@@ -1,4 +1,4 @@
-.PHONY: help setup install lint format format-check test typecheck build clean doctor dev infra-up infra-down
+.PHONY: help setup install lint format format-check test typecheck build clean doctor dev infra-up infra-down infra-status infra-logs
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -22,7 +22,7 @@ format-check: ## Check formatting without changes
 	uv run ruff format --check packages/sdk-python/src
 
 test: ## Run all tests
-	pnpm turbo test 2>/dev/null || echo "(no TypeScript test suites configured yet)"
+	pnpm turbo test
 	uv run pytest packages/sdk-python || test $$? -eq 5
 
 typecheck: ## Run type checkers
@@ -48,10 +48,7 @@ doctor: ## Check development environment
 	@echo ""
 
 dev: ## Start development services (Docker + dev servers)
-	@echo "Starting infrastructure services..."
-	docker compose up -d
-	@echo ""
-	@echo "Services started. Run 'make infra-status' to check."
+	$(MAKE) infra-up
 
 infra-up: ## Start Docker infrastructure services (PostgreSQL, Redis)
 	docker compose up -d
