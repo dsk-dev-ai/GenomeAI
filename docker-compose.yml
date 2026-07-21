@@ -1,0 +1,49 @@
+# GenomeAI development infrastructure
+# Start with: docker compose up -d
+# Stop with:  docker compose down
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: genomeai-postgres
+    restart: unless-stopped
+
+    ports:
+      - "${GENOMEAI_POSTGRES_PORT:-5433}:5432"
+
+    environment:
+      POSTGRES_USER: ${GENOMEAI_POSTGRES_USER:-genomeai}
+      POSTGRES_PASSWORD: ${GENOMEAI_POSTGRES_PASSWORD:-genomeai}
+      POSTGRES_DB: ${GENOMEAI_POSTGRES_DB:-genomeai}
+
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${GENOMEAI_POSTGRES_USER:-genomeai}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: genomeai-redis
+    restart: unless-stopped
+
+    ports:
+      - "${GENOMEAI_REDIS_PORT:-6380}:6379"
+
+    command: redis-server --appendonly yes
+
+    volumes:
+      - redis-data:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:
+  redis-data:

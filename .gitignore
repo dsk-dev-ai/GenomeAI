@@ -1,4 +1,4 @@
-# Python
+# ── Python ──────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -7,44 +7,55 @@ build/
 *.egg
 .venv/
 venv/
+.pytest_cache/
+.mypy_cache/
+.pytype/
+.ruff_cache/
 
-# Rust
+# ── Rust ────────────────────────────────────────────────
 target/
 **/*.rs.bk
 
-# Node
+# ── Node ────────────────────────────────────────────────
 node_modules/
 .npm/
+.yarn/
 
-# IDE
+# ── Turborepo ───────────────────────────────────────────
+.turbo/
+out/
+
+# ── Next.js ─────────────────────────────────────────────
+.next/
+
+# ── IDE ─────────────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# OS
+# ── OS ──────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 
-# Environment
+# ── Environment ─────────────────────────────────────────
 .env
 .env.local
+.env.*.local
 
-# Documentation build
-site/
-
-# Generated
+# ── Build ───────────────────────────────────────────────
 *.generated.*
 /gen/
+site/
 
-# Test artifacts
-.cache/
-pytest_cache/
+# ── Coverage ────────────────────────────────────────────
+coverage/
 .coverage
 htmlcov/
+coverage.xml
 
-# Data
+# ── Data (never commit genomic data) ────────────────────
 *.bam
 *.cram
 *.fastq
