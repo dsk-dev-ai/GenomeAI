@@ -22,13 +22,11 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "pnpm"
 
       - name: Install pnpm dependencies
@@ -73,13 +71,11 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "pnpm"
 
       - name: Install pnpm dependencies
@@ -95,5 +91,5 @@ jobs:
 
       - name: Run tests
         run: |
-          pnpm turbo test 2>/dev/null || true
+          pnpm turbo test
           uv run pytest packages/sdk-python || test $? -eq 5
