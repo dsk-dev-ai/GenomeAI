@@ -1,0 +1,32 @@
+[project]
+name = "genomeai-workspace"
+version = "0.1.0"
+description = "GenomeAI workspace root"
+requires-python = ">=3.11"
+
+[tool.uv.workspace]
+members = ["packages/sdk-python"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.pyright]
+include = ["packages/sdk-python/src"]
+typeCheckingMode = "strict"
+reportMissingImports = true
+reportMissingTypeStubs = false
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.411",
+    "ruff>=0.15.22",
+]

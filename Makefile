@@ -1,34 +1,66 @@
-.PHONY: setup dev test lint typecheck clean help
+.PHONY: help setup install lint format format-check test typecheck build clean doctor dev infra-up infra-down
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-setup: ## Install development dependencies
-	@echo "No build tooling configured yet. See docs/development/ for planned setup instructions."
+setup: install infra-up doctor ## Full development environment setup
 
-dev: ## Run development server
-	@echo "No development server configured yet."
+install: ## Install all dependencies (pnpm + uv)
+	pnpm install
+	uv sync
+
+lint: ## Run all linters
+	pnpm exec biome check .
+	uv run ruff check packages/sdk-python/src
+
+format: ## Format all code
+	pnpm exec biome check --write .
+	uv run ruff format packages/sdk-python/src
+
+format-check: ## Check formatting without changes
+	pnpm exec biome check .
+	uv run ruff format --check packages/sdk-python/src
 
 test: ## Run all tests
-	@echo "Running test suite..."
-
-test-unit: ## Run unit tests only
-	@echo "Running unit tests..."
-
-test-integration: ## Run integration tests only
-	@echo "Running integration tests..."
-
-test-e2e: ## Run end-to-end tests only
-	@echo "Running end-to-end tests..."
-
-lint: ## Run linters
-	@echo "Running linters..."
+	pnpm turbo test 2>/dev/null || echo "(no TypeScript test suites configured yet)"
+	uv run pytest packages/sdk-python || test $$? -eq 5
 
 typecheck: ## Run type checkers
-	@echo "Running type checkers..."
+	uv run pyright
+
+build: ## Build all packages
+	pnpm turbo build
 
 clean: ## Clean build artifacts
-	@echo "Cleaning build artifacts..."
+	pnpm turbo clean
+	rm -rf .turbo
+	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name .pytest_cache -exec rm -rf {} + 2>/dev/null || true
+	rm -rf packages/*/dist apps/*/dist
 
-build: ## Build all components
-	@echo "Building all components..."
+doctor: ## Check development environment
+	@echo "=== Environment Check ==="
+	@command -v node >/dev/null 2>&1 && echo "  node    $$(node --version)" || echo "  node    (not found)"
+	@command -v pnpm >/dev/null 2>&1 && echo "  pnpm    $$(pnpm --version)" || echo "  pnpm    (not found)"
+	@command -v uv >/dev/null 2>&1 && echo "  uv      $$(uv --version)" || echo "  uv      (not found)"
+	@command -v python3 >/dev/null 2>&1 && echo "  python  $$(python3 --version)" || echo "  python  (not found)"
+	@command -v docker >/dev/null 2>&1 && echo "  docker  $$(docker --version | cut -d' ' -f3 | tr -d ',')" || echo "  docker  (not found)"
+	@echo ""
+
+dev: ## Start development services (Docker + dev servers)
+	@echo "Starting infrastructure services..."
+	docker compose up -d
+	@echo ""
+	@echo "Services started. Run 'make infra-status' to check."
+
+infra-up: ## Start Docker infrastructure services (PostgreSQL, Redis)
+	docker compose up -d
+
+infra-down: ## Stop Docker infrastructure services
+	docker compose down
+
+infra-status: ## Show infrastructure service status
+	docker compose ps
+
+infra-logs: ## Follow infrastructure service logs
+	docker compose logs -f

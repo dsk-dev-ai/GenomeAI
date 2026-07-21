@@ -19,3 +19,12 @@ indent_size = 2
 
 [*.{json,jsonc}]
 indent_size = 2
+
+[*.{ts,tsx,js,jsx}]
+indent_size = 2
+
+[*.py]
+indent_size = 4
+
+[Dockerfile]
+indent_size = 4

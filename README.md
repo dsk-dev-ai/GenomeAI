@@ -48,9 +48,12 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for a detailed breakdown.
 # Clone the repository
 git clone https://github.com/dsk-dev-ai/GenomeAI.git
 cd GenomeAI
+
+# Install all dependencies and start infrastructure services
+make setup
 ```
 
-See [docs/development/](docs/development/) for environment setup instructions once the development tooling is in place.
+See [docs/development/](docs/development/) for detailed setup instructions, prerequisites, and workflow guides.
 
 ## Documentation
 
