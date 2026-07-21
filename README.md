@@ -1,370 +1,75 @@
-# 🧬 GenomeAI
+# GenomeAI
 
-> **Open-source AI platform for genomics, bioinformatics, biomedical research, and evidence-based AI powered by public scientific databases and multi-provider LLMs.**
+**Open-source intelligence for the genome era.**
 
-<p align="center">
+GenomeAI is an open-source project building a modular, evidence-driven platform for genomics, bioinformatics, biomedical research, and AI-powered discovery. Designed for researchers, clinicians, and developers, the goal is a unified pipeline for genomic data ingestion, analysis, machine learning, and knowledge synthesis.
 
-**Build biomedical applications with evidence, not hallucinations.**
-
-GenomeAI combines trusted scientific databases, modern AI models, and interactive research tools into one extensible platform for researchers, developers, students, and biotechnology teams.
-
-</p>
-
----
-
-## Vision
-
-GenomeAI aims to become the **open-source operating system for biomedical research**.
-
-Instead of switching between dozens of disconnected databases, APIs, and AI tools, GenomeAI provides a unified platform that combines:
-
-* 🧬 Genomics
-* 🧫 Proteomics
-* 💊 Drug Discovery
-* 🧠 AI Research Assistant
-* 📚 Scientific Literature
-* 🕸 Knowledge Graphs
-* 🔍 Evidence-Based Search
-* 🤖 Multi-Provider LLM Routing
-
-Every AI-generated answer is grounded in scientific evidence and linked back to trusted public sources whenever possible.
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
+[![Rust](https://img.shields.io/badge/rust-1.80%2B-orange)](https://www.rust-lang.org/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 ---
 
-# Why GenomeAI?
+## Features
 
-Biomedical research data is fragmented.
+| Feature | Status |
+|---------|--------|
+| Genomic pipeline engine (WGS, WES, RNA-seq, single-cell) | 📋 Planned |
+| AI/ML framework (variant effect prediction, regulatory genomics) | 📋 Planned |
+| Biomedical knowledge graph (ClinVar, GWAS Catalog, PDB, UniProt) | 📋 Planned |
+| Plugin architecture with SDK | 📋 Planned |
+| Reproducible workflow execution (DAG-based) | 📋 Planned |
+| Privacy and access control (ABAC, differential privacy) | 📋 Planned |
+| CLI, REST API, and Python SDK | 📋 Planned |
 
-Researchers often need to search:
+> This is an early-stage project. No features are implemented yet. Contributions and design feedback are welcome.
 
-* NCBI
-* PubMed
-* Ensembl
-* UniProt
-* Reactome
-* Open Targets
-* PubChem
-* ChEMBL
-* Protein Data Bank
-* OpenAlex
+## Architecture Overview
 
-Each platform has a different interface, API, and data model.
-
-GenomeAI unifies these resources into one developer-friendly platform with modern APIs, AI-assisted workflows, and visualization tools.
-
----
-
-# Key Features
-
-### 🧬 Genomics Explorer
-
-* Gene search
-* Variant search
-* Genome annotations
-* Chromosome mapping
-* Transcript information
-
----
-
-### 🧫 Protein Explorer
-
-* Protein sequences
-* Protein structures
-* Functional annotations
-* Domains
-* Protein interactions
-
----
-
-### 💊 Drug Discovery
-
-* Compound exploration
-* Drug targets
-* Bioactivity information
-* Disease associations
-* Target prioritization
-
----
-
-### 📚 Literature Explorer
-
-* Biomedical papers
-* AI summaries
-* Citation graphs
-* Semantic search
-* Related research
-
----
-
-### 🕸 Knowledge Graph
-
-Visual relationships between:
-
-* Genes
-* Proteins
-* Variants
-* Diseases
-* Drugs
-* Pathways
-* Publications
-
----
-
-### 🤖 AI Assistant
-
-Supports multiple AI providers through a unified routing layer.
-
-Planned providers include:
-
-* Ollama
-* GitHub Models
-* OpenRouter
-* NVIDIA NIM
-* Hugging Face
-* Groq
-
-Features:
-
-* Automatic fallback
-* Provider health checks
-* Streaming responses
-* Cost-aware routing
-* Evidence-backed summaries
-
----
-
-# Scientific Data Sources (Planned)
-
-GenomeAI is designed to integrate trusted public biomedical resources, including:
-
-* NCBI E-Utilities
-* PubMed
-* Ensembl REST API
-* UniProt
-* RCSB Protein Data Bank
-* Reactome
-* Open Targets Platform
-* PubChem
-* ChEMBL
-* OpenAlex
-* MyGene.info
-* MyVariant.info
-
-Additional connectors may be added over time through the plugin system.
-
----
-
-# Planned Architecture
-
-```text
-Browser
-    │
-Next.js Web Application
-    │
-API Gateway
-    │
-──────────────────────────────
-
-Authentication
-
-Authorization
-
-Rate Limiting
-
-API Versioning
-
-Logging
-
-Metrics
-
-──────────────────────────────
-
-Bio Service
-
-AI Router
-
-Search Service
-
-Knowledge Graph
-
-Reports
-
-Plugin Manager
-
-──────────────────────────────
-
-Scientific API Connectors
-
-──────────────────────────────
-
-PostgreSQL
-
-Redis
-
-Neo4j
-
-Vector Database
-
-Object Storage
+```
+┌──────────────────────────────────────────────────────┐
+│                    API Gateway                        │
+├────────────┬───────────┬──────────┬──────────────────┤
+│  Ingestion │  Analysis  │   ML     │   Knowledge      │
+│  Pipeline  │  Pipeline  │  Serving │   Graph           │
+├────────────┴───────────┴──────────┴──────────────────┤
+│                  Plugin System                        │
+├──────────────────────────────────────────────────────┤
+│        Storage Layer (Object Store + RDBMS + Vector) │
+└──────────────────────────────────────────────────────┘
 ```
 
----
+See [ARCHITECTURE.md](ARCHITECTURE.md) for a detailed breakdown.
 
-# Planned Technology Stack
+## Getting Started
 
-## Frontend
-
-* React
-* Next.js
-* TypeScript
-* Tailwind CSS
-
-## Backend
-
-* FastAPI
-* Python
-
-## Databases
-
-* PostgreSQL
-* Redis
-* Neo4j
-* Qdrant (planned)
-
-## AI
-
-* Ollama
-* GitHub Models
-* OpenRouter
-* NVIDIA NIM
-* Hugging Face
-* Groq
-
-## Infrastructure
-
-* Docker
-* GitHub Actions
-* OpenTelemetry
-* Prometheus
-* Grafana
-
----
-
-# Repository Status
-
-Current phase:
-
-**Phase 0 — Repository Foundation**
-
-Upcoming milestones:
-
-* Repository foundation
-* Documentation
-* Monorepo setup
-* API connector framework
-* Scientific API integrations
-* AI routing
-* Knowledge graph
-* Visualization
-* SDKs
-* MCP Server
-* Stable v1.0
-
----
-
-# Planned Repository Structure
-
-```text
-apps/
-packages/
-connectors/
-plugins/
-docs/
-tests/
-examples/
-docker/
-scripts/
+```bash
+# Clone the repository
+git clone https://github.com/dsk-dev-ai/GenomeAI.git
+cd GenomeAI
 ```
 
----
+See [docs/development/](docs/development/) for environment setup instructions once the development tooling is in place.
 
-# Roadmap
+## Documentation
 
-## Phase 0
+| Topic | Location |
+|-------|----------|
+| Architecture | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| API Reference | [docs/api/](docs/api/) |
+| Database Schema | [docs/database/](docs/database/) |
+| AI/ML Guide | [docs/ai/](docs/ai/) |
+| Plugin Development | [docs/plugins/](docs/plugins/) |
+| Deployment | [docs/deployment/](docs/deployment/) |
+| Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
 
-Repository Foundation
+## License
 
-## Phase 1
+GenomeAI is open source under the [Apache 2.0 License](LICENSE).
 
-Infrastructure
+## Community
 
-## Phase 2
-
-Scientific API Connectors
-
-## Phase 3
-
-AI Router
-
-## Phase 4
-
-Knowledge Graph
-
-## Phase 5
-
-Visualization
-
-## Phase 6
-
-Developer Platform
-
-* CLI
-* SDKs
-* MCP Server
-
-## Phase 7
-
-GenomeAI v1.0
-
----
-
-# Contributing
-
-GenomeAI welcomes contributions from:
-
-* Bioinformaticians
-* Software Engineers
-* AI Researchers
-* Computational Biologists
-* Students
-* Open Source Contributors
-
-Contribution guidelines will be published in `CONTRIBUTING.md`.
-
----
-
-# License
-
-Licensed under the **Apache License 2.0**.
-
-See the `LICENSE` file for details.
-
----
-
-# Author
-
-**Darshan Kachare**
-
-GitHub: https://github.com/dsk-dev-ai
-
----
-
-# Project Goals
-
-* Build a modern open-source biomedical research platform.
-* Provide evidence-first AI for genomics and bioinformatics.
-* Create an extensible plugin ecosystem.
-* Support self-hosted and cloud deployments.
-* Enable researchers to build on trusted scientific data.
-* Foster an open community around computational biology and AI.
-
+- [GitHub Discussions](https://github.com/dsk-dev-ai/GenomeAI/discussions) — Questions, ideas, and show-and-tell.
+- [Issue Tracker](https://github.com/dsk-dev-ai/GenomeAI/issues) — Bug reports and feature requests.
+- [Code of Conduct](CODE_OF_CONDUCT.md) — We value inclusive and respectful collaboration.
