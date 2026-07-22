@@ -36,8 +36,8 @@ def test_get_settings_dependency() -> None:
     app = FastAPI()
     settings = _test_settings()
     configure_logging()
-    app.state.settings = settings
-    app.state.logger = logging.getLogger("genomeai.api.test")
+    state = AppState(settings=settings, logger=logging.getLogger("genomeai.api.test"))
+    app.state.app_state = state
 
     @app.get("/check")
     async def check(settings: Settings = Depends(get_settings)) -> dict[str, str]:
@@ -53,7 +53,7 @@ def test_app_state_dependency() -> None:
     app = FastAPI()
     settings = _test_settings()
     state = AppState(settings=settings, logger=logging.getLogger("genomeai.api.test"))
-    app.state = state
+    app.state.app_state = state
 
     @app.get("/state")
     async def check(state: AppState = Depends(get_app_state)) -> dict[str, str]:

@@ -26,8 +26,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         level=state.settings.log_level.value,
         json_format=state.settings.logging.json_format,
     )
-    app.state.settings = state.settings
-    app.state.logger = state.logger
+    app.state.app_state = state
     state.logger.info("starting api")
     yield
     state.logger.info("stopping api")

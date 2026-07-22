@@ -8,10 +8,11 @@ def test_lifespan_startup_sets_state() -> None:
     with TestClient(app) as client:
         resp = client.get("/health")
     assert resp.status_code == 200
-    assert app.state.settings is not None
-    assert app.state.logger is not None
-    assert app.state.settings.app.service_name == "genomeai"
-    assert app.state.settings.app.version == "0.1.0"
+    state = app.state.app_state
+    assert state is not None
+    assert state.settings.app.service_name == "genomeai"
+    assert state.settings.app.version == "0.1.0"
+    assert state.logger is not None
 
 
 def test_health_after_lifespan() -> None:

@@ -4,6 +4,7 @@ import os
 from unittest import mock
 
 import pydantic
+import pytest
 from genomeai_config import (
     AppSettings,
     DatabaseSettings,
@@ -62,8 +63,11 @@ def test_env_overrides() -> None:
 
 
 def test_database_url() -> None:
+    from urllib.parse import quote
+
     db = DatabaseSettings()
-    assert db.url == f"postgresql+asyncpg://{db.user}:{db.password}@{db.host}:{db.port}/{db.database}"
+    expected = f"postgresql+asyncpg://{quote(db.user)}:{quote(db.password)}@{db.host}:{db.port}/{quote(db.database)}"
+    assert db.url == expected
 
 
 def test_redis_url_no_password() -> None:
@@ -94,11 +98,18 @@ def test_composite_immutable() -> None:
     redis = RedisSettings()
     log = LoggingSettings()
     settings = Settings(app=app, database=db, redis=redis, logging=log)
-    try:
+    with pytest.raises(pydantic.ValidationError):
         settings.app.service_name = "changed"  # type: ignore[misc]
-        assert False, "should be frozen"
-    except pydantic.ValidationError:
-        pass
+
+
+def test_database_min_size_zero_raises() -> None:
+    with pytest.raises(pydantic.ValidationError):
+        DatabaseSettings(min_size=0)
+
+
+def test_database_max_size_zero_raises() -> None:
+    with pytest.raises(pydantic.ValidationError):
+        DatabaseSettings(max_size=0)
 
 
 def test_load_settings_returns_composite() -> None:
