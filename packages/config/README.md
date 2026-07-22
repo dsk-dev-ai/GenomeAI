@@ -1,5 +1,9 @@
-# `packages/config` — Shared Configuration
+# `packages/config` — Configuration Library
 
-Shared ESLint, TypeScript, and other configuration presets used across the monorepo.
+Centralized application configuration with environment variable loading and validation.
 
-Contains base `tsconfig.json`, `.eslintrc` presets, and other reusable config files that apps and packages extend.
+Provides `genomeai-config` Python package with:
+- `Settings` — Pydantic-based settings with `.env` support
+- `Environment` — Enum for dev/staging/prod
+- `LogLevel` — Enum for log levels
+- `load_settings()` — Cached settings factory

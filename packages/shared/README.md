@@ -1,5 +1,8 @@
 # `packages/shared` — Shared Utilities
 
-General-purpose utilities and helpers shared across apps and packages.
+Shared exceptions, constants, and base models used across GenomeAI Python services.
 
-Contains validation logic, formatting functions, constants, and other code that does not fit into a more specific package.
+Provides `genomeai-shared` Python package with:
+- `GenomeAIError` / `ConfigurationError` / `ValidationError` / `ApplicationError` — Exception hierarchy
+- `APP_NAME` / `VERSION` — Application constants
+- `BaseModel` — Dataclass base with `to_dict()` and `from_dict()`

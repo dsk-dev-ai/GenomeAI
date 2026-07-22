@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PYTHON_VERSION: "3.11"
+  PYTHON_VERSION: "3.12"
 
 jobs:
   lint:
@@ -38,13 +38,13 @@ jobs:
           version: "0.5.x"
 
       - name: Install Python dependencies
-        run: uv sync --frozen
+        run: uv sync --frozen --all-packages
 
       - name: Biome check
-        run: pnpm exec biome check .
+        run: pnpm exec biome check packages/ apps/
 
       - name: Ruff check
-        run: uv run ruff check packages/sdk-python/src
+        run: uv run ruff check packages/ apps/
 
   typecheck:
     name: Type Check
@@ -58,7 +58,7 @@ jobs:
           version: "0.5.x"
 
       - name: Install Python dependencies
-        run: uv sync --frozen
+        run: uv sync --frozen --all-packages
 
       - name: Pyright
         run: uv run pyright
@@ -87,9 +87,9 @@ jobs:
           version: "0.5.x"
 
       - name: Install Python dependencies
-        run: uv sync --frozen
+        run: uv sync --frozen --all-packages
 
       - name: Run tests
         run: |
           pnpm turbo test
-          uv run pytest packages/sdk-python || test $? -eq 5
+          uv run pytest || test $? -eq 5

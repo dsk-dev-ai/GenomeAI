@@ -1,7 +1,12 @@
 # `apps/worker` — Background Worker
 
-Future home of the GenomeAI background job processor.
+Asynchronous background job processor.
 
-**Planned stack:** Python, Celery / Arq, Redis
+**Technology:** Python 3.12+, asyncio
+**Entry point:** `src/genomeai_worker/main.py` — `main()`
+**Capabilities:**
+- Graceful shutdown on SIGTERM/SIGINT
+- Structured logging
+- Pluggable job processing
 
-This service will execute asynchronous tasks: pipeline steps, data ingestion, cleanup, and notifications.
+**Future responsibilities:** Pipeline execution, data ingestion, cleanup tasks.

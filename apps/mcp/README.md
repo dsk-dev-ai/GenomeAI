@@ -1,7 +1,11 @@
 # `apps/mcp` — MCP Server
 
-Future home of the GenomeAI Model Context Protocol server.
+Model Context Protocol server for AI-assisted genomics analysis.
 
-**Planned stack:** Python or TypeScript
+**Technology:** MCP SDK, Python 3.12+
+**Entry point:** `src/genomeai_mcp/main.py` — `main()`
+**Capabilities:**
+- FastMCP server bootstrap
+- Ready for tool/resource/prompt registration
 
-This service will expose GenomeAI capabilities to LLM agents and AI coding tools via the MCP protocol, enabling AI-assisted genomics analysis.
+**Future responsibilities:** Expose GenomeAI capabilities to LLM agents via MCP protocol.
