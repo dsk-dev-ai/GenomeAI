@@ -9,3 +9,11 @@ class DuplicateGenomeAccessionError(ApplicationError):
             message="Genome accession already exists",
             detail="A genome with this accession already exists in the database",
         )
+
+
+class DuplicateSampleError(ApplicationError):
+    def __init__(self) -> None:
+        super().__init__(
+            message="Sample already exists",
+            detail="A sample with this sample_id already exists in the database",
+        )
