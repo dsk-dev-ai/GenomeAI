@@ -9,6 +9,7 @@ from genomeai_logging import configure_logging, get_logger
 
 from genomeai_api.cache import create_redis, shutdown_redis, verify_redis
 from genomeai_api.database import create_engine, create_session_factory, dispose_engine
+from genomeai_api.routes.genomes import router as genomes_router
 from genomeai_api.routes.health import router as health_router
 from genomeai_api.state import AppState
 
@@ -75,6 +76,7 @@ app = FastAPI(
 )
 
 app.include_router(health_router)
+app.include_router(genomes_router)
 
 
 def run() -> None:

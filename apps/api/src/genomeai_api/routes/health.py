@@ -27,9 +27,7 @@ async def ready(request: Request) -> dict[str, str]:
     if state.db_engine is not None:
         try:
             async with state.db_engine.connect() as conn:
-                await conn.execute(
-                    text("SELECT 1")
-                )
+                await conn.execute(text("SELECT 1"))
             checks["database"] = "ok"
         except Exception:
             checks["database"] = "error"
