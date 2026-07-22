@@ -11,6 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from genomeai_api.database.base import Base
 
 if TYPE_CHECKING:
+    from genomeai_api.models.protein import Protein
     from genomeai_api.models.transcript import Transcript
 
 
@@ -30,6 +31,9 @@ class Genome(Base):
 
     transcripts: Mapped[list[Transcript]] = relationship(
         "Transcript", back_populates="genome"
+    )
+    proteins: Mapped[list[Protein]] = relationship(
+        "Protein", back_populates="genome"
     )
 
     created_at: Mapped[datetime] = mapped_column(

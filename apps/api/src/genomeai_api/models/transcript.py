@@ -2,15 +2,19 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from genomeai_api.database.base import Base
-from genomeai_api.models.gene import Gene
-from genomeai_api.models.genome import Genome
-from genomeai_api.models.variant import Variant
+
+if TYPE_CHECKING:
+    from genomeai_api.models.gene import Gene
+    from genomeai_api.models.genome import Genome
+    from genomeai_api.models.protein import Protein
+    from genomeai_api.models.variant import Variant
 
 
 class Transcript(Base):
@@ -54,6 +58,9 @@ class Transcript(Base):
     genome: Mapped[Genome | None] = relationship(back_populates="transcripts")
     gene: Mapped[Gene | None] = relationship(back_populates="transcripts")
     variant: Mapped[Variant | None] = relationship(back_populates="transcripts")
+    proteins: Mapped[list[Protein]] = relationship(
+        "Protein", back_populates="transcript"
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
