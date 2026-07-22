@@ -9,9 +9,10 @@ from genomeai_config import RedisSettings
 
 def test_create_redis() -> None:
     settings = RedisSettings(host="localhost", port=6379, db=0)
-    with patch("redis.asyncio.ConnectionPool.from_url") as mock_pool, patch(
-        "redis.asyncio.Redis.from_pool"
-    ) as mock_from_pool:
+    with (
+        patch("redis.asyncio.ConnectionPool.from_url") as mock_pool,
+        patch("redis.asyncio.Redis.from_pool") as mock_from_pool,
+    ):
         mock_pool.return_value = "pool"
         _ = create_redis(settings)
         mock_pool.assert_called_once_with(settings.url, max_connections=20)

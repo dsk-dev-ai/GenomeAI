@@ -5,11 +5,12 @@ Revises:
 Create Date: 2026-07-22 10:49:54.191928
 
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
 
-revision: str = '6ca189ad6980'
+revision: str = "6ca189ad6980"
 down_revision: str | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
