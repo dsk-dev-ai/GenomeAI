@@ -13,6 +13,7 @@ from genomeai_api.database import create_engine, create_session_factory, dispose
 from genomeai_api.exceptions import (
     DuplicateGeneError,
     DuplicateGenomeAccessionError,
+    DuplicateProteinError,
     DuplicateSampleError,
     DuplicateTranscriptError,
     DuplicateVariantError,
@@ -20,6 +21,7 @@ from genomeai_api.exceptions import (
 from genomeai_api.routes.genes import router as genes_router
 from genomeai_api.routes.genomes import router as genomes_router
 from genomeai_api.routes.health import router as health_router
+from genomeai_api.routes.proteins import router as proteins_router
 from genomeai_api.routes.samples import router as samples_router
 from genomeai_api.routes.transcripts import router as transcripts_router
 from genomeai_api.routes.variants import router as variants_router
@@ -93,6 +95,7 @@ app.include_router(samples_router)
 app.include_router(genes_router)
 app.include_router(variants_router)
 app.include_router(transcripts_router)
+app.include_router(proteins_router)
 
 
 @app.exception_handler(DuplicateGenomeAccessionError)
@@ -143,6 +146,17 @@ async def duplicate_variant_handler(
 async def duplicate_transcript_handler(
     request: Request,
     exc: DuplicateTranscriptError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(DuplicateProteinError)
+async def duplicate_protein_handler(
+    request: Request,
+    exc: DuplicateProteinError,
 ) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,

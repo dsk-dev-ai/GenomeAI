@@ -41,3 +41,11 @@ class DuplicateTranscriptError(ApplicationError):
             message="Transcript already exists",
             detail="A transcript with this transcript_id already exists in the database",
         )
+
+
+class DuplicateProteinError(ApplicationError):
+    def __init__(self) -> None:
+        super().__init__(
+            message="Protein already exists",
+            detail="A protein with this protein_id already exists in the database",
+        )
