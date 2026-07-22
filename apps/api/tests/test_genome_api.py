@@ -5,8 +5,10 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
+from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
+from genomeai_api.exceptions import DuplicateGenomeAccessionError
 from genomeai_api.routes.genomes import _get_service, router
 from genomeai_api.schemas.genome import GenomeCreate, GenomeResponse
 from genomeai_api.services.genome import GenomeService
@@ -21,6 +23,13 @@ def mock_service() -> AsyncMock:
 def test_app(mock_service: AsyncMock) -> FastAPI:
     app = FastAPI()
     app.include_router(router)
+
+    @app.exception_handler(DuplicateGenomeAccessionError)
+    async def _handler(request: Request, exc: DuplicateGenomeAccessionError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={"detail": str(exc)},
+        )
 
     async def override() -> GenomeService:
         return mock_service
@@ -80,6 +89,44 @@ def test_create_genome_201(
 def test_create_genome_422_missing_fields(client: TestClient) -> None:
     resp = client.post("/genomes/", json={})
     assert resp.status_code == 422
+
+
+def test_create_genome_422_accession_too_long(client: TestClient) -> None:
+    resp = client.post(
+        "/genomes/",
+        json={
+            "accession": "A" * 51,
+            "organism": "Homo sapiens",
+        },
+    )
+    assert resp.status_code == 422
+
+
+def test_create_genome_422_organism_too_long(client: TestClient) -> None:
+    resp = client.post(
+        "/genomes/",
+        json={
+            "accession": "GCF_000001405.40",
+            "organism": "O" * 256,
+        },
+    )
+    assert resp.status_code == 422
+
+
+def test_create_genome_409_duplicate(
+    client: TestClient,
+    mock_service: AsyncMock,
+) -> None:
+    mock_service.create.side_effect = DuplicateGenomeAccessionError()
+
+    payload = {
+        "accession": "GCF_000001405.40",
+        "organism": "Homo sapiens",
+    }
+    resp = client.post("/genomes/", json=payload)
+
+    assert resp.status_code == 409
+    assert resp.json()["detail"] == "Genome accession already exists"
 
 
 def test_list_genomes(
@@ -159,6 +206,30 @@ def test_update_genome_404(client: TestClient, mock_service: AsyncMock) -> None:
 def test_update_genome_422_invalid_body(client: TestClient, sample_genome_id: uuid.UUID) -> None:
     resp = client.patch(f"/genomes/{sample_genome_id}", json={"accession": 123})
     assert resp.status_code == 422
+
+
+def test_update_genome_422_accession_too_long(
+    client: TestClient,
+    sample_genome_id: uuid.UUID,
+) -> None:
+    resp = client.patch(f"/genomes/{sample_genome_id}", json={"accession": "A" * 51})
+    assert resp.status_code == 422
+
+
+def test_update_genome_409_duplicate(
+    client: TestClient,
+    mock_service: AsyncMock,
+    sample_genome_id: uuid.UUID,
+) -> None:
+    mock_service.update.side_effect = DuplicateGenomeAccessionError()
+
+    resp = client.patch(
+        f"/genomes/{sample_genome_id}",
+        json={"accession": "GCF_000002409.10"},
+    )
+
+    assert resp.status_code == 409
+    assert resp.json()["detail"] == "Genome accession already exists"
 
 
 def test_delete_genome_204(client: TestClient, mock_service: AsyncMock) -> None:

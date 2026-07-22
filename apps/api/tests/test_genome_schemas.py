@@ -36,6 +36,40 @@ def test_genome_create_missing_organism() -> None:
         GenomeCreate(accession="GCF_000001405.40")
 
 
+def test_genome_create_accession_too_long() -> None:
+    with pytest.raises(ValidationError):
+        GenomeCreate(
+            accession="A" * 51,
+            organism="Homo sapiens",
+        )
+
+
+def test_genome_create_organism_too_long() -> None:
+    with pytest.raises(ValidationError):
+        GenomeCreate(
+            accession="GCF_000001405.40",
+            organism="O" * 256,
+        )
+
+
+def test_genome_create_assembly_too_long() -> None:
+    with pytest.raises(ValidationError):
+        GenomeCreate(
+            accession="GCF_000001405.40",
+            organism="Homo sapiens",
+            assembly="A" * 101,
+        )
+
+
+def test_genome_create_source_too_long() -> None:
+    with pytest.raises(ValidationError):
+        GenomeCreate(
+            accession="GCF_000001405.40",
+            organism="Homo sapiens",
+            source="S" * 101,
+        )
+
+
 def test_genome_update_empty() -> None:
     data = GenomeUpdate()
     assert data.model_dump(exclude_unset=True) == {}
@@ -57,6 +91,16 @@ def test_genome_update_all_fields() -> None:
         description="Updated",
     )
     assert data.accession == "GCF_000001405.41"
+
+
+def test_genome_update_accession_too_long() -> None:
+    with pytest.raises(ValidationError):
+        GenomeUpdate(accession="A" * 51)
+
+
+def test_genome_update_organism_too_long() -> None:
+    with pytest.raises(ValidationError):
+        GenomeUpdate(organism="O" * 256)
 
 
 def test_genome_response_from_attributes() -> None:

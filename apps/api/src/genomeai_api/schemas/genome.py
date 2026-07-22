@@ -3,14 +3,14 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class GenomeBase(BaseModel):
-    accession: str
-    organism: str
-    assembly: str | None = None
-    source: str | None = None
+    accession: str = Field(max_length=50)
+    organism: str = Field(max_length=255)
+    assembly: str | None = Field(default=None, max_length=100)
+    source: str | None = Field(default=None, max_length=100)
     description: str | None = None
 
 
@@ -19,10 +19,10 @@ class GenomeCreate(GenomeBase):
 
 
 class GenomeUpdate(BaseModel):
-    accession: str | None = None
-    organism: str | None = None
-    assembly: str | None = None
-    source: str | None = None
+    accession: str | None = Field(default=None, max_length=50)
+    organism: str | None = Field(default=None, max_length=255)
+    assembly: str | None = Field(default=None, max_length=100)
+    source: str | None = Field(default=None, max_length=100)
     description: str | None = None
 
 

@@ -14,17 +14,53 @@ def test_genome_table_name() -> None:
     assert Genome.__tablename__ == "genomes"
 
 
-def test_genome_columns() -> None:
-    cols = {c.name: c for c in Genome.__table__.columns}
-    assert cols["id"].primary_key
-    assert cols["accession"].unique is True
-    assert cols["accession"].nullable is False
-    assert cols["organism"].nullable is False
-    assert cols["assembly"].nullable is True
-    assert cols["source"].nullable is True
-    assert cols["description"].nullable is True
-    assert cols["created_at"].nullable is False
-    assert cols["updated_at"].nullable is False
+def test_genome_id_column() -> None:
+    col = Genome.__table__.columns["id"]
+    assert col.primary_key
+
+
+def test_genome_accession_column() -> None:
+    col = Genome.__table__.columns["accession"]
+    assert col.unique is True
+    assert col.nullable is False
+    assert col.type.length == 50
+    assert col.index is True
+
+
+def test_genome_organism_column() -> None:
+    col = Genome.__table__.columns["organism"]
+    assert col.nullable is False
+    assert col.type.length == 255
+
+
+def test_genome_assembly_column() -> None:
+    col = Genome.__table__.columns["assembly"]
+    assert col.nullable is True
+    assert col.type.length == 100
+
+
+def test_genome_source_column() -> None:
+    col = Genome.__table__.columns["source"]
+    assert col.nullable is True
+    assert col.type.length == 100
+
+
+def test_genome_description_column() -> None:
+    col = Genome.__table__.columns["description"]
+    assert col.nullable is True
+
+
+def test_genome_created_at_column() -> None:
+    col = Genome.__table__.columns["created_at"]
+    assert col.nullable is False
+    assert col.type.timezone is True
+
+
+def test_genome_updated_at_column() -> None:
+    col = Genome.__table__.columns["updated_at"]
+    assert col.nullable is False
+    assert col.type.timezone is True
+    assert col.onupdate is not None
 
 
 def test_genome_instantiation() -> None:
@@ -42,19 +78,28 @@ def test_genome_instantiation() -> None:
     assert genome.description == "Human reference genome"
 
 
-def test_genome_auto_fields() -> None:
+def test_genome_id_type() -> None:
     genome = Genome(
         id=uuid.uuid4(),
         accession="GCF_000001405.40",
         organism="Homo sapiens",
     )
     assert isinstance(genome.id, uuid.UUID)
-    assert genome.created_at is None  # server_default
-    assert genome.updated_at is None  # server_default
+
+
+def test_genome_timestamps_are_server_default() -> None:
+    genome = Genome(
+        id=uuid.uuid4(),
+        accession="GCF_000001405.40",
+        organism="Homo sapiens",
+    )
+    assert genome.created_at is None
+    assert genome.updated_at is None
 
 
 def test_genome_optional_fields_default_none() -> None:
     genome = Genome(
+        id=uuid.uuid4(),
         accession="GCF_000001405.40",
         organism="Homo sapiens",
     )

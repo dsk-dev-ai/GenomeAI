@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
+from genomeai_api.exceptions import DuplicateGenomeAccessionError
 from genomeai_api.models.genome import Genome
 from genomeai_api.repositories.genome import GenomeRepository
 from genomeai_api.schemas.genome import GenomeCreate, GenomeResponse, GenomeUpdate
@@ -42,6 +43,18 @@ async def test_create(service: GenomeService, mock_repository: AsyncMock) -> Non
     assert isinstance(result, GenomeResponse)
     assert result.accession == "GCF_000001405.40"
     mock_repository.create.assert_awaited_once_with(data)
+
+
+@pytest.mark.asyncio
+async def test_create_duplicate_accession(
+    service: GenomeService,
+    mock_repository: AsyncMock,
+) -> None:
+    mock_repository.create.side_effect = DuplicateGenomeAccessionError()
+
+    data = GenomeCreate(accession="GCF_000001405.40", organism="Homo sapiens")
+    with pytest.raises(DuplicateGenomeAccessionError):
+        await service.create(data)
 
 
 @pytest.mark.asyncio
@@ -107,6 +120,19 @@ async def test_update_not_found(service: GenomeService, mock_repository: AsyncMo
     result = await service.update(genome_id, data)
 
     assert result is None
+
+
+@pytest.mark.asyncio
+async def test_update_duplicate_accession(
+    service: GenomeService,
+    mock_repository: AsyncMock,
+) -> None:
+    mock_repository.update.side_effect = DuplicateGenomeAccessionError()
+
+    genome_id = uuid.uuid4()
+    data = GenomeUpdate(accession="GCF_000002409.10")
+    with pytest.raises(DuplicateGenomeAccessionError):
+        await service.update(genome_id, data)
 
 
 @pytest.mark.asyncio

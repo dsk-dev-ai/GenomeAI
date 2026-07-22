@@ -3,8 +3,10 @@ from __future__ import annotations
 import uuid
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from genomeai_api.exceptions import DuplicateGenomeAccessionError
 from genomeai_api.models.genome import Genome
 from genomeai_api.schemas.genome import GenomeCreate, GenomeUpdate
 
@@ -16,7 +18,11 @@ class GenomeRepository:
     async def create(self, data: GenomeCreate) -> Genome:
         genome = Genome(**data.model_dump())
         self._session.add(genome)
-        await self._session.commit()
+        try:
+            await self._session.commit()
+        except IntegrityError:
+            await self._session.rollback()
+            raise DuplicateGenomeAccessionError from None
         await self._session.refresh(genome)
         return genome
 
@@ -33,7 +39,11 @@ class GenomeRepository:
             return None
         for key, value in data.model_dump(exclude_unset=True).items():
             setattr(genome, key, value)
-        await self._session.commit()
+        try:
+            await self._session.commit()
+        except IntegrityError:
+            await self._session.rollback()
+            raise DuplicateGenomeAccessionError from None
         await self._session.refresh(genome)
         return genome
 
