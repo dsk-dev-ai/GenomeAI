@@ -63,6 +63,30 @@ async def test_create_duplicate_gene(
 
 
 @pytest.mark.asyncio
+async def test_create_non_duplicate_integrity_error(
+    repository: GeneRepository,
+    mock_session: AsyncMock,
+) -> None:
+    orig = MagicMock()
+    orig.sqlstate = "99999"
+    mock_session.commit.side_effect = IntegrityError("test", "orig", orig)
+
+    data = GeneCreate(
+        gene_id="ENSG00000139618",
+        gene_name="TP53",
+        chromosome="17",
+    )
+
+    with pytest.raises(IntegrityError):
+        await repository.create(data)
+
+    mock_session.add.assert_called_once()
+    mock_session.commit.assert_awaited_once()
+    mock_session.rollback.assert_awaited_once()
+    mock_session.refresh.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_get_by_id_found(repository: GeneRepository, mock_session: AsyncMock) -> None:
     gene_id = uuid.uuid4()
     expected = Gene(
@@ -120,6 +144,7 @@ async def test_list_order_by_desc(repository: GeneRepository, mock_session: Asyn
     compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
     assert "ORDER BY" in compiled.upper()
     assert "genes.created_at" in compiled.lower()
+    assert "DESC" in compiled.upper()
 
 
 @pytest.mark.asyncio
