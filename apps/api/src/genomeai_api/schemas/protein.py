@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ProteinBase(BaseModel):
@@ -40,6 +40,13 @@ class ProteinUpdate(BaseModel):
     transcript_id: uuid.UUID | None = None
     genome_id: uuid.UUID | None = None
     description: str | None = None
+
+    @field_validator("protein_id", "protein_name", mode="before")
+    @classmethod
+    def reject_null_non_nullable(cls, v: object) -> object:
+        if v is None:
+            raise ValueError("This field cannot be null")
+        return v
 
 
 class ProteinResponse(ProteinBase):

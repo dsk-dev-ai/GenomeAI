@@ -189,6 +189,16 @@ def test_protein_update_all_fields() -> None:
     assert data.genome_id == genome_id
 
 
+def test_protein_update_null_protein_id() -> None:
+    with pytest.raises(ValidationError):
+        ProteinUpdate(protein_id=None)
+
+
+def test_protein_update_null_protein_name() -> None:
+    with pytest.raises(ValidationError):
+        ProteinUpdate(protein_name=None)
+
+
 def test_protein_update_protein_id_too_long() -> None:
     with pytest.raises(ValidationError):
         ProteinUpdate(protein_id="P" * 51)

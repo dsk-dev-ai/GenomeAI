@@ -234,6 +234,28 @@ def test_update_protein_422_invalid_body(
     assert resp.status_code == 422
 
 
+def test_update_protein_422_null_protein_id(
+    client: TestClient,
+    sample_protein_id: uuid.UUID,
+) -> None:
+    resp = client.patch(
+        f"/proteins/{sample_protein_id}",
+        json={"protein_id": None},
+    )
+    assert resp.status_code == 422
+
+
+def test_update_protein_422_null_protein_name(
+    client: TestClient,
+    sample_protein_id: uuid.UUID,
+) -> None:
+    resp = client.patch(
+        f"/proteins/{sample_protein_id}",
+        json={"protein_name": None},
+    )
+    assert resp.status_code == 422
+
+
 def test_update_protein_422_protein_id_too_long(
     client: TestClient,
     sample_protein_id: uuid.UUID,
