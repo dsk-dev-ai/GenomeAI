@@ -223,6 +223,20 @@ def test_update_sample_404(client: TestClient, mock_service: AsyncMock) -> None:
     assert resp.status_code == 404
 
 
+def test_update_sample_200_empty_body(
+    client: TestClient,
+    mock_service: AsyncMock,
+    sample_id: uuid.UUID,
+    sample_response: dict[str, object],
+) -> None:
+    mock_service.update.return_value = SampleResponse(**sample_response)
+
+    resp = client.patch(f"/samples/{sample_id}", json={})
+
+    assert resp.status_code == 200
+    assert resp.json()["id"] == str(sample_id)
+
+
 def test_update_sample_422_invalid_body(client: TestClient, sample_id: uuid.UUID) -> None:
     resp = client.patch(f"/samples/{sample_id}", json={"sample_id": 123})
     assert resp.status_code == 422

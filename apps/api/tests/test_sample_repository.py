@@ -43,7 +43,9 @@ async def test_create_duplicate_sample(
     repository: SampleRepository,
     mock_session: AsyncMock,
 ) -> None:
-    mock_session.commit.side_effect = IntegrityError("test", "orig", "dup")
+    orig = MagicMock()
+    orig.sqlstate = "23505"
+    mock_session.commit.side_effect = IntegrityError("test", "orig", orig)
 
     data = SampleCreate(
         sample_id="SMP001",
@@ -193,7 +195,9 @@ async def test_update_duplicate_sample(
         organism="Homo sapiens",
     )
     mock_session.get.return_value = existing
-    mock_session.commit.side_effect = IntegrityError("test", "orig", "dup")
+    orig = MagicMock()
+    orig.sqlstate = "23505"
+    mock_session.commit.side_effect = IntegrityError("test", "orig", orig)
 
     data = SampleUpdate(sample_id="SMP002")
     with pytest.raises(DuplicateSampleError):

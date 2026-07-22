@@ -20,9 +20,12 @@ class SampleRepository:
         self._session.add(sample)
         try:
             await self._session.commit()
-        except IntegrityError:
+        except IntegrityError as exc:
             await self._session.rollback()
-            raise DuplicateSampleError from None
+            orig = getattr(exc, "orig", None)
+            if getattr(orig, "sqlstate", None) == "23505":
+                raise DuplicateSampleError from None
+            raise
         await self._session.refresh(sample)
         return sample
 
@@ -41,9 +44,12 @@ class SampleRepository:
             setattr(sample, key, value)
         try:
             await self._session.commit()
-        except IntegrityError:
+        except IntegrityError as exc:
             await self._session.rollback()
-            raise DuplicateSampleError from None
+            orig = getattr(exc, "orig", None)
+            if getattr(orig, "sqlstate", None) == "23505":
+                raise DuplicateSampleError from None
+            raise
         await self._session.refresh(sample)
         return sample
 

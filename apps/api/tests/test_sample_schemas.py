@@ -176,6 +176,41 @@ def test_sample_update_sample_name_too_long() -> None:
         SampleUpdate(sample_name="N" * 256)
 
 
+def test_sample_update_organism_too_long() -> None:
+    with pytest.raises(ValidationError):
+        SampleUpdate(organism="O" * 256)
+
+
+def test_sample_update_tissue_too_long() -> None:
+    with pytest.raises(ValidationError):
+        SampleUpdate(tissue="T" * 256)
+
+
+def test_sample_update_cell_type_too_long() -> None:
+    with pytest.raises(ValidationError):
+        SampleUpdate(cell_type="C" * 256)
+
+
+def test_sample_update_disease_too_long() -> None:
+    with pytest.raises(ValidationError):
+        SampleUpdate(disease="D" * 256)
+
+
+def test_sample_update_phenotype_too_long() -> None:
+    with pytest.raises(ValidationError):
+        SampleUpdate(phenotype="P" * 256)
+
+
+def test_sample_update_sex_too_long() -> None:
+    with pytest.raises(ValidationError):
+        SampleUpdate(sex="S" * 21)
+
+
+def test_sample_update_age_too_long() -> None:
+    with pytest.raises(ValidationError):
+        SampleUpdate(age="A" * 51)
+
+
 def test_sample_response_from_attributes() -> None:
     now = datetime.now(UTC)
     sample_id = uuid.uuid4()
