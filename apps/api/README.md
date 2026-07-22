@@ -1,7 +1,13 @@
-# `apps/api` — REST API Service
+# `apps/api` — REST API
 
-Future home of the GenomeAI HTTP API.
+FastAPI application exposing health endpoints.
 
-**Planned stack:** Python (FastAPI or similar), PostgreSQL
+**Technology:** FastAPI, Uvicorn, Python 3.12+
+**Entry point:** `src/genomeai_api/main.py` — `main()`
+**Endpoints:**
+- `GET /` — Root health check
+- `GET /health` — Health check
+- `GET /ready` — Readiness check
+- `GET /live` — Liveness check
 
-This service will expose platform capabilities via a RESTful API for web applications, CLI, SDKs, and integrations.
+**Future responsibilities:** Pipeline management, data queries, analysis orchestration.

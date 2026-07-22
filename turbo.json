@@ -3,7 +3,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**", "build/**"],
+      "outputs": ["dist/**", ".next/**"],
       "inputs": ["$TURBO_DEFAULT$", "src/**", "tsconfig.json"]
     },
     "dev": {
@@ -11,11 +11,9 @@
       "persistent": true
     },
     "lint": {
-      "dependsOn": ["^lint"],
       "inputs": ["$TURBO_DEFAULT$", "src/**"]
     },
     "test": {
-      "dependsOn": ["build"],
       "inputs": ["$TURBO_DEFAULT$", "src/**", "tests/**"]
     },
     "typecheck": {

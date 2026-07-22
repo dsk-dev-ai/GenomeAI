@@ -1,7 +1,11 @@
 # `apps/cli` — Command-Line Interface
 
-Future home of the GenomeAI CLI tool.
+Typer-based CLI for GenomeAI platform interaction.
 
-**Planned stack:** Python (click, typer, or rich)
+**Technology:** Typer, Rich, Python 3.12+
+**Entry point:** `genomeai` (installed via pip) or `src/genomeai_cli/main.py`
+**Commands:**
+- `genomeai version` — Print version
+- `genomeai doctor` — Environment diagnostics
 
-The CLI will provide scriptable access to all platform capabilities for automation, CI/CD, and headless environments.
+**Future responsibilities:** Pipeline submission, data queries, admin operations.

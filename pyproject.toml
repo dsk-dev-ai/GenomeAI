@@ -5,7 +5,26 @@ description = "GenomeAI workspace root"
 requires-python = ">=3.11"
 
 [tool.uv.workspace]
-members = ["packages/sdk-python"]
+members = [
+    "packages/config",
+    "packages/logging",
+    "packages/shared",
+    "packages/sdk-python",
+    "apps/api",
+    "apps/worker",
+    "apps/cli",
+    "apps/mcp",
+]
+
+[tool.uv.sources]
+genomeai-config = { workspace = true }
+genomeai-logging = { workspace = true }
+genomeai-shared = { workspace = true }
+genomeai-sdk = { workspace = true }
+genomeai-api = { workspace = true }
+genomeai-worker = { workspace = true }
+genomeai-cli = { workspace = true }
+genomeai-mcp = { workspace = true }
 
 [tool.ruff]
 line-length = 100
@@ -20,13 +39,41 @@ indent-style = "space"
 line-ending = "lf"
 
 [tool.pyright]
-include = ["packages/sdk-python/src"]
+include = [
+    "packages/config/src",
+    "packages/logging/src",
+    "packages/shared/src",
+    "packages/sdk-python/src",
+    "apps/api/src",
+    "apps/worker/src",
+    "apps/cli/src",
+    "apps/mcp/src",
+]
+exclude = ["**/node_modules", "**/__pycache__"]
+venvPath = "."
+venv = ".venv"
 typeCheckingMode = "strict"
 reportMissingImports = true
 reportMissingTypeStubs = false
+reportUnknownMemberType = false
+reportUnknownVariableType = false
+reportUnknownParameterType = false
+reportUntypedFunctionDecorator = false
+reportUntypedBaseClass = false
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
+testpaths = [
+    "apps/api/tests",
+    "apps/cli/tests",
+]
+addopts = "--import-mode=importlib"
 
 [dependency-groups]
 dev = [
+    "httpx>=0.28.1",
     "pyright>=1.1.411",
+    "pytest>=1.0.0",
+    "pytest-asyncio>=1.4.0",
     "ruff>=0.15.22",
 ]

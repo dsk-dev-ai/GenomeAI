@@ -11,6 +11,7 @@ venv/
 .mypy_cache/
 .pytype/
 .ruff_cache/
+.pyright/
 
 # ── Rust ────────────────────────────────────────────────
 target/
@@ -20,6 +21,7 @@ target/
 node_modules/
 .npm/
 .yarn/
+*.tsbuildinfo
 
 # ── Turborepo ───────────────────────────────────────────
 .turbo/

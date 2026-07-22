@@ -7,23 +7,23 @@ setup: install infra-up doctor ## Full development environment setup
 
 install: ## Install all dependencies (pnpm + uv)
 	pnpm install
-	uv sync
+	uv sync --all-packages
 
 lint: ## Run all linters
-	pnpm exec biome check .
-	uv run ruff check packages/sdk-python/src
+	pnpm exec biome check packages/ apps/
+	uv run ruff check packages/ apps/
 
 format: ## Format all code
-	pnpm exec biome check --write .
-	uv run ruff format packages/sdk-python/src
+	pnpm exec biome check --write packages/ apps/
+	uv run ruff format packages/ apps/
 
 format-check: ## Check formatting without changes
-	pnpm exec biome check .
-	uv run ruff format --check packages/sdk-python/src
+	pnpm exec biome check packages/ apps/
+	uv run ruff format --check packages/ apps/
 
 test: ## Run all tests
 	pnpm turbo test
-	uv run pytest packages/sdk-python || test $$? -eq 5
+	uv run pytest
 
 typecheck: ## Run type checkers
 	uv run pyright
