@@ -7,6 +7,8 @@ from fastapi import FastAPI
 from genomeai_config import load_settings
 from genomeai_logging import get_logger, setup_logging
 
+from genomeai_api.routes.health import router as health_router
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
@@ -24,25 +26,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-
-@app.get("/")
-async def root() -> dict[str, str]:
-    return {"status": "ok"}
-
-
-@app.get("/health")
-async def health() -> dict[str, str]:
-    return {"status": "ok"}
-
-
-@app.get("/ready")
-async def ready() -> dict[str, str]:
-    return {"status": "ok"}
-
-
-@app.get("/live")
-async def live() -> dict[str, str]:
-    return {"status": "ok"}
+app.include_router(health_router)
 
 
 def run() -> None:

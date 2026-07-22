@@ -18,7 +18,10 @@ class Worker:
         self._logger.info("worker starting")
         loop = asyncio.get_running_loop()
         for sig in (signal.SIGTERM, signal.SIGINT):
-            loop.add_signal_handler(sig, self._handle_shutdown)
+            try:
+                loop.add_signal_handler(sig, self._handle_shutdown)
+            except NotImplementedError:
+                pass
         await self._shutdown_event.wait()
         self._logger.info("worker stopped")
 

@@ -14,3 +14,5 @@ def test_doctor() -> None:
     result = runner.invoke(app, ["doctor"])
     assert result.exit_code == 0
     assert "Environment" in result.stdout
+    assert "Python" in result.stdout
+    assert "Platform" in result.stdout
