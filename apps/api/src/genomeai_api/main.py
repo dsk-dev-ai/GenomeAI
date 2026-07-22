@@ -5,19 +5,31 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from genomeai_config import load_settings
-from genomeai_logging import get_logger, setup_logging
+from genomeai_logging import configure_logging, get_logger
 
 from genomeai_api.routes.health import router as health_router
+from genomeai_api.state import AppState
+
+
+def create_app_state() -> AppState:
+    settings = load_settings()
+    return AppState(
+        settings=settings,
+        logger=get_logger(settings.service_name),
+    )
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
-    settings = load_settings()
-    setup_logging(level=settings.log_level.value, name=settings.service_name)
-    logger = get_logger(settings.service_name)
-    logger.info("starting api")
+    state = create_app_state()
+    configure_logging(
+        level=state.settings.log_level.value,
+        json_format=state.settings.logging.json_format,
+    )
+    app.state.app_state = state
+    state.logger.info("starting api")
     yield
-    logger.info("stopping api")
+    state.logger.info("stopping api")
 
 
 app = FastAPI(

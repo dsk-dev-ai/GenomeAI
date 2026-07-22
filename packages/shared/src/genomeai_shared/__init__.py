@@ -3,14 +3,16 @@ from genomeai_shared.exceptions import (
     ApplicationError,
     BaseError,
     ConfigurationError,
+    DependencyError,
     ValidationError,
 )
 
 __all__ = [
     "APP_NAME",
     "VERSION",
+    "ApplicationError",
     "BaseError",
     "ConfigurationError",
+    "DependencyError",
     "ValidationError",
-    "ApplicationError",
 ]
