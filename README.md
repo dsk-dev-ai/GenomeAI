@@ -23,7 +23,7 @@ GenomeAI is an open-source project building a modular, evidence-driven platform 
 | Privacy and access control (ABAC, differential privacy) | 📋 Planned |
 | CLI, REST API, and Python SDK | 📋 Planned |
 
-> This is an early-stage project. No features are implemented yet. Contributions and design feedback are welcome.
+> GenomeAI is under active development. Core infrastructure and the Genome, Sample, Gene, Variant, and Transcript domains have been implemented. Additional biological domains and analysis pipelines are in progress. Contributions and design feedback are welcome.
 
 ## Architecture Overview
 
