@@ -15,17 +15,32 @@ def test_lifespan_startup_sets_state() -> None:
     assert state.logger is not None
 
 
+def test_root_after_lifespan() -> None:
+    with TestClient(app) as client:
+        resp = client.get("/")
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ok"}
+
+
 def test_health_after_lifespan() -> None:
     with TestClient(app) as client:
-        resp_root = client.get("/")
-        resp_health = client.get("/health")
-        resp_ready = client.get("/ready")
-        resp_live = client.get("/live")
-    assert resp_root.status_code == 200
-    assert resp_root.json() == {"status": "ok"}
-    assert resp_health.status_code == 200
-    assert resp_health.json() == {"status": "ok"}
-    assert resp_ready.status_code == 200
-    assert resp_ready.json() == {"status": "ok"}
-    assert resp_live.status_code == 200
-    assert resp_live.json() == {"status": "ok"}
+        resp = client.get("/health")
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ok"}
+
+
+def test_ready_after_lifespan() -> None:
+    with TestClient(app) as client:
+        resp = client.get("/ready")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "database" in body
+    assert "redis" in body
+    assert body["status"] in ("ok", "degraded")
+
+
+def test_live_after_lifespan() -> None:
+    with TestClient(app) as client:
+        resp = client.get("/live")
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ok"}

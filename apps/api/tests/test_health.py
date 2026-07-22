@@ -1,28 +1,29 @@
 from fastapi.testclient import TestClient
 from genomeai_api.main import app
 
-client = TestClient(app)
-
 
 def test_root() -> None:
-    response = client.get("/")
-    assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    with TestClient(app) as client:
+        resp = client.get("/")
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ok"}
 
 
 def test_health() -> None:
-    response = client.get("/health")
-    assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    with TestClient(app) as client:
+        resp = client.get("/health")
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ok"}
 
 
 def test_ready() -> None:
-    response = client.get("/ready")
-    assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    with TestClient(app) as client:
+        resp = client.get("/ready")
+    assert resp.status_code == 200
 
 
 def test_live() -> None:
-    response = client.get("/live")
-    assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    with TestClient(app) as client:
+        resp = client.get("/live")
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ok"}
