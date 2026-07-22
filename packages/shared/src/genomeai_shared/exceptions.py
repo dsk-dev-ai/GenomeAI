@@ -17,3 +17,7 @@ class ValidationError(BaseError):
 
 class ApplicationError(BaseError):
     pass
+
+
+class DependencyError(BaseError):
+    pass
