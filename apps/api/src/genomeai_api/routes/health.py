@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import cast
 
 from fastapi import APIRouter, Request
+from sqlalchemy import text
 
 from genomeai_api.state import AppState
 
@@ -27,7 +28,7 @@ async def ready(request: Request) -> dict[str, str]:
         try:
             async with state.db_engine.connect() as conn:
                 await conn.execute(
-                    __import__("sqlalchemy").text("SELECT 1")
+                    text("SELECT 1")
                 )
             checks["database"] = "ok"
         except Exception:

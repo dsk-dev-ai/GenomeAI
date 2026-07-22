@@ -42,9 +42,10 @@ async def shutdown_cache(state: AppState) -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
+    settings = load_settings()
     state = AppState(
-        settings=load_settings(),
-        logger=get_logger("genomeai"),
+        settings=settings,
+        logger=get_logger(settings.service_name),
     )
     configure_logging(
         level=state.settings.log_level.value,
