@@ -10,9 +10,10 @@ from genomeai_logging import configure_logging, get_logger
 
 from genomeai_api.cache import create_redis, shutdown_redis, verify_redis
 from genomeai_api.database import create_engine, create_session_factory, dispose_engine
-from genomeai_api.exceptions import DuplicateGenomeAccessionError
+from genomeai_api.exceptions import DuplicateGenomeAccessionError, DuplicateSampleError
 from genomeai_api.routes.genomes import router as genomes_router
 from genomeai_api.routes.health import router as health_router
+from genomeai_api.routes.samples import router as samples_router
 from genomeai_api.state import AppState
 
 
@@ -79,12 +80,24 @@ app = FastAPI(
 
 app.include_router(health_router)
 app.include_router(genomes_router)
+app.include_router(samples_router)
 
 
 @app.exception_handler(DuplicateGenomeAccessionError)
 async def duplicate_genome_accession_handler(
     request: Request,
     exc: DuplicateGenomeAccessionError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(DuplicateSampleError)
+async def duplicate_sample_handler(
+    request: Request,
+    exc: DuplicateSampleError,
 ) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,
