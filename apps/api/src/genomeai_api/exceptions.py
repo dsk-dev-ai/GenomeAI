@@ -33,3 +33,11 @@ class DuplicateVariantError(ApplicationError):
             message="Variant already exists",
             detail="A variant with this variant_id already exists in the database",
         )
+
+
+class DuplicateTranscriptError(ApplicationError):
+    def __init__(self) -> None:
+        super().__init__(
+            message="Transcript already exists",
+            detail="A transcript with this transcript_id already exists in the database",
+        )
