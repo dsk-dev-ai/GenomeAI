@@ -17,3 +17,11 @@ class DuplicateSampleError(ApplicationError):
             message="Sample already exists",
             detail="A sample with this sample_id already exists in the database",
         )
+
+
+class DuplicateGeneError(ApplicationError):
+    def __init__(self) -> None:
+        super().__init__(
+            message="Gene already exists",
+            detail="A gene with this gene_id already exists in the database",
+        )
