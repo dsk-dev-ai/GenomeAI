@@ -4,6 +4,7 @@ import uuid
 
 from genomeai_api.database.base import Base
 from genomeai_api.models.transcript import Transcript
+from sqlalchemy import Integer
 
 
 def test_transcript_inherits_base() -> None:
@@ -54,7 +55,7 @@ def test_transcript_strand_column() -> None:
 def test_transcript_start_position_column() -> None:
     col = Transcript.__table__.columns["start_position"]
     assert col.nullable is True
-    assert isinstance(col.type, col.type.__class__)
+    assert isinstance(col.type, Integer)
 
 
 def test_transcript_end_position_column() -> None:

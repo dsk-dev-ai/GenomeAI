@@ -51,9 +51,9 @@ class Transcript(Base):
     )
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    genome: Mapped[Genome] = relationship(back_populates="transcripts")
-    gene: Mapped[Gene] = relationship(back_populates="transcripts")
-    variant: Mapped[Variant] = relationship(back_populates="transcripts")
+    genome: Mapped[Genome | None] = relationship(back_populates="transcripts")
+    gene: Mapped[Gene | None] = relationship(back_populates="transcripts")
+    variant: Mapped[Variant | None] = relationship(back_populates="transcripts")
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
