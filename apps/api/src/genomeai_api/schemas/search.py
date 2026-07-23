@@ -15,6 +15,8 @@ FilterOperator = Literal[
 
 SortOrder = Literal["asc", "desc"]
 
+QueryType = Literal["plain", "phrase", "websearch", "raw"]
+
 
 class PaginationRequest(BaseModel):
     page: int = Field(default=1, ge=1)
@@ -64,3 +66,33 @@ class SearchRequest(BaseModel):
 class SearchResponse(BaseModel):
     items: list[Any]
     pagination: PaginationResponse
+
+
+class FullTextSearchConfig(BaseModel):
+    query: str = Field(min_length=1)
+    config: str = "english"
+    query_type: QueryType = "plain"
+    columns: list[str] = Field(min_length=1)
+    weights: list[str] | None = None
+
+
+class FullTextSearchRequest(BaseModel):
+    search: SearchRequest
+    fts: FullTextSearchConfig
+
+
+class HighlightedMatch(BaseModel):
+    field: str
+    snippet: str
+
+
+class RankedSearchResult(BaseModel):
+    rank: float
+    highlights: list[HighlightedMatch] | None = None
+
+
+class FullTextSearchResponse(BaseModel):
+    items: list[Any]
+    pagination: PaginationResponse
+    ranks: list[float] | None = None
+    highlights: list[list[HighlightedMatch]] | None = None
