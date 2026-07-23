@@ -40,6 +40,12 @@ class FilterRule(BaseModel):
     operator: FilterOperator
     value: Any = None
 
+    @model_validator(mode="after")
+    def validate_is_null_value(self) -> FilterRule:
+        if self.operator == "is_null" and not isinstance(self.value, bool):
+            raise ValueError("Value for 'is_null' operator must be true or false")
+        return self
+
 
 class SearchRequest(BaseModel):
     pagination: PaginationRequest = Field(default_factory=PaginationRequest)

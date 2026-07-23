@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Generic, TypeVar
 
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, func, inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 
@@ -38,6 +38,22 @@ class SearchResult(Generic[M]):
         return self.page > 1
 
 
+def _get_mapped_columns(model: type[M]) -> frozenset[str]:
+    mapper = inspect(model)
+    return frozenset(mapper.column_attrs.keys())
+
+
+def _get_primary_key(model: type[M]) -> str:
+    mapper = inspect(model)
+    pk = mapper.primary_key[0]
+    assert pk is not None
+    return str(pk.key)
+
+
+def _is_mapped_column(model: type[M], field: str) -> bool:
+    return field in _get_mapped_columns(model)
+
+
 def apply_pagination(
     stmt: Select[tuple[M]], page: int, page_size: int
 ) -> Select[tuple[M]]:
@@ -49,10 +65,10 @@ def apply_pagination(
 def apply_sorting(
     stmt: Select[tuple[M]], model: type[M], sort: SortRequest
 ) -> Select[tuple[M]]:
-    column = getattr(model, sort.sort_by, None)
-    if column is None:
+    if not _is_mapped_column(model, sort.sort_by):
         msg = f"Invalid sort field: {sort.sort_by}"
         raise ValueError(msg)
+    column = getattr(model, sort.sort_by)
     order = column.asc() if sort.sort_order == "asc" else column.desc()
     stmt = stmt.order_by(order)
     return stmt
@@ -61,10 +77,10 @@ def apply_sorting(
 def apply_filter(
     stmt: Select[tuple[M]], model: type[M], rule: FilterRule
 ) -> Select[tuple[M]]:
-    column = getattr(model, rule.field, None)
-    if column is None:
+    if not _is_mapped_column(model, rule.field):
         msg = f"Invalid filter field: {rule.field}"
         raise ValueError(msg)
+    column = getattr(model, rule.field)
 
     if rule.operator == "equals":
         return stmt.where(column == rule.value)
@@ -99,8 +115,7 @@ def apply_filters(
 def _validate_sort_by(
     model: type[M], sort_by: str
 ) -> None:
-    column = getattr(model, sort_by, None)
-    if column is None:
+    if not _is_mapped_column(model, sort_by):
         msg = f"Invalid sort field: {sort_by}"
         raise ValueError(msg)
 
@@ -108,8 +123,7 @@ def _validate_sort_by(
 def _validate_filter_field(
     model: type[M], field: str
 ) -> None:
-    column = getattr(model, field, None)
-    if column is None:
+    if not _is_mapped_column(model, field):
         msg = f"Invalid filter field: {field}"
         raise ValueError(msg)
 
@@ -120,6 +134,21 @@ def _validate_filter_value(
     if rule.operator == "in" and not isinstance(rule.value, list):
         msg = "Filter value for 'in' operator must be a list"
         raise TypeError(msg)
+
+
+def _ensure_deterministic_ordering(
+    stmt: Select[tuple[M]], model: type[M], sort: SortRequest | None
+) -> Select[tuple[M]]:
+    pk = _get_primary_key(model)
+    pk_column = getattr(model, pk)
+
+    if sort is None:
+        return stmt.order_by(pk_column.asc())
+
+    if sort.sort_by != pk:
+        stmt = stmt.order_by(pk_column.asc())
+
+    return stmt
 
 
 async def execute_search(
@@ -139,6 +168,8 @@ async def execute_search(
     if request.sort:
         _validate_sort_by(model, request.sort.sort_by)
         stmt = apply_sorting(stmt, model, request.sort)
+
+    stmt = _ensure_deterministic_ordering(stmt, model, request.sort)
 
     count_stmt = select(func.count()).select_from(stmt.subquery())
     total_count_result = await session.execute(count_stmt)
