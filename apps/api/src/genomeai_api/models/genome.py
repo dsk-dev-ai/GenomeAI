@@ -11,6 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from genomeai_api.database.base import Base
 
 if TYPE_CHECKING:
+    from genomeai_api.models.dataset import Dataset
     from genomeai_api.models.experiment import Experiment
     from genomeai_api.models.protein import Protein
     from genomeai_api.models.transcript import Transcript
@@ -30,6 +31,9 @@ class Genome(Base):
     source: Mapped[str | None] = mapped_column(String(100), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    datasets: Mapped[list[Dataset]] = relationship(
+        "Dataset", back_populates="genome"
+    )
     experiments: Mapped[list[Experiment]] = relationship(
         "Experiment", back_populates="genome"
     )
