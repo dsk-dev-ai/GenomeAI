@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from genomeai_api.exceptions import DuplicateExperimentError
+from genomeai_api.exceptions import DuplicateExperimentError, InvalidForeignKeyError
 from genomeai_api.models.experiment import Experiment
 from genomeai_api.schemas.experiment import ExperimentCreate, ExperimentUpdate
 
@@ -19,8 +19,11 @@ class ExperimentRepository:
         self, exc: IntegrityError
     ) -> None:
         orig = getattr(exc, "orig", None)
-        if getattr(orig, "sqlstate", None) == "23505":
+        sqlstate = getattr(orig, "sqlstate", None)
+        if sqlstate == "23505":
             raise DuplicateExperimentError from None
+        if sqlstate == "23503":
+            raise InvalidForeignKeyError from None
         raise
 
     async def create(self, data: ExperimentCreate) -> Experiment:

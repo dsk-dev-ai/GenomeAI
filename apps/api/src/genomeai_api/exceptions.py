@@ -57,3 +57,11 @@ class DuplicateExperimentError(ApplicationError):
             message="Experiment already exists",
             detail="An experiment with this experiment_id already exists in the database",
         )
+
+
+class InvalidForeignKeyError(ApplicationError):
+    def __init__(self) -> None:
+        super().__init__(
+            message="Invalid reference",
+            detail="A referenced entity does not exist in the database",
+        )

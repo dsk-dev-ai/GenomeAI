@@ -255,7 +255,7 @@ async def test_delete_found(
     result = await repository.delete(experiment_id)
 
     assert result is True
-    mock_session.delete.assert_called_once_with(existing)
+    mock_session.delete.assert_awaited_once_with(existing)
     mock_session.commit.assert_awaited_once()
 
 

@@ -18,6 +18,7 @@ from genomeai_api.exceptions import (
     DuplicateSampleError,
     DuplicateTranscriptError,
     DuplicateVariantError,
+    InvalidForeignKeyError,
 )
 from genomeai_api.routes.experiments import router as experiments_router
 from genomeai_api.routes.genes import router as genes_router
@@ -163,6 +164,17 @@ async def duplicate_experiment_handler(
 ) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(InvalidForeignKeyError)
+async def invalid_foreign_key_handler(
+    request: Request,
+    exc: InvalidForeignKeyError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
         content={"detail": str(exc)},
     )
 
