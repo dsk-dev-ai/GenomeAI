@@ -6,7 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from genomeai_api.dependencies import get_db_session
+from genomeai_api.models.experiment import Experiment
 from genomeai_api.repositories.experiment import ExperimentRepository
+from genomeai_api.routes.search import add_domain_search_routes
 from genomeai_api.schemas.experiment import (
     ExperimentCreate,
     ExperimentResponse,
@@ -76,3 +78,6 @@ async def delete_experiment(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Experiment not found"
         )
+
+
+add_domain_search_routes(router, Experiment, "experiments")

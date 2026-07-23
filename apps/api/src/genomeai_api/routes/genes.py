@@ -6,7 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from genomeai_api.dependencies import get_db_session
+from genomeai_api.models.gene import Gene
 from genomeai_api.repositories.gene import GeneRepository
+from genomeai_api.routes.search import add_domain_search_routes
 from genomeai_api.schemas.gene import GeneCreate, GeneResponse, GeneUpdate
 from genomeai_api.services.gene import GeneService
 
@@ -64,3 +66,6 @@ async def delete_gene(
     deleted = await service.delete(gene_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gene not found")
+
+
+add_domain_search_routes(router, Gene, "genes")

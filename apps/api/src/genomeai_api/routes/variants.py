@@ -6,7 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from genomeai_api.dependencies import get_db_session
+from genomeai_api.models.variant import Variant
 from genomeai_api.repositories.variant import VariantRepository
+from genomeai_api.routes.search import add_domain_search_routes
 from genomeai_api.schemas.variant import VariantCreate, VariantResponse, VariantUpdate
 from genomeai_api.services.variant import VariantService
 
@@ -66,3 +68,6 @@ async def delete_variant(
     deleted = await service.delete(variant_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Variant not found")
+
+
+add_domain_search_routes(router, Variant, "variants")

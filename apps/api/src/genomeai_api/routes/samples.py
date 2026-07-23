@@ -6,7 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from genomeai_api.dependencies import get_db_session
+from genomeai_api.models.sample import Sample
 from genomeai_api.repositories.sample import SampleRepository
+from genomeai_api.routes.search import add_domain_search_routes
 from genomeai_api.schemas.sample import SampleCreate, SampleResponse, SampleUpdate
 from genomeai_api.services.sample import SampleService
 
@@ -64,3 +66,6 @@ async def delete_sample(
     deleted = await service.delete(sample_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sample not found")
+
+
+add_domain_search_routes(router, Sample, "samples")

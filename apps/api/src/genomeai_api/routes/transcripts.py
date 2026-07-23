@@ -6,7 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from genomeai_api.dependencies import get_db_session
+from genomeai_api.models.transcript import Transcript
 from genomeai_api.repositories.transcript import TranscriptRepository
+from genomeai_api.routes.search import add_domain_search_routes
 from genomeai_api.schemas.transcript import (
     TranscriptCreate,
     TranscriptResponse,
@@ -76,3 +78,6 @@ async def delete_transcript(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Transcript not found"
         )
+
+
+add_domain_search_routes(router, Transcript, "transcripts")

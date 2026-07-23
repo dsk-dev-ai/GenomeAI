@@ -6,7 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from genomeai_api.dependencies import get_db_session
+from genomeai_api.models.protein import Protein
 from genomeai_api.repositories.protein import ProteinRepository
+from genomeai_api.routes.search import add_domain_search_routes
 from genomeai_api.schemas.protein import (
     ProteinCreate,
     ProteinResponse,
@@ -76,3 +78,6 @@ async def delete_protein(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Protein not found"
         )
+
+
+add_domain_search_routes(router, Protein, "proteins")
