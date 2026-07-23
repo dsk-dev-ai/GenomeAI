@@ -16,6 +16,7 @@ FilterOperator = Literal[
 SortOrder = Literal["asc", "desc"]
 
 QueryType = Literal["plain", "phrase", "websearch", "raw"]
+WeightType = Literal["A", "B", "C", "D"]
 
 
 class PaginationRequest(BaseModel):
@@ -73,7 +74,23 @@ class FullTextSearchConfig(BaseModel):
     config: str = "english"
     query_type: QueryType = "plain"
     columns: list[str] = Field(min_length=1)
-    weights: list[str] | None = None
+    weights: list[WeightType] | None = None
+
+    @model_validator(mode="after")
+    def reject_whitespace_query(self) -> FullTextSearchConfig:
+        if not self.query.strip():
+            raise ValueError("Search query must not be whitespace-only")
+        return self
+
+    @model_validator(mode="after")
+    def validate_weights_arity(self) -> FullTextSearchConfig:
+        if self.weights is not None and len(self.weights) != len(self.columns):
+            msg = (
+                f"Number of weights ({len(self.weights)}) must match"
+                f" number of columns ({len(self.columns)})"
+            )
+            raise ValueError(msg)
+        return self
 
 
 class FullTextSearchRequest(BaseModel):

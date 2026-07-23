@@ -9,6 +9,7 @@ from sqlalchemy.sql.expression import ColumnElement
 from genomeai_api.search.fts import (
     QueryType,
     TSConfig,
+    WeightType,
     build_tsquery,
     build_tsvector,
 )
@@ -31,7 +32,7 @@ def apply_fts_to_statement(
     search_query: str,
     query_type: QueryType = "plain",
     config: TSConfig | None = None,
-    weights: list[str] | None = None,
+    weights: list[WeightType] | None = None,
 ) -> Select[tuple[_M]]:
     column_elements = [getattr(model, col) for col in columns]
     vector = build_tsvector(column_elements, weights=weights, config=config)

@@ -62,19 +62,26 @@ stmt = apply_fts_to_statement(
 
 ## Indexes
 
-For production performance, create GIN indexes:
+For production performance, create GIN indexes on TSVECTOR expressions:
 
 ```python
-from genomeai_api.search.indexes import create_gin_index
+from genomeai_api.search.indexes import create_tsvector_index, create_tsvector_column
 
-idx = create_gin_index(
-    "ix_mytable_name_gin",
+# Create a computed TSVECTOR column in your migration
+tsv_col = create_tsvector_column(
+    "tsv",
+    "to_tsvector('english', coalesce(name, '') || ' ' || coalesce(description, ''))",
+)
+
+# Index the computed column with GIN
+idx = create_tsvector_index(
+    "ix_mytable_tsv_gin",
     "my_table",
-    "name",
+    "tsv",
 )
 ```
 
-Or use computed TSVECTOR columns:
+Or use computed TSVECTOR columns directly:
 
 ```python
 from genomeai_api.search.indexes import create_tsvector_column

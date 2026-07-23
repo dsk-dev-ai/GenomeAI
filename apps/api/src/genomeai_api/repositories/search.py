@@ -14,6 +14,7 @@ from genomeai_api.schemas.search import (
 )
 from genomeai_api.search.fts import (
     QueryType,
+    WeightType,
     build_tsquery,
     build_tsvector,
 )
@@ -232,10 +233,21 @@ async def execute_fts_search(
     fts_query: str,
     fts_config: str = "english",
     query_type: QueryType = "plain",
-    weights: list[str] | None = None,
+    weights: list[WeightType] | None = None,
     highlight_columns: list[str] | None = None,
     base_stmt: Select[tuple[M]] | None = None,
 ) -> FTSResult[M]:
+    for col in fts_columns:
+        if not _is_mapped_column(model, col):
+            msg = f"Invalid FTS column: {col}"
+            raise ValueError(msg)
+
+    if highlight_columns:
+        for col in highlight_columns:
+            if not _is_mapped_column(model, col):
+                msg = f"Invalid highlight column: {col}"
+                raise ValueError(msg)
+
     stmt: Select[tuple[M]] = base_stmt if base_stmt is not None else select(model)
 
     if request.filters:

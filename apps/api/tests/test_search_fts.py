@@ -16,6 +16,7 @@ from genomeai_api.schemas.search import (
     QueryType,
     RankedSearchResult,
     SearchRequest,
+    WeightType,
 )
 from genomeai_api.search.fts import build_tsquery, build_tsvector
 from genomeai_api.search.highlighting import apply_ts_headlines, build_ts_headline
@@ -578,3 +579,84 @@ class TestSearchServiceFTS:
         assert result.items == []
         assert result.ranks == []
         assert result.highlights == []
+
+
+class TestInvalidFTSColumns:
+    @pytest.mark.asyncio
+    async def test_invalid_fts_column_raises(self) -> None:
+        session = AsyncMock(spec=["execute"])
+        request = SearchRequest()
+        with pytest.raises(ValueError, match="Invalid FTS column"):
+            await execute_fts_search(
+                session, Study, request,
+                fts_columns=["nonexistent"],
+                fts_query="cancer",
+            )
+
+    @pytest.mark.asyncio
+    async def test_invalid_highlight_column_raises(self) -> None:
+        session = AsyncMock(spec=["execute"])
+        request = SearchRequest()
+        with pytest.raises(ValueError, match="Invalid highlight column"):
+            await execute_fts_search(
+                session, Study, request,
+                fts_columns=["study_name"],
+                fts_query="cancer",
+                highlight_columns=["nonexistent"],
+            )
+
+
+class TestInvalidWeights:
+    def test_invalid_weight_value_raises(self) -> None:
+        with pytest.raises(ValueError, match="Invalid weight"):
+            build_tsvector([Study.study_name], weights=["X"])  # type: ignore[arg-type]
+
+    def test_weight_arity_mismatch_raises(self) -> None:
+        with pytest.raises(ValueError, match="Number of weights"):
+            build_tsvector([Study.study_name, Study.description], weights=["A"])
+
+    def test_schema_accepts_valid_weight_type(self) -> None:
+        w: WeightType = "A"
+        assert w == "A"
+        w = "D"
+        assert w == "D"
+
+    def test_schema_invalid_weight_arity(self) -> None:
+        with pytest.raises(ValueError, match="Number of weights"):
+            FullTextSearchConfig(
+                query="cancer",
+                columns=["study_name", "description"],
+                weights=["A"],
+            )
+
+
+class TestWhitespaceQuery:
+    def test_whitespace_only_query_raises_in_schema(self) -> None:
+        with pytest.raises(ValueError, match="whitespace-only"):
+            FullTextSearchConfig(query="   ", columns=["study_name"])
+
+    def test_query_with_leading_trailing_spaces_is_ok(self) -> None:
+        cfg = FullTextSearchConfig(
+            query="  cancer research  ",
+            columns=["study_name"],
+        )
+        assert cfg.query == "  cancer research  "
+
+    def test_whitespace_only_raises_in_build_tsquery(self) -> None:
+        with pytest.raises(ValueError, match="empty"):
+            build_tsquery("   ")
+
+
+class TestNullableColumns:
+    def test_coalesce_added_for_single_column(self) -> None:
+        vec = build_tsvector([Study.study_name])
+        compiled = str(vec.compile(compile_kwargs={"literal_binds": True}))
+        assert "coalesce" in compiled
+        assert "study_name" in compiled
+
+    def test_coalesce_added_for_multiple_columns(self) -> None:
+        vec = build_tsvector([Study.study_name, Study.description])
+        compiled = str(vec.compile(compile_kwargs={"literal_binds": True}))
+        assert "coalesce" in compiled
+        assert "study_name" in compiled
+        assert "description" in compiled
