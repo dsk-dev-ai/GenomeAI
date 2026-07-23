@@ -13,6 +13,7 @@ from genomeai_api.database.base import Base
 if TYPE_CHECKING:
     from genomeai_api.models.dataset import Dataset
     from genomeai_api.models.experiment import Experiment
+    from genomeai_api.models.project import Project
     from genomeai_api.models.protein import Protein
     from genomeai_api.models.study import Study
     from genomeai_api.models.transcript import Transcript
@@ -43,6 +44,9 @@ class Genome(Base):
     )
     transcripts: Mapped[list[Transcript]] = relationship(
         "Transcript", back_populates="genome"
+    )
+    projects: Mapped[list[Project]] = relationship(
+        "Project", back_populates="genome"
     )
     proteins: Mapped[list[Protein]] = relationship(
         "Protein", back_populates="genome"
