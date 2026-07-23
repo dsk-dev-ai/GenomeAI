@@ -12,6 +12,14 @@ from genomeai_api.schemas.search import (
     SearchRequest,
     SortRequest,
 )
+from genomeai_api.search.fts import (
+    QueryType,
+    build_tsquery,
+    build_tsvector,
+)
+from genomeai_api.search.highlighting import apply_ts_headlines
+from genomeai_api.search.query import apply_fts_filter
+from genomeai_api.search.ranking import apply_ts_rank, order_by_rank_desc
 
 M = TypeVar("M", bound=DeclarativeBase)
 
@@ -189,4 +197,115 @@ async def execute_search(
         total_count=total_count,
         page=request.pagination.page,
         page_size=request.pagination.page_size,
+    )
+
+
+@dataclass
+class FTSResult(Generic[M]):
+    items: list[M] = field(default_factory=list)
+    total_count: int = 0
+    page: int = 1
+    page_size: int = 20
+    ranks: list[float] | None = None
+    highlights: list[list[tuple[str, str]]] | None = None
+
+    @property
+    def total_pages(self) -> int:
+        if self.page_size == 0:
+            return 0
+        return max(1, -(-self.total_count // self.page_size))
+
+    @property
+    def has_next(self) -> bool:
+        return self.page < self.total_pages
+
+    @property
+    def has_previous(self) -> bool:
+        return self.page > 1
+
+
+async def execute_fts_search(
+    session: AsyncSession,
+    model: type[M],
+    request: SearchRequest,
+    fts_columns: list[str],
+    fts_query: str,
+    fts_config: str = "english",
+    query_type: QueryType = "plain",
+    weights: list[str] | None = None,
+    highlight_columns: list[str] | None = None,
+    base_stmt: Select[tuple[M]] | None = None,
+) -> FTSResult[M]:
+    stmt: Select[tuple[M]] = base_stmt if base_stmt is not None else select(model)
+
+    if request.filters:
+        for rule in request.filters:
+            _validate_filter_field(model, rule.field)
+            _validate_filter_value(rule)
+        stmt = apply_filters(stmt, model, request.filters)
+
+    column_elements = [getattr(model, col) for col in fts_columns]
+    vector = build_tsvector(column_elements, weights=weights, config=fts_config)
+    tsquery = build_tsquery(fts_query, query_type=query_type, config=fts_config)
+
+    stmt = apply_fts_filter(stmt, vector, tsquery)
+
+    rank_label = "_rank"
+    stmt = apply_ts_rank(stmt, vector, tsquery, label=rank_label, normalization=0)
+
+    if highlight_columns:
+        stmt = apply_ts_headlines(
+            stmt, model, highlight_columns, tsquery, config=fts_config,
+        )
+
+    if request.sort:
+        _validate_sort_by(model, request.sort.sort_by)
+        stmt = apply_sorting(stmt, model, request.sort)
+
+    stmt = order_by_rank_desc(stmt, rank_label=rank_label)
+    pk = _get_primary_key(model)
+    if request.sort is None or request.sort.sort_by != pk:
+        pk_column = getattr(model, pk)
+        stmt = stmt.order_by(pk_column.asc())
+
+    count_stmt = select(func.count()).select_from(stmt.subquery())
+    total_count_result = await session.execute(count_stmt)
+    total_count = total_count_result.scalar_one()
+
+    stmt = apply_pagination(
+        stmt,
+        request.pagination.page,
+        request.pagination.page_size,
+    )
+
+    result = await session.execute(stmt)
+    rows = result.all()
+
+    items = list[M]()
+    ranks = list[float]()
+    highlights: list[list[tuple[str, str]]] | None = (
+        [] if highlight_columns else None
+    )
+
+    for row in rows:
+        row_dict = row._mapping  # type: ignore[attr-defined]
+        model_instance = row_dict.get(model.__tablename__, row[0])
+        items.append(model_instance)
+        ranks.append(float(row_dict.get(rank_label, 0.0)))
+
+        if highlights is not None and highlight_columns:
+            row_highlights: list[tuple[str, str]] = []
+            for hc in highlight_columns:
+                hl_key = f"{hc}_highlight"
+                if hl_key in row_dict:
+                    row_highlights.append((hc, str(row_dict[hl_key])))
+            highlights.append(row_highlights)
+
+    return FTSResult[M](
+        items=items,
+        total_count=total_count,
+        page=request.pagination.page,
+        page_size=request.pagination.page_size,
+        ranks=ranks,
+        highlights=highlights,
     )
