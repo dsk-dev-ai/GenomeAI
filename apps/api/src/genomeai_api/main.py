@@ -11,6 +11,7 @@ from genomeai_logging import configure_logging, get_logger
 from genomeai_api.cache import create_redis, shutdown_redis, verify_redis
 from genomeai_api.database import create_engine, create_session_factory, dispose_engine
 from genomeai_api.exceptions import (
+    DuplicateExperimentError,
     DuplicateGeneError,
     DuplicateGenomeAccessionError,
     DuplicateProteinError,
@@ -18,6 +19,7 @@ from genomeai_api.exceptions import (
     DuplicateTranscriptError,
     DuplicateVariantError,
 )
+from genomeai_api.routes.experiments import router as experiments_router
 from genomeai_api.routes.genes import router as genes_router
 from genomeai_api.routes.genomes import router as genomes_router
 from genomeai_api.routes.health import router as health_router
@@ -89,6 +91,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.include_router(experiments_router)
 app.include_router(health_router)
 app.include_router(genomes_router)
 app.include_router(samples_router)
@@ -146,6 +149,17 @@ async def duplicate_variant_handler(
 async def duplicate_transcript_handler(
     request: Request,
     exc: DuplicateTranscriptError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(DuplicateExperimentError)
+async def duplicate_experiment_handler(
+    request: Request,
+    exc: DuplicateExperimentError,
 ) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,
