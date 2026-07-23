@@ -59,6 +59,14 @@ class DuplicateExperimentError(ApplicationError):
         )
 
 
+class DuplicateDatasetError(ApplicationError):
+    def __init__(self) -> None:
+        super().__init__(
+            message="Dataset already exists",
+            detail="A dataset with this dataset_id already exists in the database",
+        )
+
+
 class InvalidForeignKeyError(ApplicationError):
     def __init__(self) -> None:
         super().__init__(
