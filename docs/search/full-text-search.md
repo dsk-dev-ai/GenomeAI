@@ -62,9 +62,17 @@ stmt = apply_fts_to_statement(
 
 ## Indexes
 
-For production performance, create GIN expression indexes that match the runtime `to_tsvector()` call exactly.
+For production performance, create GIN expression indexes that exactly mirror the runtime `build_tsvector()` expression.
 
 ### Single-column expression index
+
+Runtime builds:
+
+```sql
+to_tsvector('english', coalesce(name, ''))
+```
+
+Create the matching index:
 
 ```sql
 CREATE INDEX ix_mytable_name_fts
@@ -74,40 +82,64 @@ USING GIN (to_tsvector('english', coalesce(name, '')));
 
 ### Multi-column expression index
 
+Runtime builds:
+
+```sql
+to_tsvector('english', coalesce(name, ''))
+||
+to_tsvector('english', coalesce(description, ''))
+```
+
+Create the matching index:
+
 ```sql
 CREATE INDEX ix_mytable_name_desc_fts
 ON my_table
-USING GIN (to_tsvector('english', coalesce(name, '') || ' ' || coalesce(description, '')));
+USING GIN (
+    to_tsvector('english', coalesce(name, ''))
+    ||
+    to_tsvector('english', coalesce(description, ''))
+);
 ```
 
-### Alembic migration helper
+### Weighted expression index
 
-Use Alembic's `op.create_index()` with `postgresql_using`:
+Runtime builds with weights:
+
+```sql
+setweight(to_tsvector('english', coalesce(name, '')), 'A')
+||
+setweight(to_tsvector('english', coalesce(description, '')), 'B')
+```
+
+Create the matching index:
+
+```sql
+CREATE INDEX ix_mytable_weighted_fts
+ON my_table
+USING GIN (
+    setweight(to_tsvector('english', coalesce(name, '')), 'A')
+    ||
+    setweight(to_tsvector('english', coalesce(description, '')), 'B')
+);
+```
+
+### Alembic migration example
 
 ```python
+import sqlalchemy as sa
 from alembic import op
+
 
 def upgrade() -> None:
     op.create_index(
         "ix_mytable_name_fts",
         "my_table",
-        [sa.text("to_tsvector('english', coalesce(name, ''))")],
+        [
+            sa.text(
+                "to_tsvector('english', coalesce(name, ''))"
+            ),
+        ],
         postgresql_using="gin",
     )
 ```
-
-### Index utility functions
-
-The `indexes` module provides helpers for creating GIN indexes on named columns:
-
-```python
-from genomeai_api.search.indexes import create_gin_index
-
-idx = create_gin_index(
-    "ix_mytable_name_gin",
-    "my_table",
-    "name",
-)
-```
-
-> **Note**: `create_gin_index` creates an index on a raw column, not a TSVECTOR expression. For FTS performance, prefer the expression index approach shown above using Alembic's `sa.text()`.
