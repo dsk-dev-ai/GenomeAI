@@ -6,28 +6,40 @@ from sqlalchemy import func
 from sqlalchemy.sql.expression import ColumnElement
 
 QueryType = Literal["plain", "phrase", "websearch", "raw"]
+WeightType = Literal["A", "B", "C", "D"]
 TSConfig = str
+
+_VALID_WEIGHTS: frozenset[str] = frozenset({"A", "B", "C", "D"})
 
 
 def build_tsvector(
     columns: list[ColumnElement[Any]],
-    weights: list[str] | None = None,
+    weights: list[WeightType] | None = None,
     config: TSConfig | None = None,
 ) -> ColumnElement[Any]:
     if not columns:
         msg = "At least one column is required to build a tsvector"
         raise ValueError(msg)
 
-    if weights and len(weights) != len(columns):
-        msg = "Number of weights must match number of columns"
-        raise ValueError(msg)
+    if weights is not None:
+        if len(weights) != len(columns):
+            msg = (
+                f"Number of weights ({len(weights)}) must match"
+                f" number of columns ({len(columns)})"
+            )
+            raise ValueError(msg)
+        for w in weights:
+            if w not in _VALID_WEIGHTS:
+                msg = f"Invalid weight '{w}'; must be one of {sorted(_VALID_WEIGHTS)}"
+                raise ValueError(msg)
 
     weighted_parts: list[ColumnElement[Any]] = []
     for i, col in enumerate(columns):
+        safe_col = func.coalesce(col, "")
         args: list[Any] = []
         if config:
             args.append(config)
-        args.append(col)
+        args.append(safe_col)
         tsvector = func.to_tsvector(*args)
         if weights:
             tsvector = func.setweight(tsvector, weights[i])
