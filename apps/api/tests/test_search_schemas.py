@@ -121,6 +121,32 @@ class TestFilterRule:
         f = FilterRule(field="description", operator="is_null", value=False)
         assert f.value is False
 
+    def test_is_null_rejects_missing_value(self) -> None:
+        with pytest.raises(ValidationError):
+            FilterRule(field="description", operator="is_null")
+
+    def test_is_null_rejects_string(self) -> None:
+        with pytest.raises(ValidationError):
+            FilterRule(field="description", operator="is_null", value="yes")
+
+    def test_is_null_rejects_number(self) -> None:
+        with pytest.raises(ValidationError):
+            FilterRule(field="description", operator="is_null", value=1)
+
+    def test_is_null_rejects_none(self) -> None:
+        with pytest.raises(ValidationError):
+            FilterRule(field="description", operator="is_null", value=None)
+
+    def test_is_null_rejects_empty_string(self) -> None:
+        with pytest.raises(ValidationError):
+            FilterRule(field="description", operator="is_null", value="")
+
+    def test_equals_still_allows_any_value(self) -> None:
+        f = FilterRule(field="status", operator="equals", value=None)
+        assert f.value is None
+        f2 = FilterRule(field="status", operator="equals", value="")
+        assert f2.value == ""
+
     def test_empty_field(self) -> None:
         with pytest.raises(ValidationError):
             FilterRule(field="", operator="equals", value="x")

@@ -6,6 +6,9 @@ import pytest
 from genomeai_api.models.study import Study
 from genomeai_api.repositories.search import (
     SearchResult,
+    _ensure_deterministic_ordering,
+    _get_primary_key,
+    _is_mapped_column,
     _validate_filter_field,
     _validate_filter_value,
     _validate_sort_by,
@@ -21,6 +24,78 @@ from genomeai_api.schemas.search import (
     SortRequest,
 )
 from sqlalchemy import select
+
+
+class TestMappedColumnValidation:
+    def test_valid_column_accepted(self) -> None:
+        assert _is_mapped_column(Study, "study_id") is True
+        assert _is_mapped_column(Study, "id") is True
+        assert _is_mapped_column(Study, "created_at") is True
+
+    def test_metadata_rejected(self) -> None:
+        assert _is_mapped_column(Study, "metadata") is False
+
+    def test_table_rejected(self) -> None:
+        assert _is_mapped_column(Study, "__table__") is False
+
+    def test_mapper_rejected(self) -> None:
+        assert _is_mapped_column(Study, "__mapper__") is False
+
+    def test_nonexistent_column_rejected(self) -> None:
+        assert _is_mapped_column(Study, "nonexistent") is False
+
+    def test_validate_sort_by_metadata_raises(self) -> None:
+        with pytest.raises(ValueError, match="Invalid sort field"):
+            _validate_sort_by(Study, "metadata")
+
+    def test_validate_filter_field_metadata_raises(self) -> None:
+        with pytest.raises(ValueError, match="Invalid filter field"):
+            _validate_filter_field(Study, "metadata")
+
+    def test_apply_sorting_metadata_raises(self) -> None:
+        stmt = select(Study)
+        sort = SortRequest(sort_by="metadata", sort_order="asc")
+        with pytest.raises(ValueError, match="Invalid sort field"):
+            apply_sorting(stmt, Study, sort)
+
+    def test_apply_filter_metadata_raises(self) -> None:
+        stmt = select(Study)
+        rule = FilterRule(field="metadata", operator="equals", value="x")
+        with pytest.raises(ValueError, match="Invalid filter field"):
+            apply_filter(stmt, Study, rule)
+
+
+class TestDeterministicOrdering:
+    def test_get_primary_key(self) -> None:
+        pk = _get_primary_key(Study)
+        assert pk == "id"
+
+    def test_no_sort_adds_pk_asc(self) -> None:
+        stmt = select(Study)
+        result = _ensure_deterministic_ordering(stmt, Study, None)
+        compiled = str(result.compile(compile_kwargs={"literal_binds": True}))
+        assert "ORDER BY" in compiled.upper()
+        assert "studies.id" in compiled
+        assert "ASC" in compiled.upper()
+
+    def test_sort_adds_pk_as_tie_breaker(self) -> None:
+        stmt = select(Study)
+        sort = SortRequest(sort_by="study_id", sort_order="desc")
+        result = _ensure_deterministic_ordering(stmt, Study, sort)
+        compiled = str(result.compile(compile_kwargs={"literal_binds": True}))
+        assert "studies.study_id" in compiled
+        assert "DESC" in compiled.upper()
+        assert "studies.id" in compiled
+        assert "ASC" in compiled.upper()
+
+    def test_sort_by_pk_does_not_duplicate(self) -> None:
+        stmt = select(Study)
+        sort = SortRequest(sort_by="id", sort_order="asc")
+        with_sort = apply_sorting(stmt, Study, sort)
+        result = _ensure_deterministic_ordering(with_sort, Study, sort)
+        compiled = str(result.compile(compile_kwargs={"literal_binds": True}))
+        order_count = compiled.upper().count("ASC")
+        assert order_count == 1
 
 
 class TestSearchResult:
