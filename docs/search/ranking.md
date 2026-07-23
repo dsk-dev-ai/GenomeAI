@@ -34,7 +34,7 @@ stmt = apply_ts_rank_cd(stmt, vector, query, label="rank", normalization=0)
 | `4` | Divide by mean harmonic distance |
 | `8` | Divide by number of unique words |
 | `16` | Divide by 1 + log(number of unique words) |
-| `32` | Divide by document length + 1 |
+| `32` | `rank / (rank + 1)` |
 
 Combine via bitwise OR: `1 | 4` = `5`
 

@@ -62,32 +62,84 @@ stmt = apply_fts_to_statement(
 
 ## Indexes
 
-For production performance, create GIN indexes on TSVECTOR expressions:
+For production performance, create GIN expression indexes that exactly mirror the runtime `build_tsvector()` expression.
 
-```python
-from genomeai_api.search.indexes import create_tsvector_index, create_tsvector_column
+### Single-column expression index
 
-# Create a computed TSVECTOR column in your migration
-tsv_col = create_tsvector_column(
-    "tsv",
-    "to_tsvector('english', coalesce(name, '') || ' ' || coalesce(description, ''))",
-)
+Runtime builds:
 
-# Index the computed column with GIN
-idx = create_tsvector_index(
-    "ix_mytable_tsv_gin",
-    "my_table",
-    "tsv",
-)
+```sql
+to_tsvector('english', coalesce(name, ''))
 ```
 
-Or use computed TSVECTOR columns directly:
+Create the matching index:
+
+```sql
+CREATE INDEX ix_mytable_name_fts
+ON my_table
+USING GIN (to_tsvector('english', coalesce(name, '')));
+```
+
+### Multi-column expression index
+
+Runtime builds:
+
+```sql
+to_tsvector('english', coalesce(name, ''))
+||
+to_tsvector('english', coalesce(description, ''))
+```
+
+Create the matching index:
+
+```sql
+CREATE INDEX ix_mytable_name_desc_fts
+ON my_table
+USING GIN (
+    to_tsvector('english', coalesce(name, ''))
+    ||
+    to_tsvector('english', coalesce(description, ''))
+);
+```
+
+### Weighted expression index
+
+Runtime builds with weights:
+
+```sql
+setweight(to_tsvector('english', coalesce(name, '')), 'A')
+||
+setweight(to_tsvector('english', coalesce(description, '')), 'B')
+```
+
+Create the matching index:
+
+```sql
+CREATE INDEX ix_mytable_weighted_fts
+ON my_table
+USING GIN (
+    setweight(to_tsvector('english', coalesce(name, '')), 'A')
+    ||
+    setweight(to_tsvector('english', coalesce(description, '')), 'B')
+);
+```
+
+### Alembic migration example
 
 ```python
-from genomeai_api.search.indexes import create_tsvector_column
+import sqlalchemy as sa
+from alembic import op
 
-col = create_tsvector_column(
-    "tsv",
-    "to_tsvector('english', coalesce(name, '') || ' ' || coalesce(description, ''))",
-)
+
+def upgrade() -> None:
+    op.create_index(
+        "ix_mytable_name_fts",
+        "my_table",
+        [
+            sa.text(
+                "to_tsvector('english', coalesce(name, ''))"
+            ),
+        ],
+        postgresql_using="gin",
+    )
 ```

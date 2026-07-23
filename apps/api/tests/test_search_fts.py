@@ -605,6 +605,95 @@ class TestInvalidFTSColumns:
                 highlight_columns=["nonexistent"],
             )
 
+    @pytest.mark.asyncio
+    async def test_non_text_fts_column_raises(self) -> None:
+        session = AsyncMock(spec=["execute"])
+        request = SearchRequest()
+        with pytest.raises(ValueError, match="Invalid FTS column"):
+            await execute_fts_search(
+                session, Study, request,
+                fts_columns=["id"],
+                fts_query="cancer",
+            )
+
+    @pytest.mark.asyncio
+    async def test_non_text_fts_column_uuid_raises(self) -> None:
+        session = AsyncMock(spec=["execute"])
+        request = SearchRequest()
+        with pytest.raises(ValueError, match="Invalid FTS column"):
+            await execute_fts_search(
+                session, Study, request,
+                fts_columns=["genome_id"],
+                fts_query="cancer",
+            )
+
+    @pytest.mark.asyncio
+    async def test_non_text_fts_column_date_raises(self) -> None:
+        session = AsyncMock(spec=["execute"])
+        request = SearchRequest()
+        with pytest.raises(ValueError, match="Invalid FTS column"):
+            await execute_fts_search(
+                session, Study, request,
+                fts_columns=["start_date"],
+                fts_query="cancer",
+            )
+
+    @pytest.mark.asyncio
+    async def test_non_text_highlight_column_raises(self) -> None:
+        session = AsyncMock(spec=["execute"])
+        request = SearchRequest()
+        with pytest.raises(ValueError, match="Invalid highlight column"):
+            await execute_fts_search(
+                session, Study, request,
+                fts_columns=["study_name"],
+                fts_query="cancer",
+                highlight_columns=["id"],
+            )
+
+    @pytest.mark.asyncio
+    async def test_text_columns_accepted(self) -> None:
+        session = AsyncMock(spec=["execute"])
+
+        count_result = MagicMock()
+        count_result.scalar_one.return_value = 0
+
+        session.execute = AsyncMock(
+            side_effect=[
+                count_result,
+                MagicMock(all=MagicMock(return_value=[])),
+            ]
+        )
+
+        request = SearchRequest()
+        result = await execute_fts_search(
+            session, Study, request,
+            fts_columns=["study_name", "description"],
+            fts_query="cancer",
+        )
+        assert result.total_count == 0
+
+    @pytest.mark.asyncio
+    async def test_text_columns_with_string_type(self) -> None:
+        session = AsyncMock(spec=["execute"])
+
+        count_result = MagicMock()
+        count_result.scalar_one.return_value = 0
+
+        session.execute = AsyncMock(
+            side_effect=[
+                count_result,
+                MagicMock(all=MagicMock(return_value=[])),
+            ]
+        )
+
+        request = SearchRequest()
+        result = await execute_fts_search(
+            session, Study, request,
+            fts_columns=["study_type"],
+            fts_query="cancer",
+        )
+        assert result.total_count == 0
+
 
 class TestInvalidWeights:
     def test_invalid_weight_value_raises(self) -> None:
