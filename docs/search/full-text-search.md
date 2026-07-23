@@ -62,32 +62,52 @@ stmt = apply_fts_to_statement(
 
 ## Indexes
 
-For production performance, create GIN indexes on TSVECTOR expressions:
+For production performance, create GIN expression indexes that match the runtime `to_tsvector()` call exactly.
+
+### Single-column expression index
+
+```sql
+CREATE INDEX ix_mytable_name_fts
+ON my_table
+USING GIN (to_tsvector('english', coalesce(name, '')));
+```
+
+### Multi-column expression index
+
+```sql
+CREATE INDEX ix_mytable_name_desc_fts
+ON my_table
+USING GIN (to_tsvector('english', coalesce(name, '') || ' ' || coalesce(description, '')));
+```
+
+### Alembic migration helper
+
+Use Alembic's `op.create_index()` with `postgresql_using`:
 
 ```python
-from genomeai_api.search.indexes import create_tsvector_index, create_tsvector_column
+from alembic import op
 
-# Create a computed TSVECTOR column in your migration
-tsv_col = create_tsvector_column(
-    "tsv",
-    "to_tsvector('english', coalesce(name, '') || ' ' || coalesce(description, ''))",
-)
+def upgrade() -> None:
+    op.create_index(
+        "ix_mytable_name_fts",
+        "my_table",
+        [sa.text("to_tsvector('english', coalesce(name, ''))")],
+        postgresql_using="gin",
+    )
+```
 
-# Index the computed column with GIN
-idx = create_tsvector_index(
-    "ix_mytable_tsv_gin",
+### Index utility functions
+
+The `indexes` module provides helpers for creating GIN indexes on named columns:
+
+```python
+from genomeai_api.search.indexes import create_gin_index
+
+idx = create_gin_index(
+    "ix_mytable_name_gin",
     "my_table",
-    "tsv",
+    "name",
 )
 ```
 
-Or use computed TSVECTOR columns directly:
-
-```python
-from genomeai_api.search.indexes import create_tsvector_column
-
-col = create_tsvector_column(
-    "tsv",
-    "to_tsvector('english', coalesce(name, '') || ' ' || coalesce(description, ''))",
-)
-```
+> **Note**: `create_gin_index` creates an index on a raw column, not a TSVECTOR expression. For FTS performance, prefer the expression index approach shown above using Alembic's `sa.text()`.

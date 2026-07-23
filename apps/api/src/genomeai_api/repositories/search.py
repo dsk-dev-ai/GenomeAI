@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Generic, TypeVar
 
-from sqlalchemy import Select, func, inspect, select
+from sqlalchemy import Select, func, inspect, select, types
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 
@@ -61,6 +61,13 @@ def _get_primary_key(model: type[M]) -> str:
 
 def _is_mapped_column(model: type[M], field: str) -> bool:
     return field in _get_mapped_columns(model)
+
+
+def _is_text_column(model: type[M], field: str) -> bool:
+    if not _is_mapped_column(model, field):
+        return False
+    column = getattr(model, field)
+    return isinstance(column.type, types.String)
 
 
 def apply_pagination(
@@ -238,13 +245,13 @@ async def execute_fts_search(
     base_stmt: Select[tuple[M]] | None = None,
 ) -> FTSResult[M]:
     for col in fts_columns:
-        if not _is_mapped_column(model, col):
+        if not _is_text_column(model, col):
             msg = f"Invalid FTS column: {col}"
             raise ValueError(msg)
 
     if highlight_columns:
         for col in highlight_columns:
-            if not _is_mapped_column(model, col):
+            if not _is_text_column(model, col):
                 msg = f"Invalid highlight column: {col}"
                 raise ValueError(msg)
 
