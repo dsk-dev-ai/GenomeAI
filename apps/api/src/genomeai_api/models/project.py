@@ -11,55 +11,48 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from genomeai_api.database.base import Base
 
 if TYPE_CHECKING:
-    from genomeai_api.models.dataset import Dataset
     from genomeai_api.models.genome import Genome
-    from genomeai_api.models.project import Project
+    from genomeai_api.models.study import Study
 
 
-class Study(Base):
-    __tablename__ = "studies"
+class Project(Base):
+    __tablename__ = "projects"
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
     )
-    study_id: Mapped[str] = mapped_column(
+    project_id: Mapped[str] = mapped_column(
         String(100), unique=True, nullable=False, index=True
     )
-    study_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    study_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    project_name: Mapped[str] = mapped_column(String(255), nullable=False)
     title: Mapped[str | None] = mapped_column(String(500), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    organism: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    institution: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    organization: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    owner: Mapped[str | None] = mapped_column(String(255), nullable=True)
     principal_investigator: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    publication: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    doi: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     start_date: Mapped[datetime | None] = mapped_column(Date, nullable=True)
     end_date: Mapped[datetime | None] = mapped_column(Date, nullable=True)
-    status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     genome_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("genomes.id"),
         nullable=True,
         index=True,
     )
-    dataset_id: Mapped[uuid.UUID | None] = mapped_column(
+    study_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("datasets.id"),
+        ForeignKey("studies.id"),
         nullable=True,
         index=True,
     )
 
     genome: Mapped[Genome | None] = relationship(
-        "Genome", back_populates="studies"
+        "Genome", back_populates="projects"
     )
-    dataset: Mapped[Dataset | None] = relationship(
-        "Dataset", back_populates="studies"
-    )
-    projects: Mapped[list[Project]] = relationship(
-        "Project", back_populates="study"
+    study: Mapped[Study | None] = relationship(
+        "Study", back_populates="projects"
     )
 
     created_at: Mapped[datetime] = mapped_column(

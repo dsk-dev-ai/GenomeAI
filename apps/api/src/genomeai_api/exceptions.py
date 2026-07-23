@@ -75,6 +75,14 @@ class DuplicateStudyError(ApplicationError):
         )
 
 
+class DuplicateProjectError(ApplicationError):
+    def __init__(self) -> None:
+        super().__init__(
+            message="Project already exists",
+            detail="A project with this project_id already exists in the database",
+        )
+
+
 class InvalidForeignKeyError(ApplicationError):
     def __init__(self) -> None:
         super().__init__(
