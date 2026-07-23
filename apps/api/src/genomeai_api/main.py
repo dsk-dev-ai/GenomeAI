@@ -17,6 +17,7 @@ from genomeai_api.exceptions import (
     DuplicateGenomeAccessionError,
     DuplicateProteinError,
     DuplicateSampleError,
+    DuplicateStudyError,
     DuplicateTranscriptError,
     DuplicateVariantError,
     InvalidForeignKeyError,
@@ -28,6 +29,7 @@ from genomeai_api.routes.genomes import router as genomes_router
 from genomeai_api.routes.health import router as health_router
 from genomeai_api.routes.proteins import router as proteins_router
 from genomeai_api.routes.samples import router as samples_router
+from genomeai_api.routes.studies import router as studies_router
 from genomeai_api.routes.transcripts import router as transcripts_router
 from genomeai_api.routes.variants import router as variants_router
 from genomeai_api.state import AppState
@@ -97,6 +99,7 @@ app = FastAPI(
 app.include_router(datasets_router)
 app.include_router(experiments_router)
 app.include_router(health_router)
+app.include_router(studies_router)
 app.include_router(genomes_router)
 app.include_router(samples_router)
 app.include_router(genes_router)
@@ -164,6 +167,17 @@ async def duplicate_transcript_handler(
 async def duplicate_dataset_handler(
     request: Request,
     exc: DuplicateDatasetError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(DuplicateStudyError)
+async def duplicate_study_handler(
+    request: Request,
+    exc: DuplicateStudyError,
 ) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,

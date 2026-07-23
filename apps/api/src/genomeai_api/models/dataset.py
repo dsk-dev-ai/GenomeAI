@@ -13,6 +13,7 @@ from genomeai_api.database.base import Base
 if TYPE_CHECKING:
     from genomeai_api.models.experiment import Experiment
     from genomeai_api.models.genome import Genome
+    from genomeai_api.models.study import Study
 
 
 class Dataset(Base):
@@ -49,6 +50,9 @@ class Dataset(Base):
         index=True,
     )
 
+    studies: Mapped[list[Study]] = relationship(
+        "Study", back_populates="dataset"
+    )
     genome: Mapped[Genome | None] = relationship(
         "Genome", back_populates="datasets"
     )

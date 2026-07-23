@@ -67,6 +67,14 @@ class DuplicateDatasetError(ApplicationError):
         )
 
 
+class DuplicateStudyError(ApplicationError):
+    def __init__(self) -> None:
+        super().__init__(
+            message="Study already exists",
+            detail="A study with this study_id already exists in the database",
+        )
+
+
 class InvalidForeignKeyError(ApplicationError):
     def __init__(self) -> None:
         super().__init__(
