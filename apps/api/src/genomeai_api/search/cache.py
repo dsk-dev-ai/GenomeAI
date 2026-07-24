@@ -46,7 +46,7 @@ class MemoryCache(SuggestionCache):
         entry = self._store.get(key)
         if entry is None:
             return None
-        if time.time() >= entry.expires_at:
+        if time.monotonic() >= entry.expires_at:
             del self._store[key]
             return None
         return entry.suggestions
@@ -54,7 +54,7 @@ class MemoryCache(SuggestionCache):
     def set(self, key: str, suggestions: list[SuggestionItem], ttl: int) -> None:
         self._store[key] = SuggestionCacheEntry(
             suggestions=suggestions,
-            expires_at=time.time() + ttl,
+            expires_at=time.monotonic() + ttl,
         )
 
     def invalidate(self, key: str) -> None:

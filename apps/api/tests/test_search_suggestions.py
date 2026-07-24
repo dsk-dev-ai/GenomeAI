@@ -113,30 +113,30 @@ class TestMemoryCache:
     def test_expired_entry_returns_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
         cache = MemoryCache()
         fake_now = 1000.0
-        monkeypatch.setattr(time, "time", lambda: fake_now)
+        monkeypatch.setattr(time, "monotonic", lambda: fake_now)
 
         cache.set("k", [_make_item("val")], ttl=10)
         assert cache.get("k") is not None
 
         fake_now = 1100.0
-        monkeypatch.setattr(time, "time", lambda: fake_now)
+        monkeypatch.setattr(time, "monotonic", lambda: fake_now)
         assert cache.get("k") is None
 
     def test_expired_entry_removed_from_store(self, monkeypatch: pytest.MonkeyPatch) -> None:
         cache = MemoryCache()
         fake_now = 1000.0
-        monkeypatch.setattr(time, "time", lambda: fake_now)
+        monkeypatch.setattr(time, "monotonic", lambda: fake_now)
 
         cache.set("k", [_make_item("val")], ttl=10)
         fake_now = 1100.0
-        monkeypatch.setattr(time, "time", lambda: fake_now)
+        monkeypatch.setattr(time, "monotonic", lambda: fake_now)
         cache.get("k")
         assert "k" not in cache._store
 
     def test_valid_entry_survives_after_get(self, monkeypatch: pytest.MonkeyPatch) -> None:
         cache = MemoryCache()
         fake_now = 1000.0
-        monkeypatch.setattr(time, "time", lambda: fake_now)
+        monkeypatch.setattr(time, "monotonic", lambda: fake_now)
 
         items = [_make_item("survivor")]
         cache.set("k", items, ttl=60)
@@ -146,15 +146,15 @@ class TestMemoryCache:
     def test_set_overwrites_old_ttl(self, monkeypatch: pytest.MonkeyPatch) -> None:
         cache = MemoryCache()
         fake_now = 1000.0
-        monkeypatch.setattr(time, "time", lambda: fake_now)
+        monkeypatch.setattr(time, "monotonic", lambda: fake_now)
 
         cache.set("k", [_make_item("old")], ttl=10)
         fake_now = 1005.0
-        monkeypatch.setattr(time, "time", lambda: fake_now)
+        monkeypatch.setattr(time, "monotonic", lambda: fake_now)
         cache.set("k", [_make_item("new")], ttl=20)
 
         fake_now = 1012.0
-        monkeypatch.setattr(time, "time", lambda: fake_now)
+        monkeypatch.setattr(time, "monotonic", lambda: fake_now)
         # first entry would have expired (1000+10=1010), second is still valid (1005+20=1025)
         assert cache.get("k") is not None
 
