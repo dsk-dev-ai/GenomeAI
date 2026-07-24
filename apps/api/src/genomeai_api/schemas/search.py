@@ -162,3 +162,38 @@ class SuggestionResponse(BaseModel):
     suggestions: list[SuggestionItem]
     count: int
     query: str
+
+
+CoordinateMatchTypeLiteral = Literal[
+    "exact", "contains", "contained_by", "overlap", "range"
+]
+
+
+class CoordinateIntervalModel(BaseModel):
+    chromosome: str = Field(min_length=1)
+    start: int = Field(ge=0)
+    end: int = Field(ge=0)
+
+    @model_validator(mode="after")
+    def validate_start_end(self) -> CoordinateIntervalModel:
+        if self.start > self.end:
+            msg = f"Start ({self.start}) must not exceed end ({self.end})"
+            raise ValueError(msg)
+        return self
+
+
+class CoordinateSearchRequest(BaseModel):
+    interval: CoordinateIntervalModel
+    match_type: CoordinateMatchTypeLiteral = "overlap"
+    pagination: PaginationRequest = Field(default_factory=PaginationRequest)
+    sort: SortRequest | None = None
+    filters: list[FilterRule] | None = None
+    advanced_filters: AdvancedFilterGroup | None = None
+    chromosome_column: str = "chromosome"
+    start_column: str = "start_position"
+    end_column: str = "end_position"
+
+
+class CoordinateSearchResponse(BaseModel):
+    items: list[Any]
+    pagination: PaginationResponse
