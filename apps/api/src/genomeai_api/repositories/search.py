@@ -13,6 +13,7 @@ from genomeai_api.schemas.search import (
     SearchRequest,
     SortRequest,
 )
+from genomeai_api.search.autocomplete import build_prefix_query
 from genomeai_api.search.expressions import (
     GroupExpression,
     LeafExpression,
@@ -385,3 +386,15 @@ async def execute_fts_search(
         ranks=ranks,
         highlights=highlights,
     )
+
+
+async def execute_suggestions(
+    session: AsyncSession,
+    model: type[M],
+    column_name: str,
+    query: str,
+    limit: int,
+) -> list[str]:
+    stmt = build_prefix_query(model, column_name, query, limit)
+    result = await session.execute(stmt)
+    return [row[0] for row in result.all()]

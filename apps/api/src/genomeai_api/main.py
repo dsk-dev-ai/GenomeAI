@@ -31,6 +31,7 @@ from genomeai_api.routes.health import router as health_router
 from genomeai_api.routes.projects import router as projects_router
 from genomeai_api.routes.proteins import router as proteins_router
 from genomeai_api.routes.samples import router as samples_router
+from genomeai_api.routes.search import router as search_router
 from genomeai_api.routes.studies import router as studies_router
 from genomeai_api.routes.transcripts import router as transcripts_router
 from genomeai_api.routes.variants import router as variants_router
@@ -102,6 +103,7 @@ app.include_router(datasets_router)
 app.include_router(experiments_router)
 app.include_router(health_router)
 app.include_router(projects_router)
+app.include_router(search_router)
 app.include_router(studies_router)
 app.include_router(genomes_router)
 app.include_router(samples_router)

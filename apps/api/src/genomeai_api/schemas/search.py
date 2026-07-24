@@ -145,3 +145,20 @@ class FullTextSearchResponse(BaseModel):
     pagination: PaginationResponse
     ranks: list[float] | None = None
     highlights: list[list[HighlightedMatch]] | None = None
+
+
+SuggestionMatchTypeLiteral = Literal["exact", "prefix", "alphabetical"]
+
+
+class SuggestionItem(BaseModel):
+    domain: str
+    field: str
+    value: str
+    rank: int
+    match_type: SuggestionMatchTypeLiteral
+
+
+class SuggestionResponse(BaseModel):
+    suggestions: list[SuggestionItem]
+    count: int
+    query: str
