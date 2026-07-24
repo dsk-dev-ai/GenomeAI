@@ -13,6 +13,25 @@ FilterOperator = Literal[
     "is_null",
 ]
 
+AdvancedFilterOperator = Literal[
+    "equals",
+    "not_equals",
+    "greater_than",
+    "greater_than_or_equal",
+    "less_than",
+    "less_than_or_equal",
+    "between",
+    "in",
+    "not_in",
+    "is_null",
+    "is_not_null",
+    "like",
+    "ilike",
+    "starts_with",
+    "ends_with",
+    "contains",
+]
+
 SortOrder = Literal["asc", "desc"]
 
 QueryType = Literal["plain", "phrase", "websearch", "raw"]
@@ -50,10 +69,23 @@ class FilterRule(BaseModel):
         return self
 
 
+class AdvancedFilterRule(BaseModel):
+    field: str = Field(min_length=1)
+    operator: AdvancedFilterOperator
+    value: Any = None
+
+
+class AdvancedFilterGroup(BaseModel):
+    connector: Literal["AND", "OR"] = "AND"
+    children: list[AdvancedFilterRule | AdvancedFilterGroup]
+    negated: bool = False
+
+
 class SearchRequest(BaseModel):
     pagination: PaginationRequest = Field(default_factory=PaginationRequest)
     sort: SortRequest | None = None
     filters: list[FilterRule] | None = None
+    advanced_filters: AdvancedFilterGroup | None = None
 
     @model_validator(mode="before")
     @classmethod
