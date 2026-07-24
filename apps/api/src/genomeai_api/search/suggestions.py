@@ -29,7 +29,7 @@ def rank_suggestions(
     scored: list[Suggestion] = []
     seen: set[str] = set()
 
-    for rank, value in enumerate(values):
+    for value in values:
         if value in seen:
             continue
         seen.add(value)
@@ -45,7 +45,7 @@ def rank_suggestions(
                 domain=domain,
                 field=field,
                 value=value,
-                rank=rank,
+                rank=0,
                 match_type=match_type,
             )
         )

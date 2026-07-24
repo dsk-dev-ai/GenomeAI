@@ -111,12 +111,13 @@ class SearchService:
         domain: str = "study",
         cache: SuggestionCache | None = None,
     ) -> SuggestionResponse:
-        cache_key = suggestion_cache_key(domain, column_name, query, limit)
+        normalized_query = query.strip().lower()
+        cache_key = suggestion_cache_key(domain, column_name, normalized_query, limit)
         if cache is not None:
             cached = cache.get(cache_key)
             if cached is not None:
                 return SuggestionResponse(
-                    suggestions=[SuggestionItem(**s) for s in cached],
+                    suggestions=cached,
                     count=len(cached),
                     query=query,
                 )
@@ -129,19 +130,20 @@ class SearchService:
             limit,
         )
         ranked: list[Suggestion] = rank_suggestions(raw_values, query, domain, column_name)
-        items = [
-            SuggestionItem(
-                domain=s.domain,
-                field=s.field,
-                value=s.value,
-                rank=s.rank,
-                match_type=s.match_type.value,
+        items = list[SuggestionItem]()
+        for s in ranked:
+            items.append(
+                SuggestionItem(
+                    domain=s.domain,
+                    field=s.field,
+                    value=s.value,
+                    rank=s.rank,
+                    match_type=s.match_type.value,
+                )
             )
-            for s in ranked
-        ]
 
         if cache is not None:
-            cache.set(cache_key, [item.model_dump() for item in items], ttl=300)
+            cache.set(cache_key, items, ttl=300)
 
         return SuggestionResponse(
             suggestions=items,

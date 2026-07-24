@@ -50,38 +50,12 @@ DEFAULT_FIELDS: dict[str, str] = {
 SUPPORTED_DOMAINS: set[str] = set(DOMAIN_MAP.keys())
 
 
-def _validate_query(query: str) -> None:
-    if not query or not query.strip():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Query must be a non-empty string",
-        )
-    if len(query) > 200:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Query must not exceed 200 characters",
-        )
-
-
 def _validate_domain(domain: str) -> None:
     if domain not in SUPPORTED_DOMAINS:
         domains_list = ", ".join(sorted(SUPPORTED_DOMAINS))
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Unsupported domain '{domain}'. Supported domains: {domains_list}",
-        )
-
-
-def _validate_limit(limit: int) -> None:
-    if limit < 1:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Limit must be at least 1",
-        )
-    if limit > 100:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Limit must not exceed 100",
         )
 
 
@@ -93,9 +67,7 @@ async def get_suggestions(
     field: str | None = Query(default=None),
     session: AsyncSession = Depends(get_db_session),
 ) -> SuggestionResponse:
-    _validate_query(query)
     _validate_domain(domain)
-    _validate_limit(limit)
 
     model = DOMAIN_MAP[domain]
     resolved_field = field if field is not None else DEFAULT_FIELDS[domain]

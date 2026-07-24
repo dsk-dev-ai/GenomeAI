@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import time
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from genomeai_api.models.study import Study
+from genomeai_api.schemas.search import SuggestionItem
 from genomeai_api.search.autocomplete import build_prefix_query
 from genomeai_api.search.cache import (
     MemoryCache,
@@ -18,6 +20,16 @@ from genomeai_api.search.suggestions import (
 )
 from genomeai_api.services.search import SearchService
 from pydantic import ValidationError
+
+
+def _make_item(value: str = "brca1", match_type: str = "exact", rank: int = 0) -> SuggestionItem:
+    return SuggestionItem(
+        domain="study",
+        field="study_name",
+        value=value,
+        rank=rank,
+        match_type=match_type,
+    )
 
 
 class TestSuggestionCacheKey:
@@ -53,7 +65,7 @@ class TestNullCache:
 
     def test_set_does_not_store(self) -> None:
         cache = NullCache()
-        cache.set("key", [{"value": "test"}], 60)
+        cache.set("key", [_make_item()], 60)
         assert cache.get("key") is None
 
     def test_invalidate_does_not_crash(self) -> None:
@@ -65,9 +77,9 @@ class TestNullCache:
 class TestMemoryCache:
     def test_get_set_roundtrip(self) -> None:
         cache = MemoryCache()
-        data = [{"value": "brca1", "field": "gene_name"}]
-        cache.set("k", data, 60)
-        assert cache.get("k") == data
+        items = [_make_item("brca1")]
+        cache.set("k", items, 60)
+        assert cache.get("k") == items
 
     def test_get_missing_returns_none(self) -> None:
         cache = MemoryCache()
@@ -75,7 +87,7 @@ class TestMemoryCache:
 
     def test_invalidate_removes_entry(self) -> None:
         cache = MemoryCache()
-        cache.set("k", [{"value": "x"}], 60)
+        cache.set("k", [_make_item("x")], 60)
         cache.invalidate("k")
         assert cache.get("k") is None
 
@@ -85,15 +97,66 @@ class TestMemoryCache:
 
     def test_multiple_entries(self) -> None:
         cache = MemoryCache()
-        cache.set("a", [1], 60)
-        cache.set("b", [2], 60)
-        assert cache.get("a") == [1]
-        assert cache.get("b") == [2]
+        a = [_make_item("a")]
+        b = [_make_item("b")]
+        cache.set("a", a, 60)
+        cache.set("b", b, 60)
+        assert cache.get("a") == a
+        assert cache.get("b") == b
 
     def test_entry_type(self) -> None:
-        entry = SuggestionCacheEntry(suggestions=[{"value": "x"}], ttl=60)
-        assert entry.suggestions == [{"value": "x"}]
-        assert entry.ttl == 60
+        items = [_make_item("x")]
+        entry = SuggestionCacheEntry(suggestions=items, expires_at=1000.0)
+        assert entry.suggestions == items
+        assert entry.expires_at == 1000.0
+
+    def test_expired_entry_returns_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        cache = MemoryCache()
+        fake_now = 1000.0
+        monkeypatch.setattr(time, "time", lambda: fake_now)
+
+        cache.set("k", [_make_item("val")], ttl=10)
+        assert cache.get("k") is not None
+
+        fake_now = 1100.0
+        monkeypatch.setattr(time, "time", lambda: fake_now)
+        assert cache.get("k") is None
+
+    def test_expired_entry_removed_from_store(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        cache = MemoryCache()
+        fake_now = 1000.0
+        monkeypatch.setattr(time, "time", lambda: fake_now)
+
+        cache.set("k", [_make_item("val")], ttl=10)
+        fake_now = 1100.0
+        monkeypatch.setattr(time, "time", lambda: fake_now)
+        cache.get("k")
+        assert "k" not in cache._store
+
+    def test_valid_entry_survives_after_get(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        cache = MemoryCache()
+        fake_now = 1000.0
+        monkeypatch.setattr(time, "time", lambda: fake_now)
+
+        items = [_make_item("survivor")]
+        cache.set("k", items, ttl=60)
+        assert cache.get("k") == items
+        assert "k" in cache._store
+
+    def test_set_overwrites_old_ttl(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        cache = MemoryCache()
+        fake_now = 1000.0
+        monkeypatch.setattr(time, "time", lambda: fake_now)
+
+        cache.set("k", [_make_item("old")], ttl=10)
+        fake_now = 1005.0
+        monkeypatch.setattr(time, "time", lambda: fake_now)
+        cache.set("k", [_make_item("new")], ttl=20)
+
+        fake_now = 1012.0
+        monkeypatch.setattr(time, "time", lambda: fake_now)
+        # first entry would have expired (1000+10=1010), second is still valid (1005+20=1025)
+        assert cache.get("k") is not None
 
 
 class TestSuggestion:
@@ -178,6 +241,13 @@ class TestRankSuggestions:
         assert result[1].match_type == SuggestionMatchType.PREFIX
         assert result[2].match_type == SuggestionMatchType.ALPHABETICAL
 
+    def test_rank_sequence_after_sort(self) -> None:
+        values = ["zzz", "aaa", "brca"]
+        result = rank_suggestions(values, "brca", "gene", "gene_name")
+        assert result[0].rank == 0
+        assert result[1].rank == 1
+        assert result[2].rank == 2
+
 
 class TestBuildPrefixQuery:
     def test_creates_select_statement(self) -> None:
@@ -245,18 +315,17 @@ class TestSearchServiceSuggest:
         assert result.suggestions == []
 
     @pytest.mark.asyncio
-    async def test_suggest_with_cache(self) -> None:
+    async def test_suggest_with_cache_hit(self) -> None:
         session = AsyncMock(spec=["execute"])
         cache = MemoryCache()
 
-        data = [{
-            "domain": "study",
-            "field": "study_name",
-            "value": "cancer",
-            "rank": 0,
-            "match_type": "exact",
-        }]
-        cache.set("suggest:study:study_name:cancer:10", data, 60)
+        items = [
+            SuggestionItem(
+                domain="study", field="study_name", value="cancer",
+                rank=0, match_type="exact",
+            ),
+        ]
+        cache.set("suggest:study:study_name:cancer:10", items, 60)
 
         service = SearchService(session)
         result = await service.suggest(
@@ -270,6 +339,32 @@ class TestSearchServiceSuggest:
         assert result.count == 1
         assert result.suggestions[0].value == "cancer"
         session.execute.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_suggest_cache_miss_then_write(self) -> None:
+        session = AsyncMock(spec=["execute"])
+
+        scalar_result = MagicMock()
+        scalar_result.all.return_value = [("brca1",)]
+        session.execute = AsyncMock(return_value=scalar_result)
+
+        cache = MemoryCache()
+        service = SearchService(session)
+        result = await service.suggest(
+            model=Study,
+            column_name="study_name",
+            query="brca1",
+            limit=10,
+            domain="study",
+            cache=cache,
+        )
+        assert result.count == 1
+
+        cached = cache.get("suggest:study:study_name:brca1:10")
+        assert cached is not None
+        assert len(cached) == 1
+        assert cached[0].value == "brca1"
+        assert cached[0].domain == "study"
 
     @pytest.mark.asyncio
     async def test_suggest_uses_null_cache_by_default(self) -> None:
@@ -290,12 +385,42 @@ class TestSearchServiceSuggest:
         )
         assert result.count == 1
         assert result.suggestions[0].value == "brca1"
+        session.execute.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_suggest_cache_key_normalized(self) -> None:
+        session = AsyncMock(spec=["execute"])
+
+        scalar_result = MagicMock()
+        scalar_result.all.return_value = [("brca1",)]
+        session.execute = AsyncMock(return_value=scalar_result)
+
+        cache = MemoryCache()
+        service = SearchService(session)
+        result_upper = await service.suggest(
+            model=Study,
+            column_name="study_name",
+            query="  BRCA1  ",
+            limit=10,
+            domain="study",
+            cache=cache,
+        )
+        result_lower = await service.suggest(
+            model=Study,
+            column_name="study_name",
+            query="brca1",
+            limit=10,
+            domain="study",
+            cache=cache,
+        )
+        assert result_upper.query == "  BRCA1  "
+        assert result_lower.query == "brca1"
+        assert result_upper.suggestions == result_lower.suggestions
+        session.execute.assert_called_once()
 
 
 class TestSuggestionSchemas:
     def test_suggestion_item_required_fields(self) -> None:
-        from genomeai_api.schemas.search import SuggestionItem
-
         item = SuggestionItem(
             domain="study",
             field="study_name",
@@ -308,8 +433,6 @@ class TestSuggestionSchemas:
         assert item.match_type == "exact"
 
     def test_suggestion_item_invalid_match_type(self) -> None:
-        from genomeai_api.schemas.search import SuggestionItem
-
         with pytest.raises(ValidationError):
             SuggestionItem(
                 domain="study",
@@ -320,17 +443,12 @@ class TestSuggestionSchemas:
             )
 
     def test_suggestion_response(self) -> None:
-        from genomeai_api.schemas.search import SuggestionItem, SuggestionResponse
+        from genomeai_api.schemas.search import SuggestionResponse
 
-        items = [
-            SuggestionItem(
-                domain="study",
-                field="study_name",
-                value="cancer",
-                rank=0,
-                match_type="exact",
-            ),
-        ]
+        items = [SuggestionItem(
+            domain="study", field="study_name", value="cancer",
+            rank=0, match_type="exact",
+        )]
         response = SuggestionResponse(suggestions=items, count=1, query="cancer")
         assert response.count == 1
         assert response.query == "cancer"
@@ -344,17 +462,12 @@ class TestSuggestionSchemas:
         assert response.suggestions == []
 
     def test_suggestion_response_serialization(self) -> None:
-        from genomeai_api.schemas.search import SuggestionItem, SuggestionResponse
+        from genomeai_api.schemas.search import SuggestionResponse
 
-        items = [
-            SuggestionItem(
-                domain="study",
-                field="study_name",
-                value="brca",
-                rank=0,
-                match_type="prefix",
-            ),
-        ]
+        items = [SuggestionItem(
+            domain="study", field="study_name", value="brca",
+            rank=0, match_type="prefix",
+        )]
         response = SuggestionResponse(suggestions=items, count=1, query="brca")
         dumped = response.model_dump()
         assert dumped["query"] == "brca"
