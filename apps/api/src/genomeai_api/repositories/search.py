@@ -8,9 +8,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 
 from genomeai_api.schemas.search import (
+    AdvancedFilterGroup,
     FilterRule,
     SearchRequest,
     SortRequest,
+)
+from genomeai_api.search.expressions import (
+    GroupExpression,
+    LeafExpression,
 )
 from genomeai_api.search.fts import (
     QueryType,
@@ -19,8 +24,16 @@ from genomeai_api.search.fts import (
     build_tsvector,
 )
 from genomeai_api.search.highlighting import apply_ts_headlines
+from genomeai_api.search.operators import (
+    Operator,
+)
 from genomeai_api.search.query import apply_fts_filter
+from genomeai_api.search.query_builder import build_clause
 from genomeai_api.search.ranking import apply_ts_rank, order_by_rank_desc
+from genomeai_api.search.validation import (
+    ValidationError,
+    validate_expression,
+)
 
 M = TypeVar("M", bound=DeclarativeBase)
 
@@ -128,6 +141,44 @@ def apply_filters(
     return stmt
 
 
+def _convert_to_expression(
+    group: AdvancedFilterGroup,
+) -> GroupExpression:
+    children: list[LeafExpression | GroupExpression] = []
+    for child in group.children:
+        if isinstance(child, AdvancedFilterGroup):
+            children.append(_convert_to_expression(child))
+        else:
+            try:
+                operator = Operator(child.operator)
+            except ValueError:
+                msg = f"Invalid operator: {child.operator}"
+                raise ValidationError(msg)
+            children.append(
+                LeafExpression(
+                    field=child.field,
+                    operator=operator,
+                    value=child.value,
+                )
+            )
+    return GroupExpression(
+        connector=group.connector,
+        children=tuple(children),
+        negated=group.negated,
+    )
+
+
+def apply_advanced_filters(
+    stmt: Select[tuple[M]],
+    model: type[M],
+    advanced_filters: AdvancedFilterGroup,
+) -> Select[tuple[M]]:
+    expr = _convert_to_expression(advanced_filters)
+    validate_expression(model, expr)
+    clause = build_clause(model, expr)
+    return stmt.where(clause)
+
+
 def _validate_sort_by(
     model: type[M], sort_by: str
 ) -> None:
@@ -180,6 +231,9 @@ async def execute_search(
             _validate_filter_field(model, rule.field)
             _validate_filter_value(rule)
         stmt = apply_filters(stmt, model, request.filters)
+
+    if request.advanced_filters:
+        stmt = apply_advanced_filters(stmt, model, request.advanced_filters)
 
     if request.sort:
         _validate_sort_by(model, request.sort.sort_by)
@@ -262,6 +316,9 @@ async def execute_fts_search(
             _validate_filter_field(model, rule.field)
             _validate_filter_value(rule)
         stmt = apply_filters(stmt, model, request.filters)
+
+    if request.advanced_filters:
+        stmt = apply_advanced_filters(stmt, model, request.advanced_filters)
 
     column_elements = [getattr(model, col) for col in fts_columns]
     vector = build_tsvector(column_elements, weights=weights, config=fts_config)
