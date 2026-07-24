@@ -8,6 +8,21 @@ from genomeai_api.search.cache import (
     SuggestionCacheEntry,
     suggestion_cache_key,
 )
+from genomeai_api.search.coordinate_intervals import (
+    apply_coordinate_filter,
+)
+from genomeai_api.search.coordinate_types import (
+    CoordinateInterval,
+    CoordinateMatchType,
+)
+from genomeai_api.search.coordinate_validation import (
+    SUPPORTED_COORDINATE_MATCH_TYPES,
+    validate_chromosome,
+    validate_coordinate,
+    validate_coordinate_request,
+    validate_interval,
+    validate_match_type,
+)
 from genomeai_api.search.expressions import (
     GroupExpression,
     LeafExpression,
@@ -66,6 +81,7 @@ from genomeai_api.search.validation import (
 
 __all__ = [
     "ALL_OPERATORS",
+    "apply_coordinate_filter",
     "apply_fts_filter",
     "apply_fts_to_statement",
     "apply_ts_headlines",
@@ -77,6 +93,8 @@ __all__ = [
     "build_tsquery",
     "build_tsvector",
     "COMPARISON_OPERATORS",
+    "CoordinateInterval",
+    "CoordinateMatchType",
     "count_expressions",
     "create_gin_index",
     "create_tsvector_column",
@@ -96,14 +114,20 @@ __all__ = [
     "RANGE_OPERATORS",
     "SET_OPERATORS",
     "STRING_OPERATORS",
+    "SUPPORTED_COORDINATE_MATCH_TYPES",
     "Suggestion",
     "SuggestionCache",
     "SuggestionCacheEntry",
     "SuggestionMatchType",
     "suggestion_cache_key",
     "rank_suggestions",
+    "validate_chromosome",
+    "validate_coordinate",
+    "validate_coordinate_request",
     "validate_expression",
     "validate_field_name",
+    "validate_interval",
+    "validate_match_type",
     "validate_operator_value",
     "ValidationError",
 ]

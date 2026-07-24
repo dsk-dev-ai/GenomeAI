@@ -11,6 +11,9 @@ from genomeai_api.repositories.search import (
     SearchResult,
 )
 from genomeai_api.repositories.search import (
+    execute_coordinate_search as _execute_coordinate_search,
+)
+from genomeai_api.repositories.search import (
     execute_fts_search as _execute_fts_search,
 )
 from genomeai_api.repositories.search import (
@@ -20,6 +23,8 @@ from genomeai_api.repositories.search import (
     execute_suggestions as _execute_suggestions,
 )
 from genomeai_api.schemas.search import (
+    CoordinateSearchRequest,
+    CoordinateSearchResponse,
     FullTextSearchConfig,
     FullTextSearchResponse,
     HighlightedMatch,
@@ -149,4 +154,25 @@ class SearchService:
             suggestions=items,
             count=len(items),
             query=query,
+        )
+
+    async def coordinate_search(
+        self,
+        model: type[M],
+        request: CoordinateSearchRequest,
+        base_stmt: Select[tuple[M]] | None = None,
+    ) -> CoordinateSearchResponse:
+        result: SearchResult[M] = await _execute_coordinate_search(
+            self._session, model, request, base_stmt
+        )
+        return CoordinateSearchResponse(
+            items=result.items,
+            pagination=PaginationResponse(
+                page=result.page,
+                page_size=result.page_size,
+                total_count=result.total_count,
+                total_pages=result.total_pages,
+                has_next=result.has_next,
+                has_previous=result.has_previous,
+            ),
         )
