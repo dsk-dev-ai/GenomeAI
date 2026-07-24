@@ -16,6 +16,9 @@ from genomeai_api.repositories.search import (
 from genomeai_api.repositories.search import (
     execute_search as _execute_search,
 )
+from genomeai_api.repositories.search import (
+    execute_suggestions as _execute_suggestions,
+)
 from genomeai_api.schemas.search import (
     FullTextSearchConfig,
     FullTextSearchResponse,
@@ -23,7 +26,11 @@ from genomeai_api.schemas.search import (
     PaginationResponse,
     SearchRequest,
     SearchResponse,
+    SuggestionItem,
+    SuggestionResponse,
 )
+from genomeai_api.search.cache import SuggestionCache, suggestion_cache_key
+from genomeai_api.search.suggestions import Suggestion, rank_suggestions
 
 M = TypeVar("M", bound=DeclarativeBase)
 
@@ -93,4 +100,51 @@ class SearchService:
             ),
             ranks=fts_result.ranks,
             highlights=highlights,
+        )
+
+    async def suggest(
+        self,
+        model: type[M],
+        column_name: str,
+        query: str,
+        limit: int = 10,
+        domain: str = "study",
+        cache: SuggestionCache | None = None,
+    ) -> SuggestionResponse:
+        cache_key = suggestion_cache_key(domain, column_name, query, limit)
+        if cache is not None:
+            cached = cache.get(cache_key)
+            if cached is not None:
+                return SuggestionResponse(
+                    suggestions=[SuggestionItem(**s) for s in cached],
+                    count=len(cached),
+                    query=query,
+                )
+
+        raw_values = await _execute_suggestions(
+            self._session,
+            model,
+            column_name,
+            query,
+            limit,
+        )
+        ranked: list[Suggestion] = rank_suggestions(raw_values, query, domain, column_name)
+        items = [
+            SuggestionItem(
+                domain=s.domain,
+                field=s.field,
+                value=s.value,
+                rank=s.rank,
+                match_type=s.match_type.value,
+            )
+            for s in ranked
+        ]
+
+        if cache is not None:
+            cache.set(cache_key, [item.model_dump() for item in items], ttl=300)
+
+        return SuggestionResponse(
+            suggestions=items,
+            count=len(items),
+            query=query,
         )

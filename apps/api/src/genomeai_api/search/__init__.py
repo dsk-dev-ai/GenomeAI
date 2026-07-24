@@ -1,3 +1,13 @@
+from genomeai_api.search.autocomplete import (
+    build_prefix_query,
+)
+from genomeai_api.search.cache import (
+    MemoryCache,
+    NullCache,
+    SuggestionCache,
+    SuggestionCacheEntry,
+    suggestion_cache_key,
+)
 from genomeai_api.search.expressions import (
     GroupExpression,
     LeafExpression,
@@ -40,6 +50,11 @@ from genomeai_api.search.ranking import (
     apply_ts_rank_cd,
     order_by_rank_desc,
 )
+from genomeai_api.search.suggestions import (
+    Suggestion,
+    SuggestionMatchType,
+    rank_suggestions,
+)
 from genomeai_api.search.validation import (
     MAX_EXPRESSIONS,
     MAX_RECURSION_DEPTH,
@@ -57,6 +72,7 @@ __all__ = [
     "apply_ts_rank",
     "apply_ts_rank_cd",
     "build_clause",
+    "build_prefix_query",
     "build_ts_headline",
     "build_tsquery",
     "build_tsvector",
@@ -70,7 +86,9 @@ __all__ = [
     "MAX_EXPRESSIONS",
     "MAX_RECURSION_DEPTH",
     "max_depth",
+    "MemoryCache",
     "NULL_OPERATORS",
+    "NullCache",
     "OPERATORS_REQUIRING_LIST",
     "OPERATORS_REQUIRING_NO_VALUE",
     "Operator",
@@ -78,6 +96,12 @@ __all__ = [
     "RANGE_OPERATORS",
     "SET_OPERATORS",
     "STRING_OPERATORS",
+    "Suggestion",
+    "SuggestionCache",
+    "SuggestionCacheEntry",
+    "SuggestionMatchType",
+    "suggestion_cache_key",
+    "rank_suggestions",
     "validate_expression",
     "validate_field_name",
     "validate_operator_value",
