@@ -8,8 +8,6 @@ from sqlalchemy.orm import DeclarativeBase
 from genomeai_api.search.expressions import (
     GroupExpression,
     LeafExpression,
-    count_expressions,
-    max_depth,
 )
 from genomeai_api.search.operators import (
     OPERATORS_REQUIRING_LIST,
@@ -101,13 +99,3 @@ def validate_expression(
         validate_leaf(model, expr)
     else:
         validate_group(model, expr)
-
-    actual_depth = max_depth(expr)
-    if actual_depth > MAX_RECURSION_DEPTH:
-        msg = f"Expression depth ({actual_depth}) exceeds maximum ({MAX_RECURSION_DEPTH})"
-        raise ValidationError(msg)
-
-    actual_count = count_expressions(expr)
-    if actual_count > MAX_EXPRESSIONS:
-        msg = f"Expression count ({actual_count}) exceeds maximum ({MAX_EXPRESSIONS})"
-        raise ValidationError(msg)

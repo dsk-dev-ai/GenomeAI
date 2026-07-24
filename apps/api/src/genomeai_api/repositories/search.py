@@ -30,7 +30,10 @@ from genomeai_api.search.operators import (
 from genomeai_api.search.query import apply_fts_filter
 from genomeai_api.search.query_builder import build_clause
 from genomeai_api.search.ranking import apply_ts_rank, order_by_rank_desc
-from genomeai_api.search.validation import validate_expression
+from genomeai_api.search.validation import (
+    ValidationError,
+    validate_expression,
+)
 
 M = TypeVar("M", bound=DeclarativeBase)
 
@@ -146,10 +149,15 @@ def _convert_to_expression(
         if isinstance(child, AdvancedFilterGroup):
             children.append(_convert_to_expression(child))
         else:
+            try:
+                operator = Operator(child.operator)
+            except ValueError:
+                msg = f"Invalid operator: {child.operator}"
+                raise ValidationError(msg)
             children.append(
                 LeafExpression(
                     field=child.field,
-                    operator=Operator(child.operator),
+                    operator=operator,
                     value=child.value,
                 )
             )

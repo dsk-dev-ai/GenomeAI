@@ -8,6 +8,7 @@ from genomeai_api.models.study import Study
 from genomeai_api.repositories.search import (
     _convert_to_expression,
     apply_advanced_filters,
+    execute_fts_search,
     execute_search,
 )
 from genomeai_api.schemas.search import (
@@ -971,6 +972,27 @@ class TestApplyAdvancedFilters:
         with pytest.raises(ValidationError, match="requires a list"):
             apply_advanced_filters(stmt, Study, adv)
 
+    def test_recursion_depth_overflow_rejected(self) -> None:
+        stmt = select(Study)
+        deep: AdvancedFilterRule | AdvancedFilterGroup = AdvancedFilterRule(
+            field="study_name", operator="equals", value="x"
+        )
+        limit = MAX_RECURSION_DEPTH + 2
+        for _ in range(limit):
+            deep = AdvancedFilterGroup(connector="AND", children=[deep])
+        with pytest.raises(ValidationError, match="recursion|depth|exceeded"):
+            apply_advanced_filters(stmt, Study, deep)  # type: ignore[arg-type]
+
+    def test_expression_count_overflow_rejected(self) -> None:
+        stmt = select(Study)
+        leaves = [
+            AdvancedFilterRule(field="study_name", operator="equals", value=str(i))
+            for i in range(MAX_EXPRESSIONS + 5)
+        ]
+        big = AdvancedFilterGroup(connector="AND", children=leaves)
+        with pytest.raises(ValidationError, match="exceeded"):
+            apply_advanced_filters(stmt, Study, big)
+
 
 class TestExecuteSearchWithAdvancedFilters:
     @pytest.mark.asyncio
@@ -1127,3 +1149,104 @@ class TestExecuteSearchWithAdvancedFilters:
         )
         result = await execute_search(session, Study, request, select(Study))
         assert result.total_count == 1
+
+
+class TestExecuteFTSSearchWithAdvancedFilters:
+    @pytest.mark.asyncio
+    async def test_advanced_filters_applied(self) -> None:
+        session = AsyncMock(spec=["execute"])
+
+        count_result = MagicMock()
+        count_result.scalar_one.return_value = 1
+
+        data_scalar = MagicMock()
+        data_scalar.all.return_value = ["item"]
+        data_result = MagicMock()
+        data_result.scalars.return_value = data_scalar
+
+        session.execute = AsyncMock(side_effect=[count_result, data_result])
+
+        request = SearchRequest(
+            advanced_filters=AdvancedFilterGroup(
+                connector="AND",
+                children=[
+                    AdvancedFilterRule(
+                        field="study_name", operator="equals", value="Test Study"
+                    )
+                ],
+            ),
+        )
+        result = await execute_fts_search(
+            session,
+            Study,
+            request,
+            fts_columns=["study_name", "description"],
+            fts_query="cancer",
+        )
+        assert result.total_count == 1
+
+    @pytest.mark.asyncio
+    async def test_with_sort(self) -> None:
+        session = AsyncMock(spec=["execute"])
+
+        count_result = MagicMock()
+        count_result.scalar_one.return_value = 2
+
+        data_scalar = MagicMock()
+        data_scalar.all.return_value = ["a", "b"]
+        data_result = MagicMock()
+        data_result.scalars.return_value = data_scalar
+
+        session.execute = AsyncMock(side_effect=[count_result, data_result])
+
+        request = SearchRequest(
+            sort=SortRequest(sort_by="study_name", sort_order="asc"),
+            advanced_filters=AdvancedFilterGroup(
+                connector="AND",
+                children=[
+                    AdvancedFilterRule(field="study_name", operator="is_not_null")
+                ],
+            ),
+        )
+        result = await execute_fts_search(
+            session,
+            Study,
+            request,
+            fts_columns=["study_name"],
+            fts_query="cancer",
+        )
+        assert result.total_count == 2
+
+    @pytest.mark.asyncio
+    async def test_with_pagination(self) -> None:
+        session = AsyncMock(spec=["execute"])
+
+        count_result = MagicMock()
+        count_result.scalar_one.return_value = 10
+
+        data_scalar = MagicMock()
+        data_scalar.all.return_value = ["a", "b"]
+        data_result = MagicMock()
+        data_result.scalars.return_value = data_scalar
+
+        session.execute = AsyncMock(side_effect=[count_result, data_result])
+
+        request = SearchRequest(
+            pagination=PaginationRequest(page=1, page_size=5),
+            advanced_filters=AdvancedFilterGroup(
+                connector="AND",
+                children=[
+                    AdvancedFilterRule(field="study_name", operator="is_not_null")
+                ],
+            ),
+        )
+        result = await execute_fts_search(
+            session,
+            Study,
+            request,
+            fts_columns=["study_name"],
+            fts_query="cancer",
+        )
+        assert result.page == 1
+        assert result.page_size == 5
+        assert result.total_count == 10
