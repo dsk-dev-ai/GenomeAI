@@ -14,6 +14,9 @@ from genomeai_api.repositories.search import (
     execute_coordinate_search as _execute_coordinate_search,
 )
 from genomeai_api.repositories.search import (
+    execute_dsl_search as _execute_dsl_search,
+)
+from genomeai_api.repositories.search import (
     execute_fts_search as _execute_fts_search,
 )
 from genomeai_api.repositories.search import (
@@ -39,9 +42,25 @@ from genomeai_api.schemas.search import (
 )
 from genomeai_api.search.cache import SuggestionCache, suggestion_cache_key
 from genomeai_api.search.domain_search import DomainSearchConfig
+from genomeai_api.search.dsl_compiler import compile_dsl
+from genomeai_api.search.dsl_types import DslSearchQuery
 from genomeai_api.search.suggestions import Suggestion, rank_suggestions
 
 M = TypeVar("M", bound=DeclarativeBase)
+
+
+def _to_search_response(result: SearchResult[M]) -> SearchResponse:
+    return SearchResponse(
+        items=result.items,
+        pagination=PaginationResponse(
+            page=result.page,
+            page_size=result.page_size,
+            total_count=result.total_count,
+            total_pages=result.total_pages,
+            has_next=result.has_next,
+            has_previous=result.has_previous,
+        ),
+    )
 
 
 class SearchService:
@@ -282,3 +301,20 @@ class SearchService:
                 has_previous=result.has_previous,
             ),
         )
+
+    async def search_dsl(
+        self,
+        model: type[M],
+        request: DslSearchQuery,
+        base_stmt: Select[tuple[M]] | None = None,
+    ) -> SearchResponse:
+        dsl_expr = compile_dsl(request.where, model)
+        search_request = SearchRequest(
+            pagination=request.pagination,
+            sort=request.sort,
+            filters=request.filters,
+        )
+        result: SearchResult[M] = await _execute_dsl_search(
+            self._session, model, search_request, dsl_expr, base_stmt
+        )
+        return _to_search_response(result)

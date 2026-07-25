@@ -266,6 +266,52 @@ async def execute_search(
     )
 
 
+async def execute_dsl_search(
+    session: AsyncSession,
+    model: type[M],
+    request: SearchRequest,
+    dsl_expr: GroupExpression,
+    base_stmt: Select[tuple[M]] | None = None,
+) -> SearchResult[M]:
+    stmt: Select[tuple[M]] = base_stmt if base_stmt is not None else select(model)
+
+    if request.filters:
+        for rule in request.filters:
+            _validate_filter_field(model, rule.field)
+            _validate_filter_value(rule)
+        stmt = apply_filters(stmt, model, request.filters)
+
+    validate_expression(model, dsl_expr)
+    clause = build_clause(model, dsl_expr)
+    stmt = stmt.where(clause)
+
+    if request.sort:
+        _validate_sort_by(model, request.sort.sort_by)
+        stmt = apply_sorting(stmt, model, request.sort)
+
+    stmt = _ensure_deterministic_ordering(stmt, model, request.sort)
+
+    count_stmt = select(func.count()).select_from(stmt.subquery())
+    total_count_result = await session.execute(count_stmt)
+    total_count = total_count_result.scalar_one()
+
+    stmt = apply_pagination(
+        stmt,
+        request.pagination.page,
+        request.pagination.page_size,
+    )
+
+    result = await session.execute(stmt)
+    items: list[M] = list(result.scalars().all())
+
+    return SearchResult[M](
+        items=items,
+        total_count=total_count,
+        page=request.pagination.page,
+        page_size=request.pagination.page_size,
+    )
+
+
 @dataclass
 class FTSResult(Generic[M]):
     items: list[M] = field(default_factory=list)

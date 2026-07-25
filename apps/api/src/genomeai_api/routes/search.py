@@ -26,6 +26,8 @@ from genomeai_api.schemas.search import (
 )
 from genomeai_api.search.cache import NullCache
 from genomeai_api.search.domain_search import DOMAIN_SEARCH_CONFIGS
+from genomeai_api.search.dsl_types import DslSearchQuery
+from genomeai_api.search.validation import ValidationError as DslValidationError
 from genomeai_api.services.search import SearchService
 
 router = APIRouter(prefix="/search", tags=["search"])
@@ -109,6 +111,33 @@ async def search_domain(
     config = DOMAIN_SEARCH_CONFIGS[domain]
     service = SearchService(session)
     return await service.domain_search(config, request)
+
+
+@router.post("/dsl", response_model=SearchResponse)
+async def search_dsl(
+    request: DslSearchQuery,
+    session: AsyncSession = Depends(get_db_session),
+) -> SearchResponse:
+    service = SearchService(session)
+    return await service.search_dsl(Gene, request)
+
+
+@router.post("/{domain}/dsl", response_model=SearchResponse)
+async def search_domain_dsl(
+    domain: str,
+    request: DslSearchQuery,
+    session: AsyncSession = Depends(get_db_session),
+) -> SearchResponse:
+    _validate_domain(domain)
+    model = DOMAIN_MAP[domain]
+    service = SearchService(session)
+    try:
+        return await service.search_dsl(model, request)
+    except DslValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
 
 
 @router.post("/{domain}/fts", response_model=FullTextSearchResponse)

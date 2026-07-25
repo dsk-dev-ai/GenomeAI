@@ -37,6 +37,14 @@ from genomeai_api.search.domain_search import (
     VARIANT_SEARCH,
     DomainSearchConfig,
 )
+from genomeai_api.search.dsl_compiler import (
+    DSL_OP_MAP,
+    SUPPORTED_DSL_OPS,
+    compile_dsl,
+)
+from genomeai_api.search.dsl_types import (
+    DslSearchQuery,
+)
 from genomeai_api.search.expressions import (
     GroupExpression,
     LeafExpression,
@@ -157,4 +165,9 @@ __all__ = [
     "STUDY_SEARCH",
     "TRANSCRIPT_SEARCH",
     "VARIANT_SEARCH",
+    # DSL
+    "compile_dsl",
+    "DSL_OP_MAP",
+    "DslSearchQuery",
+    "SUPPORTED_DSL_OPS",
 ]
