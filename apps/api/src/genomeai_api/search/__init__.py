@@ -1,12 +1,28 @@
 from genomeai_api.search.autocomplete import (
     build_prefix_query,
 )
+from genomeai_api.search.backends.elasticsearch import (
+    ElasticsearchBackend,
+)
+from genomeai_api.search.backends.factory import (
+    create_backend,
+)
+from genomeai_api.search.backends.opensearch import (
+    OpenSearchBackend,
+)
+from genomeai_api.search.backends.postgres import (
+    PostgresBackend,
+)
 from genomeai_api.search.cache import (
     MemoryCache,
     NullCache,
     SuggestionCache,
     SuggestionCacheEntry,
     suggestion_cache_key,
+)
+from genomeai_api.search.config import (
+    BackendConfig,
+    load_backend_config,
 )
 from genomeai_api.search.coordinate_intervals import (
     apply_coordinate_filter,
@@ -59,10 +75,19 @@ from genomeai_api.search.highlighting import (
     apply_ts_headlines,
     build_ts_headline,
 )
+from genomeai_api.search.index_management import (
+    SUPPORTED_INDEX_TYPES,
+    create_index,
+    delete_index,
+    index_exists,
+)
 from genomeai_api.search.indexes import (
     create_gin_index,
     create_tsvector_column,
     create_tsvector_index,
+)
+from genomeai_api.search.interfaces import (
+    SearchBackend,
 )
 from genomeai_api.search.operators import (
     ALL_OPERATORS,
@@ -109,6 +134,7 @@ __all__ = [
     "apply_ts_headlines",
     "apply_ts_rank",
     "apply_ts_rank_cd",
+    "BackendConfig",
     "build_clause",
     "build_prefix_query",
     "build_ts_headline",
@@ -118,11 +144,17 @@ __all__ = [
     "CoordinateInterval",
     "CoordinateMatchType",
     "count_expressions",
+    "create_backend",
     "create_gin_index",
+    "create_index",
     "create_tsvector_column",
     "create_tsvector_index",
+    "delete_index",
+    "ElasticsearchBackend",
     "GroupExpression",
+    "index_exists",
     "LeafExpression",
+    "load_backend_config",
     "MAX_EXPRESSIONS",
     "MAX_RECURSION_DEPTH",
     "max_depth",
@@ -131,12 +163,16 @@ __all__ = [
     "NullCache",
     "OPERATORS_REQUIRING_LIST",
     "OPERATORS_REQUIRING_NO_VALUE",
+    "OpenSearchBackend",
     "Operator",
     "order_by_rank_desc",
+    "PostgresBackend",
     "RANGE_OPERATORS",
     "SET_OPERATORS",
+    "SearchBackend",
     "STRING_OPERATORS",
     "SUPPORTED_COORDINATE_MATCH_TYPES",
+    "SUPPORTED_INDEX_TYPES",
     "Suggestion",
     "SuggestionCache",
     "SuggestionCacheEntry",

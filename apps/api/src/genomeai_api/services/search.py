@@ -11,19 +11,7 @@ from genomeai_api.repositories.search import (
     SearchResult,
 )
 from genomeai_api.repositories.search import (
-    execute_coordinate_search as _execute_coordinate_search,
-)
-from genomeai_api.repositories.search import (
     execute_dsl_search as _execute_dsl_search,
-)
-from genomeai_api.repositories.search import (
-    execute_fts_search as _execute_fts_search,
-)
-from genomeai_api.repositories.search import (
-    execute_search as _execute_search,
-)
-from genomeai_api.repositories.search import (
-    execute_suggestions as _execute_suggestions,
 )
 from genomeai_api.schemas.search import (
     CoordinateSearchRequest,
@@ -40,10 +28,12 @@ from genomeai_api.schemas.search import (
     SuggestionItem,
     SuggestionResponse,
 )
+from genomeai_api.search.backends.postgres import PostgresBackend
 from genomeai_api.search.cache import SuggestionCache, suggestion_cache_key
 from genomeai_api.search.domain_search import DomainSearchConfig
 from genomeai_api.search.dsl_compiler import compile_dsl
 from genomeai_api.search.dsl_types import DslSearchQuery
+from genomeai_api.search.interfaces import SearchBackend
 from genomeai_api.search.suggestions import Suggestion, rank_suggestions
 
 M = TypeVar("M", bound=DeclarativeBase)
@@ -64,8 +54,13 @@ def _to_search_response(result: SearchResult[M]) -> SearchResponse:
 
 
 class SearchService:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        backend: SearchBackend | None = None,
+    ) -> None:
         self._session = session
+        self._backend = backend or PostgresBackend(session)
 
     async def search(
         self,
@@ -73,21 +68,10 @@ class SearchService:
         request: SearchRequest,
         base_stmt: Select[tuple[M]] | None = None,
     ) -> SearchResponse:
-        stmt = base_stmt if base_stmt is not None else select(model)
-        result: SearchResult[M] = await _execute_search(
-            self._session, model, request, stmt
+        result: SearchResult[M] = await self._backend.search(
+            model, request, base_stmt
         )
-        return SearchResponse(
-            items=result.items,
-            pagination=PaginationResponse(
-                page=result.page,
-                page_size=result.page_size,
-                total_count=result.total_count,
-                total_pages=result.total_pages,
-                has_next=result.has_next,
-                has_previous=result.has_previous,
-            ),
-        )
+        return _to_search_response(result)
 
     async def search_fts(
         self,
@@ -96,17 +80,8 @@ class SearchService:
         fts_config: FullTextSearchConfig,
         base_stmt: Select[tuple[M]] | None = None,
     ) -> FullTextSearchResponse:
-        fts_result: FTSResult[M] = await _execute_fts_search(
-            self._session,
-            model,
-            request,
-            fts_columns=fts_config.columns,
-            fts_query=fts_config.query,
-            fts_config=fts_config.config,
-            query_type=fts_config.query_type,
-            weights=fts_config.weights,
-            highlight_columns=fts_config.columns,
-            base_stmt=base_stmt,
+        fts_result: FTSResult[M] = await self._backend.search_fts(
+            model, request, fts_config, base_stmt
         )
 
         highlights: list[list[HighlightedMatch]] | None = None
@@ -156,20 +131,10 @@ class SearchService:
             filters=request.filters,
             advanced_filters=request.advanced_filters,
         )
-        result = await _execute_search(
-            self._session, model, search_request, stmt
+        result = await self._backend.search(
+            model, search_request, stmt
         )
-        return SearchResponse(
-            items=result.items,
-            pagination=PaginationResponse(
-                page=result.page,
-                page_size=result.page_size,
-                total_count=result.total_count,
-                total_pages=result.total_pages,
-                has_next=result.has_next,
-                has_previous=result.has_previous,
-            ),
-        )
+        return _to_search_response(result)
 
     async def domain_search_fts(
         self,
@@ -198,17 +163,8 @@ class SearchService:
             filters=request.filters,
             advanced_filters=request.advanced_filters,
         )
-        fts_result = await _execute_fts_search(
-            self._session,
-            model,
-            search_request,
-            fts_columns=fts_config.columns,
-            fts_query=fts_config.query,
-            fts_config=fts_config.config,
-            query_type=fts_config.query_type,
-            weights=fts_config.weights,
-            highlight_columns=fts_config.columns,
-            base_stmt=stmt,
+        fts_result = await self._backend.search_fts(
+            model, search_request, fts_config, stmt
         )
 
         highlights: list[list[HighlightedMatch]] | None = None
@@ -252,12 +208,8 @@ class SearchService:
                     query=query,
                 )
 
-        raw_values = await _execute_suggestions(
-            self._session,
-            model,
-            column_name,
-            query,
-            limit,
+        raw_values = await self._backend.suggest(
+            model, column_name, query, limit,
         )
         ranked: list[Suggestion] = rank_suggestions(raw_values, query, domain, column_name)
         items = list[SuggestionItem]()
@@ -287,8 +239,8 @@ class SearchService:
         request: CoordinateSearchRequest,
         base_stmt: Select[tuple[M]] | None = None,
     ) -> CoordinateSearchResponse:
-        result: SearchResult[M] = await _execute_coordinate_search(
-            self._session, model, request, base_stmt
+        result: SearchResult[M] = await self._backend.coordinate_search(
+            model, request, base_stmt
         )
         return CoordinateSearchResponse(
             items=result.items,
