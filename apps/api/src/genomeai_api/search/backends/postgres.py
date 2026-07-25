@@ -14,6 +14,9 @@ from genomeai_api.repositories.search import (
     execute_coordinate_search as _execute_coordinate_search,
 )
 from genomeai_api.repositories.search import (
+    execute_dsl_search as _execute_dsl_search,
+)
+from genomeai_api.repositories.search import (
     execute_fts_search as _execute_fts_search,
 )
 from genomeai_api.repositories.search import (
@@ -22,6 +25,9 @@ from genomeai_api.repositories.search import (
 from genomeai_api.repositories.search import (
     execute_suggestions as _execute_suggestions,
 )
+from genomeai_api.schemas.search import SearchRequest
+from genomeai_api.search.dsl_compiler import compile_dsl
+from genomeai_api.search.dsl_types import DslSearchQuery
 from genomeai_api.search.interfaces import SearchBackend
 
 
@@ -107,3 +113,20 @@ class PostgresBackend(SearchBackend):
     ) -> None:
         msg = "PostgresBackend does not support document indexing"
         raise NotImplementedError(msg)
+
+    async def search_dsl(
+        self,
+        model: type[DeclarativeBase],
+        request: DslSearchQuery,
+        base_stmt: Any = None,
+    ) -> SearchResult[Any]:
+        dsl_expr = compile_dsl(request.where, model)
+        search_request = SearchRequest(
+            pagination=request.pagination,
+            sort=request.sort,
+            filters=request.filters,
+        )
+        stmt = base_stmt if base_stmt is not None else select(model)
+        return await _execute_dsl_search(
+            self._session, model, search_request, dsl_expr, stmt
+        )

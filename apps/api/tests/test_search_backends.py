@@ -16,6 +16,7 @@ from genomeai_api.search.backends.opensearch import OpenSearchBackend
 from genomeai_api.search.backends.postgres import PostgresBackend
 from genomeai_api.search.config import BackendConfig
 from genomeai_api.search.index_management import (
+    INDEX_MAPPINGS,
     SUPPORTED_INDEX_TYPES,
     create_index,
     delete_index,
@@ -163,6 +164,28 @@ class TestPostgresBackend:
         assert healthy is False
 
     @pytest.mark.asyncio
+    async def test_search_dsl_delegates_to_repository(self) -> None:
+        session = AsyncMock(spec=["execute"])
+        backend = PostgresBackend(session)
+        from genomeai_api.schemas.search import PaginationRequest
+        from genomeai_api.search.dsl_types import DslSearchQuery
+
+        request = DslSearchQuery(
+            where={"field": "id", "op": "eq", "value": 1},
+            pagination=PaginationRequest(page=1, page_size=10),
+        )
+        with patch(
+            "genomeai_api.search.backends.postgres._execute_dsl_search",
+            new_callable=AsyncMock,
+        ) as mock_dsl:
+            mock_dsl.return_value = SearchResult(
+                items=["result"], total_count=1, page=1, page_size=10,
+            )
+            result = await backend.search_dsl(Study, request)
+            assert result.total_count == 1
+            mock_dsl.assert_awaited_once()
+
+    @pytest.mark.asyncio
     async def test_index_operations_raise_not_implemented(self) -> None:
         backend = PostgresBackend(AsyncMock())
         with pytest.raises(NotImplementedError):
@@ -236,6 +259,16 @@ class TestOpenSearchBackend:
         assert body[0]["index"]["_id"] == "1"
 
     @pytest.mark.asyncio
+    async def test_bulk_index_does_not_mutate_docs(self) -> None:
+        backend = OpenSearchBackend(index_prefix="test")
+        backend._client = MagicMock()
+        docs = [{"_id": "1", "name": "A"}]
+        original = list(docs)
+        await backend.bulk_index("study", docs)
+        assert docs == original  # caller's list unchanged
+        assert "_id" in docs[0]  # original doc not mutated
+
+    @pytest.mark.asyncio
     async def test_search_not_implemented(self) -> None:
         backend = OpenSearchBackend()
         with pytest.raises(NotImplementedError):
@@ -258,6 +291,12 @@ class TestOpenSearchBackend:
         backend = OpenSearchBackend()
         with pytest.raises(NotImplementedError):
             await backend.coordinate_search(object, object)
+
+    @pytest.mark.asyncio
+    async def test_search_dsl_not_implemented(self) -> None:
+        backend = OpenSearchBackend()
+        with pytest.raises(NotImplementedError):
+            await backend.search_dsl(object, object)
 
 
 class TestElasticsearchBackend:
@@ -316,6 +355,16 @@ class TestElasticsearchBackend:
         assert len(body) == 4
 
     @pytest.mark.asyncio
+    async def test_bulk_index_does_not_mutate_docs(self) -> None:
+        backend = ElasticsearchBackend(index_prefix="test")
+        backend._client = MagicMock()
+        docs = [{"_id": "1", "name": "A"}]
+        original = list(docs)
+        await backend.bulk_index("study", docs)
+        assert docs == original
+        assert "_id" in docs[0]
+
+    @pytest.mark.asyncio
     async def test_search_not_implemented(self) -> None:
         backend = ElasticsearchBackend()
         with pytest.raises(NotImplementedError):
@@ -326,6 +375,12 @@ class TestElasticsearchBackend:
         backend = ElasticsearchBackend()
         with pytest.raises(NotImplementedError):
             await backend.search_fts(object, object, object)
+
+    @pytest.mark.asyncio
+    async def test_search_dsl_not_implemented(self) -> None:
+        backend = ElasticsearchBackend()
+        with pytest.raises(NotImplementedError):
+            await backend.search_dsl(object, object)
 
 
 class TestBackendFactory:
@@ -362,6 +417,16 @@ class TestBackendFactory:
         assert isinstance(backend, ElasticsearchBackend)
         assert backend._index_prefix == "myapp"
 
+    def test_unknown_backend_raises(self) -> None:
+        config = BackendConfig(backend="unknown")
+        with pytest.raises(ValueError, match="Unknown backend.*unknown"):
+            create_backend(config)
+
+    def test_unknown_backend_raises_even_with_session(self) -> None:
+        config = BackendConfig(backend="unknown")
+        with pytest.raises(ValueError, match="Unknown backend.*unknown"):
+            create_backend(config, session=AsyncMock())
+
 
 class TestIndexManagement:
     @pytest.mark.asyncio
@@ -372,6 +437,15 @@ class TestIndexManagement:
         await create_index(backend, "study")
         mock_client.indices.create.assert_called_once()
         assert mock_client.indices.create.call_args[1]["index"] == "test_study"
+
+    @pytest.mark.asyncio
+    async def test_create_index_uses_per_type_mappings(self) -> None:
+        backend = OpenSearchBackend(index_prefix="test")
+        mock_client = MagicMock()
+        backend._client = mock_client
+        await create_index(backend, "gene")
+        body = mock_client.indices.create.call_args[1]["body"]
+        assert body["mappings"] == INDEX_MAPPINGS["gene"]
 
     @pytest.mark.asyncio
     async def test_create_index_with_custom_mappings(self) -> None:
@@ -420,6 +494,11 @@ class TestIndexManagement:
         assert "gene" in SUPPORTED_INDEX_TYPES
         assert "variant" in SUPPORTED_INDEX_TYPES
         assert len(SUPPORTED_INDEX_TYPES) == 10
+
+    def test_all_index_types_have_mappings(self) -> None:
+        for t in SUPPORTED_INDEX_TYPES:
+            assert t in INDEX_MAPPINGS
+            assert "properties" in INDEX_MAPPINGS[t]
 
 
 class TestSearchServiceWithBackend:

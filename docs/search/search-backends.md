@@ -11,8 +11,10 @@ SearchService
 SearchBackend (ABC)
     │
     ├── PostgresBackend (default)
-    ├── OpenSearchBackend (optional)
-    └── ElasticsearchBackend (optional)
+    └── _BaseSearchEngineBackend
+            │
+            ├── OpenSearchBackend (optional)
+            └── ElasticsearchBackend (optional)
 ```
 
 The `SearchService` accepts an optional `SearchBackend` instance. If none is provided, a `PostgresBackend` is created automatically, preserving the existing behavior.
@@ -32,6 +34,7 @@ All backends implement the `SearchBackend` ABC:
 | `update_document()` | Update an existing document |
 | `delete_document()` | Delete a document |
 | `bulk_index()` | Bulk index multiple documents |
+| `search_dsl()` | DSL-based structured search |
 
 ## Backends
 
@@ -66,7 +69,7 @@ Environment variables:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SEARCH_BACKEND` | `postgres` | Backend selection: `postgres`, `opensearch`, `elasticsearch` |
-| `SEARCH_URL` | `http://localhost:9200` | Backend server URL |
+| `SEARCH_URL` | `None` (defaults to `http://localhost:9200` per backend) | Backend server URL |
 | `SEARCH_USERNAME` | None | Authentication username |
 | `SEARCH_PASSWORD` | None | Authentication password |
 | `SEARCH_INDEX_PREFIX` | `genomeai` | Prefix for index names |

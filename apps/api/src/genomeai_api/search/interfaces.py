@@ -60,6 +60,14 @@ class SearchBackend(ABC):
         self, index: str, documents: list[dict[str, Any]]
     ) -> None: ...
 
+    @abstractmethod
+    async def search_dsl(
+        self,
+        model: type[Any],
+        request: Any,
+        base_stmt: Any = None,
+    ) -> Any: ...
+
 
 class SupportsHealthCheck(Protocol):
     async def health_check(self) -> bool: ...

@@ -10,9 +10,6 @@ from genomeai_api.repositories.search import (
     FTSResult,
     SearchResult,
 )
-from genomeai_api.repositories.search import (
-    execute_dsl_search as _execute_dsl_search,
-)
 from genomeai_api.schemas.search import (
     CoordinateSearchRequest,
     CoordinateSearchResponse,
@@ -31,7 +28,6 @@ from genomeai_api.schemas.search import (
 from genomeai_api.search.backends.postgres import PostgresBackend
 from genomeai_api.search.cache import SuggestionCache, suggestion_cache_key
 from genomeai_api.search.domain_search import DomainSearchConfig
-from genomeai_api.search.dsl_compiler import compile_dsl
 from genomeai_api.search.dsl_types import DslSearchQuery
 from genomeai_api.search.interfaces import SearchBackend
 from genomeai_api.search.suggestions import Suggestion, rank_suggestions
@@ -260,13 +256,8 @@ class SearchService:
         request: DslSearchQuery,
         base_stmt: Select[tuple[M]] | None = None,
     ) -> SearchResponse:
-        dsl_expr = compile_dsl(request.where, model)
-        search_request = SearchRequest(
-            pagination=request.pagination,
-            sort=request.sort,
-            filters=request.filters,
-        )
-        result: SearchResult[M] = await _execute_dsl_search(
-            self._session, model, search_request, dsl_expr, base_stmt
+        stmt = base_stmt if base_stmt is not None else select(model)
+        result: SearchResult[M] = await self._backend.search_dsl(
+            model, request, stmt
         )
         return _to_search_response(result)
