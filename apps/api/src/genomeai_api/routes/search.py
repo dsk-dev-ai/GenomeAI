@@ -56,7 +56,7 @@ DEFAULT_FIELDS: dict[str, str] = {
     "project": "project_name",
 }
 
-SUPPORTED_DOMAINS: set[str] = set(DOMAIN_MAP.keys())
+SUPPORTED_DOMAINS: set[str] = set(DOMAIN_SEARCH_CONFIGS.keys())
 
 
 def _validate_domain(domain: str) -> None:
@@ -119,6 +119,15 @@ async def search_domain_fts(
 ) -> FullTextSearchResponse:
     _validate_domain(domain)
     config = DOMAIN_SEARCH_CONFIGS[domain]
+    for col in request.fts.columns:
+        if col not in config.fts_fields:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Column '{col}' is not an FTS-searchable field for domain "
+                    f"'{domain}'. Allowed: {', '.join(config.fts_fields)}"
+                ),
+            )
     domain_request = DomainSearchRequest(
         pagination=request.search.pagination,
         sort=request.search.sort,
@@ -129,7 +138,7 @@ async def search_domain_fts(
     return await service.domain_search_fts(
         config,
         domain_request,
-        fts_query=request.fts.query,
+        fts_config=request.fts,
     )
 
 

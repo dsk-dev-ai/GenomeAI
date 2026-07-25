@@ -359,7 +359,14 @@ class TestSearchServiceDomainFTS:
 
         service = SearchService(session)
         request = DomainSearchRequest()
-        result = await service.domain_search_fts(GENE_SEARCH, request, fts_query="BRCA1")
+        result = await service.domain_search_fts(
+            GENE_SEARCH,
+            request,
+            fts_config=FullTextSearchConfig(
+                query="BRCA1",
+                columns=["gene_name", "description"],
+            ),
+        )
         assert result.pagination.total_count == 2
 
     @pytest.mark.asyncio
@@ -378,7 +385,14 @@ class TestSearchServiceDomainFTS:
 
         service = SearchService(session)
         request = DomainSearchRequest()
-        result = await service.domain_search_fts(PROTEIN_SEARCH, request, fts_query="kinase")
+        result = await service.domain_search_fts(
+            PROTEIN_SEARCH,
+            request,
+            fts_config=FullTextSearchConfig(
+                query="kinase",
+                columns=["protein_name", "description", "function"],
+            ),
+        )
         assert result.pagination.total_count == 1
 
     @pytest.mark.asyncio
@@ -397,7 +411,14 @@ class TestSearchServiceDomainFTS:
 
         service = SearchService(session)
         request = DomainSearchRequest()
-        result = await service.domain_search_fts(VARIANT_SEARCH, request, fts_query="rs123")
+        result = await service.domain_search_fts(
+            VARIANT_SEARCH,
+            request,
+            fts_config=FullTextSearchConfig(
+                query="rs123",
+                columns=["variant_id", "ref", "alt", "description"],
+            ),
+        )
         assert result.pagination.total_count == 3
 
     @pytest.mark.asyncio
@@ -418,7 +439,14 @@ class TestSearchServiceDomainFTS:
 
         service = SearchService(session)
         request = DomainSearchRequest()
-        result = await service.domain_search_fts(GENE_SEARCH, request, fts_query="BRCA")
+        result = await service.domain_search_fts(
+            GENE_SEARCH,
+            request,
+            fts_config=FullTextSearchConfig(
+                query="BRCA",
+                columns=["gene_name", "description"],
+            ),
+        )
         assert result.pagination.total_count == 1
         assert result.highlights is not None
         assert len(result.highlights) == 1
@@ -434,7 +462,14 @@ class TestSearchServiceDomainFTS:
 
         service = SearchService(session)
         request = DomainSearchRequest()
-        result = await service.domain_search_fts(GENE_SEARCH, request, fts_query="NONEXISTENT")
+        result = await service.domain_search_fts(
+            GENE_SEARCH,
+            request,
+            fts_config=FullTextSearchConfig(
+                query="NONEXISTENT",
+                columns=["gene_name", "description"],
+            ),
+        )
         assert result.pagination.total_count == 0
         assert len(result.items) == 0
 
@@ -456,7 +491,14 @@ class TestSearchServiceDomainFTS:
         request = DomainSearchRequest(
             filters=[FilterRule(field="biotype", operator="equals", value="protein_coding")],
         )
-        result = await service.domain_search_fts(GENE_SEARCH, request, fts_query="BRCA")
+        result = await service.domain_search_fts(
+            GENE_SEARCH,
+            request,
+            fts_config=FullTextSearchConfig(
+                query="BRCA",
+                columns=["gene_name", "description"],
+            ),
+        )
         assert result.pagination.total_count == 1
 
     @pytest.mark.asyncio
@@ -475,7 +517,14 @@ class TestSearchServiceDomainFTS:
 
         service = SearchService(session)
         request = DomainSearchRequest(q="BRCA")
-        result = await service.domain_search_fts(GENE_SEARCH, request, fts_query="BRCA1")
+        result = await service.domain_search_fts(
+            GENE_SEARCH,
+            request,
+            fts_config=FullTextSearchConfig(
+                query="BRCA1",
+                columns=["gene_name", "description"],
+            ),
+        )
         assert result.pagination.total_count == 1
 
 

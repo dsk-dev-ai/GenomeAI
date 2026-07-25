@@ -32,6 +32,8 @@ from genomeai_api.schemas.search import (
     PaginationResponse,
     SearchRequest,
     SearchResponse,
+    SortOrder,
+    SortRequest,
     SuggestionItem,
     SuggestionResponse,
 )
@@ -123,9 +125,15 @@ class SearchService:
                 for f in config.search_fields
             ]
             stmt = stmt.where(or_(*field_filters))
+        sort = request.sort
+        if sort is None and config.default_sort_field is not None:
+            sort = SortRequest(
+                sort_by=config.default_sort_field,
+                sort_order=cast(SortOrder, config.default_sort_order),
+            )
         search_request = SearchRequest(
             pagination=request.pagination,
-            sort=request.sort,
+            sort=sort,
             filters=request.filters,
             advanced_filters=request.advanced_filters,
         )
@@ -148,7 +156,7 @@ class SearchService:
         self,
         config: DomainSearchConfig,
         request: DomainSearchRequest,
-        fts_query: str,
+        fts_config: FullTextSearchConfig,
         base_stmt: Select[tuple[M]] | None = None,
     ) -> FullTextSearchResponse:
         model = cast(type[M], config.model)
@@ -159,15 +167,15 @@ class SearchService:
                 for f in config.search_fields
             ]
             stmt = stmt.where(or_(*field_filters))
-        fts_config = FullTextSearchConfig(
-            query=fts_query,
-            config=config.fts_config,
-            columns=config.fts_fields,
-            weights=config.fts_weights,
-        )
+        sort = request.sort
+        if sort is None and config.default_sort_field is not None:
+            sort = SortRequest(
+                sort_by=config.default_sort_field,
+                sort_order=cast(SortOrder, config.default_sort_order),
+            )
         search_request = SearchRequest(
             pagination=request.pagination,
-            sort=request.sort,
+            sort=sort,
             filters=request.filters,
             advanced_filters=request.advanced_filters,
         )

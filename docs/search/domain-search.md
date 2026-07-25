@@ -4,7 +4,7 @@ Reusable domain-specific search endpoints backed by the generic search infrastru
 
 ## Architecture
 
-```
+```text
 POST /search/{domain}       → SearchService.domain_search()       → execute_search()
 POST /search/{domain}/fts   → SearchService.domain_search_fts()   → execute_fts_search()
 POST /search/{domain}/coordinate → SearchService.coordinate_search() → execute_coordinate_search()
@@ -124,6 +124,8 @@ The `DomainSearchRequest` model extends `SearchRequest` with an optional `q` fie
 To add a new domain:
 
 ```python
+from genomeai_api.models.mymodel import MyModel
+from genomeai_api.routes.search import DOMAIN_MAP
 from genomeai_api.search.domain_search import DomainSearchConfig, DOMAIN_SEARCH_CONFIGS
 
 MY_SEARCH = DomainSearchConfig(
@@ -139,6 +141,7 @@ MY_SEARCH = DomainSearchConfig(
 )
 
 DOMAIN_SEARCH_CONFIGS["mymodel"] = MY_SEARCH
+DOMAIN_MAP["mymodel"] = MyModel
 ```
 
-The search endpoints at `/search/{domain}` will work automatically.
+Both `DOMAIN_SEARCH_CONFIGS` and `DOMAIN_MAP` must be updated to activate search endpoints and coordinate search for the new domain.
