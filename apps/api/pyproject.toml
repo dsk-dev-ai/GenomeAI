@@ -15,6 +15,10 @@ dependencies = [
     "alembic>=1.18.5",
 ]
 
+[project.optional-dependencies]
+opensearch = ["opensearch-py>=2.7"]
+elasticsearch = ["elasticsearch>=8.15"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
