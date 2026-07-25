@@ -100,7 +100,7 @@ Universal DSL search across all entities.
 
 ### POST /api/v1/search/{domain}/dsl
 
-Domain-scoped DSL search. The `{domain}` placeholder is replaced with a registered domain name (study, gene, variant, sample, experiment, dataset, project).
+Domain-scoped DSL search. The `{domain}` placeholder is replaced with a registered domain name (study, gene, genome, variant, sample, transcript, protein, experiment, dataset, project).
 
 ## Examples
 

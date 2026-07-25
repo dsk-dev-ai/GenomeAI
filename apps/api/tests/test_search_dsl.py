@@ -199,6 +199,26 @@ class TestValidateNodeStructure:
                 Study,
             )
 
+    def test_not_as_sibling_of_and_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="Multiple logical"):
+            compile_dsl(
+                {
+                    "and": [{"field": "study_name", "op": "eq", "value": "x"}],
+                    "not": {"field": "status", "op": "eq", "value": "deleted"},
+                },
+                Study,
+            )
+
+    def test_not_as_sibling_of_or_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="Multiple logical"):
+            compile_dsl(
+                {
+                    "or": [{"field": "study_name", "op": "eq", "value": "x"}],
+                    "not": {"field": "status", "op": "eq", "value": "deleted"},
+                },
+                Study,
+            )
+
     def test_missing_field(self) -> None:
         with pytest.raises(ValidationError, match="missing 'field'"):
             compile_dsl({"op": "eq", "value": "x"}, Study)
@@ -438,7 +458,7 @@ class TestExecuteDslSearch:
 class TestSearchServiceDsl:
     @pytest.mark.asyncio
     async def test_search_dsl(self) -> None:
-        from genomeai_api.repositories.search import execute_dsl_search as real_execute_dsl
+        from genomeai_api.services.search import SearchService
 
         session = AsyncMock(spec=["execute"])
 
@@ -446,7 +466,7 @@ class TestSearchServiceDsl:
         count_result.scalar_one.return_value = 1
 
         data_scalar = MagicMock()
-        data_scalar.all.return_value = ["item"]
+        data_scalar.all.return_value = [MagicMock()]
         data_result = MagicMock()
         data_result.scalars.return_value = data_scalar
 
@@ -456,9 +476,7 @@ class TestSearchServiceDsl:
             where={"field": "study_name", "op": "eq", "value": "Test"},
         )
 
-        result = await real_execute_dsl(
-            session, Study, SearchRequest(pagination=request.pagination),
-            compile_dsl(request.where, Study),
-        )
-        assert result.total_count == 1
-        assert result.items == ["item"]
+        service = SearchService(session)
+        result = await service.search_dsl(Study, request)
+        assert result.pagination.total_count == 1
+        assert len(result.items) == 1

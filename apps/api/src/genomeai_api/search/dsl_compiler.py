@@ -77,13 +77,12 @@ def _validate_node_structure(node: object, depth: int) -> None:
     if has_logical:
         node_keys = set(n.keys()) & LOGICAL_KEYS
         multiple_logical = len(node_keys) > 1
-        has_not = "not" in node_keys
-        has_and_or = bool(node_keys & {"and", "or"})
 
-        if multiple_logical and not (has_not and has_and_or):
+        if multiple_logical:
             msg = (
                 f"Multiple logical keys at depth {depth}: {', '.join(sorted(node_keys))}. "
-                f"Only one logical key allowed per node (except 'not' may wrap and/or)."
+                f"Only one logical key allowed per node. "
+                f"Nest 'not' explicitly, e.g. {{'not': {{'and': [...]}}}}."
             )
             raise ValidationError(msg)
 
