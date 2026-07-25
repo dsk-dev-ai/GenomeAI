@@ -15,8 +15,17 @@ from genomeai_api.models.sample import Sample
 from genomeai_api.models.study import Study
 from genomeai_api.models.transcript import Transcript
 from genomeai_api.models.variant import Variant
-from genomeai_api.schemas.search import SuggestionResponse
+from genomeai_api.schemas.search import (
+    CoordinateSearchRequest,
+    CoordinateSearchResponse,
+    DomainSearchRequest,
+    FullTextSearchRequest,
+    FullTextSearchResponse,
+    SearchResponse,
+    SuggestionResponse,
+)
 from genomeai_api.search.cache import NullCache
+from genomeai_api.search.domain_search import DOMAIN_SEARCH_CONFIGS
 from genomeai_api.services.search import SearchService
 
 router = APIRouter(prefix="/search", tags=["search"])
@@ -88,3 +97,73 @@ async def get_suggestions(
         domain=domain,
         cache=cache,
     )
+
+
+@router.post("/{domain}", response_model=SearchResponse)
+async def search_domain(
+    domain: str,
+    request: DomainSearchRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> SearchResponse:
+    _validate_domain(domain)
+    config = DOMAIN_SEARCH_CONFIGS[domain]
+    service = SearchService(session)
+    return await service.domain_search(config, request)
+
+
+@router.post("/{domain}/fts", response_model=FullTextSearchResponse)
+async def search_domain_fts(
+    domain: str,
+    request: FullTextSearchRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> FullTextSearchResponse:
+    _validate_domain(domain)
+    config = DOMAIN_SEARCH_CONFIGS[domain]
+    domain_request = DomainSearchRequest(
+        pagination=request.search.pagination,
+        sort=request.search.sort,
+        filters=request.search.filters,
+        advanced_filters=request.search.advanced_filters,
+    )
+    service = SearchService(session)
+    return await service.domain_search_fts(
+        config,
+        domain_request,
+        fts_query=request.fts.query,
+    )
+
+
+@router.post("/{domain}/coordinate", response_model=CoordinateSearchResponse)
+async def search_domain_coordinate(
+    domain: str,
+    request: CoordinateSearchRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> CoordinateSearchResponse:
+    _validate_domain(domain)
+    config = DOMAIN_SEARCH_CONFIGS[domain]
+    if not config.has_coordinate_search:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Domain '{domain}' does not support coordinate search",
+        )
+    model = DOMAIN_MAP[domain]
+    overrides: dict[str, str] = {}
+    if request.chromosome_column == "chromosome":
+        overrides["chromosome_column"] = config.coordinate_chromosome_column
+    if request.start_column == "start_position":
+        overrides["start_column"] = config.coordinate_start_column
+    if request.end_column == "end_position":
+        overrides["end_column"] = config.coordinate_end_column
+    merged_request = CoordinateSearchRequest(
+        interval=request.interval,
+        match_type=request.match_type,
+        pagination=request.pagination,
+        sort=request.sort,
+        filters=request.filters,
+        advanced_filters=request.advanced_filters,
+        chromosome_column=overrides.get("chromosome_column", request.chromosome_column),
+        start_column=overrides.get("start_column", request.start_column),
+        end_column=overrides.get("end_column", request.end_column),
+    )
+    service = SearchService(session)
+    return await service.coordinate_search(model, merged_request)
