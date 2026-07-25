@@ -23,6 +23,20 @@ from genomeai_api.search.coordinate_validation import (
     validate_interval,
     validate_match_type,
 )
+from genomeai_api.search.domain_search import (
+    DATASET_SEARCH,
+    DOMAIN_SEARCH_CONFIGS,
+    EXPERIMENT_SEARCH,
+    GENE_SEARCH,
+    GENOME_SEARCH,
+    PROJECT_SEARCH,
+    PROTEIN_SEARCH,
+    SAMPLE_SEARCH,
+    STUDY_SEARCH,
+    TRANSCRIPT_SEARCH,
+    VARIANT_SEARCH,
+    DomainSearchConfig,
+)
 from genomeai_api.search.expressions import (
     GroupExpression,
     LeafExpression,
@@ -130,4 +144,17 @@ __all__ = [
     "validate_match_type",
     "validate_operator_value",
     "ValidationError",
+    # Domain search configs
+    "DATASET_SEARCH",
+    "DOMAIN_SEARCH_CONFIGS",
+    "DomainSearchConfig",
+    "EXPERIMENT_SEARCH",
+    "GENE_SEARCH",
+    "GENOME_SEARCH",
+    "PROJECT_SEARCH",
+    "PROTEIN_SEARCH",
+    "SAMPLE_SEARCH",
+    "STUDY_SEARCH",
+    "TRANSCRIPT_SEARCH",
+    "VARIANT_SEARCH",
 ]

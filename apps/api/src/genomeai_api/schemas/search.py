@@ -205,6 +205,10 @@ class CoordinateSearchRequest(BaseModel):
     end_column: str = "end_position"
 
 
+class DomainSearchRequest(SearchRequest):
+    q: str | None = None
+
+
 class CoordinateSearchResponse(BaseModel):
     items: list[Any]
     pagination: PaginationResponse

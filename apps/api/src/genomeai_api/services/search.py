@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import TypeVar
+from typing import TypeVar, cast
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 
@@ -25,16 +25,20 @@ from genomeai_api.repositories.search import (
 from genomeai_api.schemas.search import (
     CoordinateSearchRequest,
     CoordinateSearchResponse,
+    DomainSearchRequest,
     FullTextSearchConfig,
     FullTextSearchResponse,
     HighlightedMatch,
     PaginationResponse,
     SearchRequest,
     SearchResponse,
+    SortOrder,
+    SortRequest,
     SuggestionItem,
     SuggestionResponse,
 )
 from genomeai_api.search.cache import SuggestionCache, suggestion_cache_key
+from genomeai_api.search.domain_search import DomainSearchConfig
 from genomeai_api.search.suggestions import Suggestion, rank_suggestions
 
 M = TypeVar("M", bound=DeclarativeBase)
@@ -84,6 +88,108 @@ class SearchService:
             weights=fts_config.weights,
             highlight_columns=fts_config.columns,
             base_stmt=base_stmt,
+        )
+
+        highlights: list[list[HighlightedMatch]] | None = None
+        if fts_result.highlights is not None:
+            highlights = [
+                [HighlightedMatch(field=h[0], snippet=h[1]) for h in row]
+                for row in fts_result.highlights
+            ]
+
+        return FullTextSearchResponse(
+            items=fts_result.items,
+            pagination=PaginationResponse(
+                page=fts_result.page,
+                page_size=fts_result.page_size,
+                total_count=fts_result.total_count,
+                total_pages=fts_result.total_pages,
+                has_next=fts_result.has_next,
+                has_previous=fts_result.has_previous,
+            ),
+            ranks=fts_result.ranks,
+            highlights=highlights,
+        )
+
+    async def domain_search(
+        self,
+        config: DomainSearchConfig,
+        request: DomainSearchRequest,
+        base_stmt: Select[tuple[M]] | None = None,
+    ) -> SearchResponse:
+        model = cast(type[M], config.model)
+        stmt = base_stmt if base_stmt is not None else select(model)
+        if request.q:
+            field_filters = [
+                getattr(model, f).contains(request.q)
+                for f in config.search_fields
+            ]
+            stmt = stmt.where(or_(*field_filters))
+        sort = request.sort
+        if sort is None and config.default_sort_field is not None:
+            sort = SortRequest(
+                sort_by=config.default_sort_field,
+                sort_order=cast(SortOrder, config.default_sort_order),
+            )
+        search_request = SearchRequest(
+            pagination=request.pagination,
+            sort=sort,
+            filters=request.filters,
+            advanced_filters=request.advanced_filters,
+        )
+        result = await _execute_search(
+            self._session, model, search_request, stmt
+        )
+        return SearchResponse(
+            items=result.items,
+            pagination=PaginationResponse(
+                page=result.page,
+                page_size=result.page_size,
+                total_count=result.total_count,
+                total_pages=result.total_pages,
+                has_next=result.has_next,
+                has_previous=result.has_previous,
+            ),
+        )
+
+    async def domain_search_fts(
+        self,
+        config: DomainSearchConfig,
+        request: DomainSearchRequest,
+        fts_config: FullTextSearchConfig,
+        base_stmt: Select[tuple[M]] | None = None,
+    ) -> FullTextSearchResponse:
+        model = cast(type[M], config.model)
+        stmt = base_stmt if base_stmt is not None else select(model)
+        if request.q:
+            field_filters = [
+                getattr(model, f).contains(request.q)
+                for f in config.search_fields
+            ]
+            stmt = stmt.where(or_(*field_filters))
+        sort = request.sort
+        if sort is None and config.default_sort_field is not None:
+            sort = SortRequest(
+                sort_by=config.default_sort_field,
+                sort_order=cast(SortOrder, config.default_sort_order),
+            )
+        search_request = SearchRequest(
+            pagination=request.pagination,
+            sort=sort,
+            filters=request.filters,
+            advanced_filters=request.advanced_filters,
+        )
+        fts_result = await _execute_fts_search(
+            self._session,
+            model,
+            search_request,
+            fts_columns=fts_config.columns,
+            fts_query=fts_config.query,
+            fts_config=fts_config.config,
+            query_type=fts_config.query_type,
+            weights=fts_config.weights,
+            highlight_columns=fts_config.columns,
+            base_stmt=stmt,
         )
 
         highlights: list[list[HighlightedMatch]] | None = None
