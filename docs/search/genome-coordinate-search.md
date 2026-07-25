@@ -6,7 +6,7 @@ Genome Coordinate Search provides reusable genomic interval searching that works
 
 ## Architecture
 
-```
+```mermaid
 Service → Repository → coordinate_intervals.apply_coordinate_filter()
                            ↓
                     SQLAlchemy WHERE clause
@@ -49,12 +49,15 @@ For single-position models like Variant, set both `start_column` and `end_column
 ## Usage
 
 ```python
-from genomeai_api.services.search import SearchService
+from genomeai_api.models.gene import Gene
 from genomeai_api.schemas.search import (
     CoordinateIntervalModel,
     CoordinateSearchRequest,
+    FilterRule,
+    PaginationRequest,
+    SortRequest,
 )
-from genomeai_api.models.gene import Gene
+from genomeai_api.services.search import SearchService
 
 service = SearchService(session)
 
@@ -76,6 +79,15 @@ result = await service.coordinate_search(Gene, request)
 ### Variant example (single position):
 
 ```python
+from genomeai_api.models.variant import Variant
+from genomeai_api.schemas.search import (
+    CoordinateIntervalModel,
+    CoordinateSearchRequest,
+)
+from genomeai_api.services.search import SearchService
+
+service = SearchService(session)
+
 request = CoordinateSearchRequest(
     interval=CoordinateIntervalModel(chromosome="chr1", start=150, end=150),
     match_type="exact",

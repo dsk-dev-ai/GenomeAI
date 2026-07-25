@@ -1,8 +1,19 @@
 from __future__ import annotations
 
+import re
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
+
+CHROMOSOME_PATTERN = re.compile(r"^(chr)?([1-9][0-9]?|X|Y|MT|M)$", re.IGNORECASE)
+
+
+def validate_chromosome_format(value: str) -> str:
+    if not CHROMOSOME_PATTERN.match(value):
+        msg = f"Invalid chromosome format: '{value}'"
+        raise ValueError(msg)
+    return value
+
 
 FilterOperator = Literal[
     "equals",
