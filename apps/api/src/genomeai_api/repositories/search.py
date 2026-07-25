@@ -9,11 +9,14 @@ from sqlalchemy.orm import DeclarativeBase
 
 from genomeai_api.schemas.search import (
     AdvancedFilterGroup,
+    CoordinateSearchRequest,
     FilterRule,
     SearchRequest,
     SortRequest,
 )
 from genomeai_api.search.autocomplete import build_prefix_query
+from genomeai_api.search.coordinate_intervals import apply_coordinate_filter
+from genomeai_api.search.coordinate_types import CoordinateInterval, CoordinateMatchType
 from genomeai_api.search.expressions import (
     GroupExpression,
     LeafExpression,
@@ -398,3 +401,63 @@ async def execute_suggestions(
     stmt = build_prefix_query(model, column_name, query, limit)
     result = await session.execute(stmt)
     return [row[0] for row in result.all()]
+
+
+async def execute_coordinate_search(
+    session: AsyncSession,
+    model: type[M],
+    request: CoordinateSearchRequest,
+    base_stmt: Select[tuple[M]] | None = None,
+) -> SearchResult[M]:
+    stmt: Select[tuple[M]] = base_stmt if base_stmt is not None else select(model)
+
+    match_type = CoordinateMatchType(request.match_type)
+    interval = CoordinateInterval(
+        chromosome=request.interval.chromosome,
+        start=request.interval.start,
+        end=request.interval.end,
+    )
+    stmt = apply_coordinate_filter(
+        stmt,
+        model,
+        interval,
+        match_type,
+        chromosome_column=request.chromosome_column,
+        start_column=request.start_column,
+        end_column=request.end_column,
+    )
+
+    if request.filters:
+        for rule in request.filters:
+            _validate_filter_field(model, rule.field)
+            _validate_filter_value(rule)
+        stmt = apply_filters(stmt, model, request.filters)
+
+    if request.advanced_filters:
+        stmt = apply_advanced_filters(stmt, model, request.advanced_filters)
+
+    if request.sort:
+        _validate_sort_by(model, request.sort.sort_by)
+        stmt = apply_sorting(stmt, model, request.sort)
+
+    stmt = _ensure_deterministic_ordering(stmt, model, request.sort)
+
+    count_stmt = select(func.count()).select_from(stmt.subquery())
+    total_count_result = await session.execute(count_stmt)
+    total_count = total_count_result.scalar_one()
+
+    stmt = apply_pagination(
+        stmt,
+        request.pagination.page,
+        request.pagination.page_size,
+    )
+
+    result = await session.execute(stmt)
+    items: list[M] = list(result.scalars().all())
+
+    return SearchResult[M](
+        items=items,
+        total_count=total_count,
+        page=request.pagination.page,
+        page_size=request.pagination.page_size,
+    )
