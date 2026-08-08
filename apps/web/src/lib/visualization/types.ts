@@ -52,8 +52,9 @@ export interface VisualizationDataSource {
 /**
  * Discriminated union describing the state of visualization data.
  *
- * Used by the data layer (`useVisualizationData`) so consumers can render
- * exactly one state at a time.
+ * `useVisualizationData` exposes the same state through separate
+ * `status`/`data`/`error` fields; this union is for callers that want to
+ * pass the whole state around as a single value.
  */
 export type VisualizationDataState<T> =
   | { status: 'idle' }

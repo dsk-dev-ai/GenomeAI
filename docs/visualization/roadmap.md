@@ -40,4 +40,4 @@ Constraints honored:
 | 6.7 | Scientific Charts | Trend/QC plots; D3-based |
 | 6.8 | Integrated Research Workspace | Assembles 6.2–6.7 into a UI |
 | 6.9 | Visualization Performance & Optimization | Virtualization for large data |
-| 6.10 | Visualization Testing & Documentation | Stabilization + docs pass
+| 6.10 | Visualization Testing & Documentation | Stabilization + docs pass |

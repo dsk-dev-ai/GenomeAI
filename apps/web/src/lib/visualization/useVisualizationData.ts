@@ -35,6 +35,9 @@ function normalizeError(reason: unknown): VisualizationError {
   if (typeof reason === 'string') {
     return { message: reason }
   }
+  if (typeof reason === 'object' && reason !== null && 'message' in reason) {
+    return { message: String((reason as { message: unknown }).message) }
+  }
   return { message: 'Failed to load visualization data.' }
 }
 
@@ -88,13 +91,21 @@ export function useVisualizationData<T>(
       .then(
         (resolved) => {
           if (requestId !== requestIdRef.current) return
+          let isEmpty = false
+          try {
+            isEmpty = isEmptyRef.current ? isEmptyRef.current(resolved) : false
+          } catch (predicateError) {
+            if (requestId !== requestIdRef.current) return
+            setError(normalizeError(predicateError))
+            setStatus('error')
+            return
+          }
           setData(resolved)
-          const isEmpty = isEmptyRef.current?.call(null, resolved) ?? false
           setStatus(isEmpty ? 'empty' : 'success')
         },
         (reason: unknown) => {
           if (requestId !== requestIdRef.current) return
-          if (isAbortError(reason)) return
+          if (controller.signal.aborted && isAbortError(reason)) return
           setError(normalizeError(reason))
           setStatus('error')
         },

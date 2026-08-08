@@ -106,11 +106,46 @@ describe('useVisualizationData', () => {
     expect(screen.getByTestId('data').textContent).toBe('"second"')
   })
 
-  it('does not surface an error when the request is aborted', async () => {
-    render(<Harness loader={() => Promise.reject(new DOMException('aborted', 'AbortError'))} />)
+  it('does not surface an error when the request is aborted by the hook', async () => {
+    let capturedSignal: AbortSignal | undefined
+    const loader = (signal: AbortSignal) => {
+      capturedSignal = signal
+      return new Promise<string>((_, reject) => {
+        signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))
+      })
+    }
 
+    const { unmount } = render(<Harness loader={loader} />)
+    await waitFor(() => expect(capturedSignal).toBeDefined())
+    expect(statusText()).toBe('loading')
+
+    fireEvent.click(screen.getByRole('button', { name: 'refetch' }))
     await waitFor(() => expect(statusText()).toBe('loading'))
     expect(screen.getByTestId('error').textContent).toBe('')
+
+    unmount()
+  })
+
+  it('surfaces an AbortError that was not produced by request cancellation', async () => {
+    render(<Harness loader={() => Promise.reject(new DOMException('boom', 'AbortError'))} />)
+
+    await waitFor(() => expect(statusText()).toBe('error'))
+    expect(screen.getByTestId('error').textContent).toBe('boom')
+  })
+
+  it('resolves to error when the isEmpty predicate throws', async () => {
+    render(
+      <Harness
+        loader={() => Promise.resolve(['a', 'b'])}
+        isEmpty={() => {
+          throw new Error('emptiness check failed')
+        }}
+      />,
+    )
+
+    await waitFor(() => expect(statusText()).toBe('error'))
+    expect(screen.getByTestId('error').textContent).toBe('emptiness check failed')
+    expect(screen.getByTestId('data').textContent).toBe('')
   })
 
   it('aborts the in-flight request when the consumer unmounts', async () => {

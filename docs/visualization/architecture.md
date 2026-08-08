@@ -7,7 +7,7 @@ invariant is that **visualization components never touch storage** — they cons
 data through the visualization data layer, which resolves it via the GenomeAI
 API/SDK.
 
-```
+```text
 Next.js / React (UI)
       │
       ▼
@@ -31,7 +31,7 @@ FastAPI → PostgreSQL
 
 The foundation lives in the web application:
 
-```
+```text
 apps/web/src/
 ├── components/visualization/
 │   ├── VisualizationContainer.tsx      Composes heading, description, and one state
@@ -100,8 +100,8 @@ aborted and stale responses are discarded. Loaders must throw an
 
 - Containers fill their parent width with responsive padding (`p-4 sm:p-6`).
 - Content areas scroll horizontally when necessary (`overflow-auto`).
-- The demo page uses single-column → multi-column grids
-  (`grid-cols-1 lg:grid-cols-2`, and module lists use `sm:grid-cols-2 lg:grid-cols-3`).
+- The demo page uses a `grid-cols-1 lg:grid-cols-2` layout; the module list
+  inside it uses `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`.
 
 Performance optimization for very large data sets is deferred to Phase 6.9.
 

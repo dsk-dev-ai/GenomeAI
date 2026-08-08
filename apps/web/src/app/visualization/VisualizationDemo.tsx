@@ -32,7 +32,7 @@ export function VisualizationDemo() {
         emptyMessage="No visualization modules are registered yet."
         onRetry={refetch}
       >
-        <ul className="flex w-full flex-col gap-3">
+        <ul className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {(data ?? []).map((module: VisualizationModule) => (
             <li
               key={module.id}
@@ -56,7 +56,6 @@ export function VisualizationDemo() {
           title="Error state"
           status="error"
           error={{ message: 'The visualization service could not be reached.' }}
-          onRetry={() => undefined}
         />
       </div>
     </div>
