@@ -63,6 +63,7 @@ See [docs/development/](docs/development/) for detailed setup instructions, prer
 | API Reference | [docs/api/](docs/api/) |
 | Database Schema | [docs/database/](docs/database/) |
 | AI/ML Guide | [docs/ai/](docs/ai/) |
+| Visualization | [docs/visualization/](docs/visualization/) |
 | Plugin Development | [docs/plugins/](docs/plugins/) |
 | Deployment | [docs/deployment/](docs/deployment/) |
 | Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |

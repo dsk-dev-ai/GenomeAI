@@ -15,12 +15,20 @@ GenomeAI web dashboard and user interface.
 |-------|---------|
 | `/` | Home page — project introduction |
 | `/health` | Health check status page |
+| `/visualization` | Visualization foundation demo (Phase 6.1) |
 | `/*` | 404 catch-all page |
 
 ## Entry Point
 
 - Development: `pnpm --filter @genomeai/web dev`
 - Build: `pnpm --filter @genomeai/web build`
+
+## Testing
+
+- Unit tests: `pnpm --filter @genomeai/web test` (Vitest + Testing Library)
+- Tests live alongside the code as `*.test.ts(x)`. See
+  [Visualization Architecture](../../docs/visualization/architecture.md) for
+  coverage details and conventions.
 
 ## Future Responsibilities
 
