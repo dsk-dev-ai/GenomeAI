@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 
 import { GenomeBrowser } from '@/components/genome/GenomeBrowser'
 import { fetchIntervalFeatures, fetchVariantFeatures } from '@/lib/genome/api'
+import { TP53_WINDOW } from '@/lib/genome/geneTranscript.fixtures'
 import type { GenomeTrackDefinition } from '@/lib/genome/useGenomeBrowser'
 
 /**
@@ -33,10 +34,5 @@ export function GenomeBrowserDemo() {
     [],
   )
 
-  return (
-    <GenomeBrowser
-      initialViewport={{ chromosome: 'chr17', start: 7_650_000, end: 7_700_000 }}
-      tracks={tracks}
-    />
-  )
+  return <GenomeBrowser initialViewport={{ ...TP53_WINDOW }} tracks={tracks} />
 }

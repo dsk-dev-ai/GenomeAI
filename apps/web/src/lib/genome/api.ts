@@ -45,7 +45,8 @@ interface CoordinateSearchPayload {
   pagination?: PaginationPayload
 }
 
-type RawSearchItem = Record<string, unknown>
+/** A raw, untyped item from a search response. */
+export type RawSearchItem = Record<string, unknown>
 
 function asString(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined
@@ -158,9 +159,11 @@ const MAX_COORDINATE_RESULTS = 10_000
 /**
  * Fetches every page of a coordinate search for the visible interval, up to
  * `pagination.total_count`. The API caps result sets (Phase 5), so a dense
- * region cannot silently truncate at the first page.
+ * region cannot silently truncate at the first page. Exported so Phase 6.3
+ * adapters can reuse the same request pipeline without duplicating HTTP
+ * logic.
  */
-async function requestCoordinateSearch(
+export async function requestCoordinateSearch(
   domain: CoordinateDomain,
   interval: GenomicInterval,
   signal: AbortSignal | undefined,

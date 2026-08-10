@@ -4,15 +4,15 @@ This directory documents the GenomeAI visualization platform (Phase 6).
 
 ## Status
 
-**Phase 6.2 — Genome Browser** is the current milestone. It adds the first
-concrete visualization (region parsing, viewport navigation, track rendering)
-on top of the Phase 6.1 foundation.
+**Phase 6.3 — Gene / Transcript Visualization** is the current milestone. It
+adds isoform structure (gene lanes, transcript lanes, exon blocks) on top of
+the Phase 6.2 Genome Browser foundation.
 
 | Milestone | Description | Status |
 |-----------|-------------|--------|
 | 6.1 | Visualization Foundation | ✅ Implemented |
 | 6.2 | Genome Browser | ✅ Implemented |
-| 6.3 | Gene / Transcript Visualization | 📋 Planned |
+| 6.3 | Gene / Transcript Visualization | ✅ Implemented |
 | 6.4 | Variant Visualization | 📋 Planned |
 | 6.5 | Protein Structure Viewer | 📋 Planned |
 | 6.6 | Biological Network Visualization | 📋 Planned |
@@ -39,12 +39,25 @@ on top of the Phase 6.1 foundation.
 - Pure, unit-tested genomic math modules under `apps/web/src/lib/genome/`.
 - Demo integrated at `/visualization`.
 
+## What Phase 6.3 Provides
+
+- Gene / transcript isoform visualization (see [Gene / Transcript](./gene-transcript.md)):
+  a typed domain model, pure layout geometry, and a thin adapter over the
+  Phase 5 coordinate-search API — no backend changes.
+- A `GeneTranscriptViewer` SVG component with gene lanes (strand arrows),
+  transcript lanes (intron connectors and exon blocks), hover titles, and
+  keyboard-accessible transcript selection.
+- An injectable exon source: the Phase 5 API does not yet expose exons, so the
+  demo uses a dev-only fixture while production callers return no exons.
+- Demo integrated at `/visualization`.
+
 ## Documents
 
 | Document | Description |
 |----------|-------------|
 | [Architecture](architecture.md) | Component structure, data flow, and how future modules integrate |
 | [Genome Browser](genome-browser.md) | Phase 6.2 Genome Browser: scope, data flow, API, a11y, tests |
+| [Gene / Transcript](gene-transcript.md) | Phase 6.3 Gene / Transcript visualization: scope, data flow, API, a11y, tests |
 | [Roadmap](roadmap.md) | Detailed phase tracking and future work |
 
 ## Technology Notes
