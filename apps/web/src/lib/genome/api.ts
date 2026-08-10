@@ -135,6 +135,7 @@ export function toVariantFeature(item: RawSearchItem): VariantFeature {
   }
   const ref = asString(item.ref)
   const alt = asString(item.alt)
+  const quality = asNumber(item.quality)
   return {
     id: idOf(item.id),
     type: 'variant',
@@ -145,7 +146,12 @@ export function toVariantFeature(item: RawSearchItem): VariantFeature {
     ref,
     alt,
     name: ref && alt ? `${ref}>${alt}` : undefined,
-    metadata: { ...withOptional('variantId', asString(item.variant_id)) },
+    variantId: asString(item.variant_id),
+    variantType: asString(item.type),
+    ...(quality !== undefined ? { quality } : {}),
+    filterStatus: asString(item.filter_status),
+    geneId: asString(item.gene_id),
+    description: asString(item.description),
   }
 }
 

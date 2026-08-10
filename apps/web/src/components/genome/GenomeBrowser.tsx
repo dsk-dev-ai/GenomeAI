@@ -12,7 +12,6 @@ import {
 } from '@/lib/genome/geometry'
 import { type RegionValidationError, parseGenomeRegion } from '@/lib/genome/region'
 import { featuresInViewport } from '@/lib/genome/tracks'
-import type { TrackKind } from '@/lib/genome/tracks'
 import type { GenomeViewport, GenomicFeature } from '@/lib/genome/types'
 import {
   type GenomeBrowserOptions,
@@ -23,6 +22,8 @@ import {
   useGenomeTrack,
 } from '@/lib/genome/useGenomeBrowser'
 import { viewportBaseCount } from '@/lib/genome/viewport'
+
+import { VariantTrack } from './VariantTrack'
 
 const SVG_WIDTH = 1000
 const AXIS_HEIGHT = 28
@@ -66,41 +67,20 @@ function AxisSvg({ viewport }: { viewport: GenomeViewport }) {
 }
 
 /**
- * Draws one lane of genomic features.
+ * Draws one lane of span features (genes/transcripts).
  *
- * `kind` selects the glyph: genes/transcripts are strand-aware arrow
- * rectangles, variants are point marks. Features are clipped to the
- * viewport before their pixel geometry is computed so glyphs never spill
- * into the reserved header column.
+ * Features are clipped to the viewport before their pixel geometry is
+ * computed so glyphs never spill into the reserved header column. Point
+ * variants are rendered by the reusable `VariantTrack` component instead.
  */
 function GenomeTrackSvg({
   viewport,
   features,
-  kind,
 }: {
   viewport: GenomeViewport
   features: readonly GenomicFeature[]
-  kind: TrackKind
 }) {
   const scale = createScale(viewport.start, viewport.end, SVG_WIDTH - TRACK_HEADER_WIDTH)
-
-  if (kind === 'variants') {
-    return (
-      <g>
-        {features.map((feature, index) => {
-          const position = Math.min(Math.max(feature.start, viewport.start), viewport.end)
-          const x = TRACK_HEADER_WIDTH + scale.toX(position)
-          const y = ROW_HEIGHT / 2
-          return (
-            <g key={`${feature.id}-${index}`}>
-              <line x1={x} y1={y - 5} x2={x} y2={y + 5} stroke="#0891b2" strokeWidth={2} />
-              <title>{feature.name ?? feature.id}</title>
-            </g>
-          )
-        })}
-      </g>
-    )
-  }
 
   return (
     <g>
@@ -235,7 +215,9 @@ function BrowserStatus({ viewport }: { viewport: GenomeViewport }) {
  * Renders one track lane as its own stable component instance.
  *
  * Being a component (not a loop inside a hook) keeps the Rules of Hooks
- * satisfied as the track set grows, shrinks, or reorders.
+ * satisfied as the track set grows, shrinks, or reorders. Span tracks
+ * (genes/transcripts) render arrow glyphs; point variants render through the
+ * reusable `VariantTrack` component.
  */
 function BrowserTrack({
   track,
@@ -244,6 +226,10 @@ function BrowserTrack({
   track: GenomeTrackDefinition
   debouncedViewport: GenomeViewport
 }) {
+  if (track.kind === 'variants') {
+    return <VariantTrack track={track} debouncedViewport={debouncedViewport} />
+  }
+
   const data = useGenomeTrack(track, debouncedViewport)
   const viewport = debouncedViewport
   const features = featuresInViewport(data.data ?? [], viewport)
@@ -259,7 +245,7 @@ function BrowserTrack({
     >
       <svg viewBox={`0 0 ${SVG_WIDTH} ${ROW_HEIGHT}`} className="w-full" aria-hidden="true">
         {data.status === 'success' ? (
-          <GenomeTrackSvg viewport={viewport} features={features} kind={data.kind} />
+          <GenomeTrackSvg viewport={viewport} features={features} />
         ) : null}
       </svg>
     </VisualizationContainer>

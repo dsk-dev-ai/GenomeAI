@@ -4,7 +4,40 @@ Tracks the Phase 6 visualization platform milestones. See
 [Phase 6 of the project ROADMAP](</ROADMAP.md#phase-6--visualization-platform>) for
 the authoritative milestone list.
 
-## Current Milestone: 6.3 — Gene / Transcript Visualization ✅
+## Current Milestone: 6.4 — Variant Visualization ✅
+
+Implemented on branch `feat/visualization-variant`, on top of 6.3.
+
+Delivered:
+
+- Typed domain model (`lib/genome/variant.ts`) — `Variant` (reusing the
+  existing `VariantFeature` type), normalization from raw search items,
+  validation, and display helpers (label, accessible label, detail lines)
+- Pure point geometry (`lib/genome/variantGeometry.ts`) — in-viewport filtering
+  for single positions, pixel mapping via the shared scale, deterministic row
+  stacking for dense/identical marks, lane height
+- Thin typed adapter (`lib/genome/variantApi.ts`) over the Phase 5
+  coordinate-search API (no backend changes)
+- `VariantTrack` SVG component — coordinate-accurate point marks, hover titles,
+  keyboard-accessible selection (`role="button"`, Enter/Space, `aria-pressed`),
+  and a readable detail panel
+- The Genome Browser now routes `kind: 'variants'` tracks through the reusable
+  `VariantTrack` (no inline variant branch)
+- Enriched `VariantFeature` / `toVariantFeature` with `variantId`,
+  `variantType`, `quality`, `filterStatus`, `geneId`, `description`
+- Demo integrated at `/visualization` (variants track uses `fetchVariants`)
+- Tests and docs (see [Variant](variant.md))
+
+Constraints honored:
+
+- Variant `type` is carried as opaque text and never inferred from arbitrary
+  strings or `ref`/`alt`; only API-reported fields are displayed
+- No C++, WebAssembly, WebGPU, Three.js, Cytoscape.js, or D3.js
+- Phase 5 search untouched; no new runtime dependencies
+
+## Previous milestones
+
+### 6.3 — Gene / Transcript Visualization ✅
 
 Implemented on branch `feat/visualization-gene-transcript`, on top of 6.2.
 
@@ -34,8 +67,6 @@ Constraints honored:
 
 - No C++, WebAssembly, WebGPU, Three.js, Cytoscape.js, or D3.js
 - Phase 5 search untouched; no new runtime dependencies
-
-## Previous milestones
 
 ### 6.2 — Genome Browser ✅
 
@@ -89,10 +120,9 @@ Constraints honored:
 
 | # | Milestone | Notes |
 |---|-----------|-------|
-| 6.4 | Variant Visualization | Variant tables + dense tracks; D3-based |
 | 6.5 | Protein Structure Viewer | 3D; Three.js only if 3D is truly required |
 | 6.6 | Biological Network Visualization | Interaction graphs; Cytoscape.js |
 | 6.7 | Scientific Charts | Trend/QC plots; D3-based |
 | 6.8 | Integrated Research Workspace | Assembles 6.4–6.7 into a UI |
-| 6.9 | Visualization Performance & Optimization | Virtualization for large data |
+| 6.9 | Visualization Performance & Optimization | Virtualization / density rendering for large data |
 | 6.10 | Visualization Testing & Documentation | Stabilization + docs pass |

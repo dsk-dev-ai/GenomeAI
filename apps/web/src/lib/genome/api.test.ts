@@ -98,6 +98,44 @@ describe('toVariantFeature', () => {
     expect(feature.end).toBe(140_453_136)
     expect(feature.ref).toBe('C')
     expect(feature.alt).toBe('T')
+    expect(feature.name).toBe('C>T')
+    expect(feature.variantId).toBe('rs113488022')
+  })
+
+  it('carries optional variant attributes when present', () => {
+    const feature = toVariantFeature({
+      id: 'var-3',
+      variant_id: 'rs1',
+      chromosome: 'chr7',
+      position: 100,
+      ref: 'A',
+      alt: 'G',
+      type: 'snv',
+      quality: 99.5,
+      filter_status: 'PASS',
+      gene_id: 'gene-1',
+      description: 'missense',
+    })
+    expect(feature.variantType).toBe('snv')
+    expect(feature.quality).toBe(99.5)
+    expect(feature.filterStatus).toBe('PASS')
+    expect(feature.geneId).toBe('gene-1')
+    expect(feature.description).toBe('missense')
+  })
+
+  it('leaves optional variant attributes undefined when absent', () => {
+    const feature = toVariantFeature({
+      id: 'var-4',
+      chromosome: 'chr7',
+      position: 50,
+      ref: 'C',
+      alt: 'T',
+    })
+    expect(feature.variantType).toBeUndefined()
+    expect(feature.quality).toBeUndefined()
+    expect(feature.filterStatus).toBeUndefined()
+    expect(feature.geneId).toBeUndefined()
+    expect(feature.description).toBeUndefined()
   })
 
   it('returns position 0 when invalid', () => {
