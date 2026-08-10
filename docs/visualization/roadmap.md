@@ -4,7 +4,40 @@ Tracks the Phase 6 visualization platform milestones. See
 [Phase 6 of the project ROADMAP](</ROADMAP.md#phase-6--visualization-platform>) for
 the authoritative milestone list.
 
-## Current Milestone: 6.2 — Genome Browser ✅
+## Current Milestone: 6.3 — Gene / Transcript Visualization ✅
+
+Implemented on branch `feat/visualization-gene-transcript`, on top of 6.2.
+
+Delivered:
+
+- Typed domain model (`lib/genome/geneTranscript.ts`) — `Gene`, `GeneTranscript`,
+  `GeneExon`, normalization from raw search items, validators, transcript
+  sorting, and gene grouping
+- Pure geometry module (`lib/genome/geneTranscriptGeometry.ts`) — exon,
+  transcript, and gene spans, lane layout, height, viewport clipping
+- Thin typed adapter (`lib/genome/geneTranscriptApi.ts`) over the Phase 5
+  coordinate-search API (no backend changes) with an injectable exon source
+- `GeneTranscriptViewer` SVG component — gene lane with strand arrow, transcript
+  lanes with intron connector lines and exon blocks, hover titles, and
+  keyboard-accessible transcript selection (`role="button"`, Enter/Space)
+- Demo integrated at `/visualization` (`GeneTranscriptDemo`)
+- Tests and docs (see [Gene / Transcript](gene-transcript.md))
+
+Exon boundary:
+
+- The Phase 5 API currently returns genes and transcripts but no exon structure.
+  The frontend model supports exons via an injectable `ExonSource`; a dev-only
+  fixture provides representative TP53 / BRCA1-like data. This is documented in
+  [Gene / Transcript](gene-transcript.md#exon-data-boundary).
+
+Constraints honored:
+
+- No C++, WebAssembly, WebGPU, Three.js, Cytoscape.js, or D3.js
+- Phase 5 search untouched; no new runtime dependencies
+
+## Previous milestones
+
+### 6.2 — Genome Browser ✅
 
 Implemented on branch `feat/visualization-genome-browser`, on top of 6.1.
 
@@ -56,11 +89,10 @@ Constraints honored:
 
 | # | Milestone | Notes |
 |---|-----------|-------|
-| 6.3 | Gene / Transcript Visualization | Isoform structure, expression; D3-based |
 | 6.4 | Variant Visualization | Variant tables + dense tracks; D3-based |
 | 6.5 | Protein Structure Viewer | 3D; Three.js only if 3D is truly required |
 | 6.6 | Biological Network Visualization | Interaction graphs; Cytoscape.js |
 | 6.7 | Scientific Charts | Trend/QC plots; D3-based |
-| 6.8 | Integrated Research Workspace | Assembles 6.3–6.7 into a UI |
+| 6.8 | Integrated Research Workspace | Assembles 6.4–6.7 into a UI |
 | 6.9 | Visualization Performance & Optimization | Virtualization for large data |
 | 6.10 | Visualization Testing & Documentation | Stabilization + docs pass |
