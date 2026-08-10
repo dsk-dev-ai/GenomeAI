@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { GenomicFeature, GenomicInterval } from '@/lib/genome/types'
@@ -78,6 +78,38 @@ describe('GenomeBrowser', () => {
       const interval = lastInterval(genesLoader)
       expect(interval).toEqual({ chromosome: 'chr17', start: 10, end: 100 })
     })
+  })
+
+  it('keeps the axis aligned with track glyphs while the viewport settles', async () => {
+    vi.useFakeTimers()
+    renderBrowser(300)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    expect(screen.getByTestId('axis-region')).toHaveAttribute(
+      'data-viewport',
+      'chr17:7,650,000-7,700,000',
+    )
+
+    fireEvent.change(screen.getByPlaceholderText('chr1:100000-200000'), {
+      target: { value: 'chr17:10-100' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Go' }))
+
+    // Immediately after navigation the tracks still draw the previous window;
+    // the axis must not jump ahead of them.
+    expect(screen.getByTestId('axis-region')).toHaveAttribute(
+      'data-viewport',
+      'chr17:7,650,000-7,700,000',
+    )
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300)
+    })
+    expect(screen.getByTestId('axis-region')).toHaveAttribute('data-viewport', 'chr17:10-100')
+    expect(lastInterval(genesLoader)).toEqual({ chromosome: 'chr17', start: 10, end: 100 })
+
+    vi.useRealTimers()
   })
 
   it('keeps invalid region input and announces the error without refetching', async () => {

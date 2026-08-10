@@ -41,7 +41,13 @@ function AxisSvg({ viewport }: { viewport: GenomeViewport }) {
   const ticks = computeTicks(viewport.start, viewport.end, 8)
 
   return (
-    <svg viewBox={`0 0 ${SVG_WIDTH} ${AXIS_HEIGHT}`} className="w-full" aria-hidden="true">
+    <svg
+      viewBox={`0 0 ${SVG_WIDTH} ${AXIS_HEIGHT}`}
+      className="w-full"
+      aria-hidden="true"
+      data-testid="axis-region"
+      data-viewport={formatRegionLabel(viewport.chromosome, viewport.start, viewport.end)}
+    >
       {ticks.map((tick: AxisTick, index) => {
         const x = TRACK_HEADER_WIDTH + scale.toX(tick.position)
         return (
@@ -281,7 +287,7 @@ export function GenomeBrowser({ initialViewport, tracks, debounceMs }: GenomeBro
       <BrowserControls browser={browser} />
       <BrowserStatus viewport={browser.viewport} />
       <div className="w-full rounded-lg border border-gray-200 bg-white p-4 sm:p-6">
-        <AxisSvg viewport={browser.viewport} />
+        <AxisSvg viewport={browser.debouncedViewport} />
       </div>
       <div className="flex w-full flex-col gap-4">
         {tracks.map((track) => (
