@@ -125,6 +125,55 @@ describe('fetchGeneTranscripts', () => {
     expect(genes[0].transcripts[0].exons).toEqual([{ start: 300, end: 400 }])
   })
 
+  it('keeps API-provided exons instead of overwriting them', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          items: [
+            {
+              id: 'gene-tp53',
+              gene_name: 'TP53',
+              chromosome: 'chr17',
+              start_position: 100,
+              end_position: 1000,
+            },
+          ],
+          pagination: { page: 1, page_size: 100, total_count: 1 },
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          items: [
+            {
+              id: 'tx-1',
+              transcript_name: 'TP53-201',
+              chromosome: 'chr17',
+              start_position: 200,
+              end_position: 800,
+              gene_id: 'gene-tp53',
+              exons: [
+                { id: 'exon-1', start: 300, end: 400 },
+                { id: 'exon-2', start: 500, end: 600 },
+              ],
+            },
+          ],
+          pagination: { page: 1, page_size: 100, total_count: 1 },
+        }),
+      )
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+
+    const genes = await fetchGeneTranscripts(interval, undefined, {
+      exonSource: () => [{ start: 900, end: 950 }],
+    })
+
+    // A future API exon source must not be clobbered by the fallback source.
+    expect(genes[0].transcripts[0].exons).toEqual([
+      { id: 'exon-1', start: 300, end: 400 },
+      { id: 'exon-2', start: 500, end: 600 },
+    ])
+  })
+
   it('drops unlinked transcripts rather than mis-assigning them', async () => {
     const fetchMock = vi
       .fn()

@@ -181,6 +181,20 @@ describe('groupTranscriptsByGene', () => {
     expect(result[0].transcripts.map((t) => t.id)).toEqual(['t1'])
   })
 
+  it('assigns transcripts matching the gene accession (geneId)', () => {
+    const accessionGene: Gene = { ...gene, geneId: 'ENSG00000141510' }
+    const tx = transcript({ id: 't1', geneId: 'ENSG00000141510', start: 200, end: 300 })
+    const result = groupTranscriptsByGene([accessionGene], [tx])
+    expect(result[0].transcripts.map((t) => t.id)).toEqual(['t1'])
+  })
+
+  it('drops transcripts referencing a different gene accession', () => {
+    const accessionGene: Gene = { ...gene, geneId: 'ENSG00000141510' }
+    const tx = transcript({ id: 't1', geneId: 'ENSG00000000001', start: 1100, end: 1200 })
+    const result = groupTranscriptsByGene([accessionGene], [tx])
+    expect(result[0].transcripts).toEqual([])
+  })
+
   it('assigns contained transcripts by coordinate fallback', () => {
     const tx = transcript({ id: 't1', start: 200, end: 300 })
     const result = groupTranscriptsByGene([gene], [tx])

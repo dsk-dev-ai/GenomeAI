@@ -16,6 +16,7 @@
  * adapter module for the exact boundary.
  */
 
+import type { RawSearchItem } from './api'
 import type { Strand } from './types'
 
 /** A single exon (coding or UTR segment) of a transcript, 1-based inclusive. */
@@ -71,8 +72,6 @@ export interface Gene {
   /** Transcripts ordered for display (see `sortTranscripts`). */
   transcripts: GeneTranscript[]
 }
-
-type RawSearchItem = Record<string, unknown>
 
 function asString(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined
@@ -205,7 +204,8 @@ export function sortTranscripts(transcripts: readonly GeneTranscript[]): GeneTra
  * Assigns transcripts to their owning gene.
  *
  * A transcript is placed on a gene when:
- * 1. the transcript explicitly references the gene (by gene id), or
+ * 1. the transcript explicitly references the gene — matching either the gene's
+ *    search-record id or its accession (`gene.geneId`), or
  * 2. (fallback) the transcript is on the same chromosome and its span is
  *    contained within the gene span.
  *
@@ -223,7 +223,8 @@ export function groupTranscriptsByGene(
     const owned: GeneTranscript[] = []
     for (const transcript of transcripts) {
       if (!isValidTranscript(transcript)) continue
-      const explicit = transcript.geneId !== undefined && transcript.geneId === gene.id
+      const geneIds = [gene.id, gene.geneId].filter((value): value is string => value !== undefined)
+      const explicit = transcript.geneId !== undefined && geneIds.includes(transcript.geneId)
       const contained =
         transcript.chromosome === gene.chromosome &&
         transcript.start >= gene.start &&

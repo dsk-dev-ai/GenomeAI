@@ -10,8 +10,10 @@
  *
  * The Phase 5 API does **not** expose exon structure. The adapter therefore
  * returns transcripts with `exons: []`, and an optional `exonSource` can
- * enrich them. Production callers that need exon blocks should supply a real
- * source once the backend exposes one; the isolated development fixture in
+ * enrich them. Enrichment only runs when the API did not already provide
+ * exons, so a future backend exon source is never overwritten. Production
+ * callers that need exon blocks should supply a real source once the backend
+ * exposes one; the isolated development fixture in
  * `lib/genome/geneTranscript.fixtures.ts` is the current substitute and must
  * be replaced, not treated as a real API.
  */
@@ -66,7 +68,7 @@ export async function fetchGeneTranscripts(
     ...gene,
     transcripts: gene.transcripts.map((transcript) => ({
       ...transcript,
-      exons: exonSource(transcript),
+      exons: transcript.exons.length > 0 ? transcript.exons : exonSource(transcript),
     })),
   }))
 }
