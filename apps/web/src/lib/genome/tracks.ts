@@ -85,12 +85,16 @@ export function layoutRows(features: readonly GenomicFeature[]): FeatureRow[] {
 
 /**
  * One-based inclusive overlap test used to keep only features intersecting
- * the viewport (`a.start <= b.end && a.end >= b.start`).
+ * the viewport (`a.start <= b.end && a.end >= b.start`). Also requires the
+ * feature to be on the same chromosome, so a feature with numerically
+ * overlapping coordinates cannot leak in from a different contig.
  */
 export function featuresInViewport(
   features: readonly GenomicFeature[],
   viewport: GenomeViewport,
 ): GenomicFeature[] {
-  const { start, end } = viewport
-  return features.filter((feature) => feature.start <= end && feature.end >= start)
+  const { chromosome, start, end } = viewport
+  return features.filter(
+    (feature) => feature.chromosome === chromosome && feature.start <= end && feature.end >= start,
+  )
 }

@@ -170,6 +170,61 @@ describe('fetchIntervalFeatures', () => {
     expect(features).toHaveLength(1)
     expect(features[0].id).toBe('good')
   })
+
+  it('paginates until total_count is reached', async () => {
+    const firstPage = Array.from({ length: 100 }, (_, i) => ({
+      id: `gene-${i}`,
+      gene_name: `Gene ${i}`,
+      chromosome: 'chr1',
+      start_position: i * 10 + 1,
+      end_position: i * 10 + 10,
+    }))
+    const secondPage = [
+      {
+        id: 'gene-tail',
+        gene_name: 'Tail',
+        chromosome: 'chr1',
+        start_position: 1,
+        end_position: 10,
+      },
+    ]
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          items: firstPage,
+          pagination: { page: 1, page_size: 100, total_count: 101 },
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          items: secondPage,
+          pagination: { page: 2, page_size: 100, total_count: 101 },
+        }),
+      )
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+
+    const features = await fetchIntervalFeatures('gene', {
+      chromosome: 'chr1',
+      start: 1,
+      end: 100_000,
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(features).toHaveLength(101)
+    const secondCall = JSON.parse(String(fetchMock.mock.calls[1][1].body)) as {
+      pagination: { page: number }
+    }
+    expect(secondCall.pagination.page).toBe(2)
+  })
+
+  it('throws a GenomeApiError when the payload is not an object', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(jsonResponse(null))
+
+    await expect(
+      fetchIntervalFeatures('gene', { chromosome: 'chr1', start: 1, end: 100 }),
+    ).rejects.toBeInstanceOf(GenomeApiError)
+  })
 })
 
 describe('fetchVariantFeatures', () => {

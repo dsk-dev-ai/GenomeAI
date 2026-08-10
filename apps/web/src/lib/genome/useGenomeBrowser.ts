@@ -9,6 +9,13 @@
  *
  * Region changes are debounced (default 300 ms) so rapid pan/zoom does not
  * fire a request per animation frame.
+ *
+ * ## Rules of Hooks
+ *
+ * `useGenomeBrowser` owns the viewport and navigation only. Per-track data
+ * loading lives in `useGenomeTrack`, which callers must invoke from a
+ * stable component instance (one per track), not from `Array.prototype.map`
+ * inside a hook — keeping hook order deterministic as track sets change.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -47,8 +54,6 @@ export interface GenomeTrackData extends GenomeTrackDefinition {
 export interface GenomeBrowserOptions {
   /** Viewport shown on first render. */
   initialViewport: GenomeViewport
-  /** Tracks to fetch and render. */
-  tracks: GenomeTrackDefinition[]
   /** Debounce (ms) applied to viewport changes before refetching. */
   debounceMs?: number
 }
@@ -56,8 +61,12 @@ export interface GenomeBrowserOptions {
 export interface GenomeBrowserResult {
   /** Current, immutable viewport. */
   viewport: GenomeViewport
-  /** Per-track data layer results, in `tracks` order. */
-  trackResults: GenomeTrackData[]
+  /**
+   * Viewport that has settled past the debounce window. Track loaders fetch
+   * only this settled region, so rapid pan/zoom does not fire per-frame
+   * requests.
+   */
+  debouncedViewport: GenomeViewport
   zoomIn: () => void
   zoomOut: () => void
   panLeft: () => void
@@ -83,7 +92,14 @@ function useDebouncedViewport(viewport: GenomeViewport, debounceMs: number): Gen
   return debounced
 }
 
-function useGenomeTrack(
+/**
+ * Drives one track's async lifecycle for the settled viewport.
+ *
+ * Must be called from a stable component instance (one per track). Refetches
+ * when the debounced viewport settles on a new region; the initial request
+ * is fired by `useVisualizationData`.
+ */
+export function useGenomeTrack(
   definition: GenomeTrackDefinition,
   debouncedViewport: GenomeViewport,
 ): GenomeTrackData {
@@ -139,13 +155,18 @@ function useGenomeTrack(
   }
 }
 
+/** Clamps an interval to contig bounds (inclusive 1..length). */
+function clampToBounds(interval: GenomicInterval, length: number): GenomicInterval {
+  const start = Math.min(Math.max(interval.start, 1), length)
+  const end = Math.min(Math.max(interval.end, start), length)
+  return { chromosome: interval.chromosome, start, end }
+}
+
 export function useGenomeBrowser(options: GenomeBrowserOptions): GenomeBrowserResult {
-  const { initialViewport, tracks, debounceMs = 300 } = options
+  const { initialViewport, debounceMs = 300 } = options
 
   const [viewport, setViewport] = useState<GenomeViewport>(initialViewport)
   const debouncedViewport = useDebouncedViewport(viewport, debounceMs)
-
-  const trackResults = tracks.map((track) => useGenomeTrack(track, debouncedViewport))
 
   const zoomIn = useCallback(() => {
     setViewport((current) => zoomViewport(current, 1 / ZOOM_FACTOR))
@@ -168,17 +189,20 @@ export function useGenomeBrowser(options: GenomeBrowserOptions): GenomeBrowserRe
   }, [accel])
 
   const reset = useCallback(() => {
-    setViewport({ ...initialViewport, bounds: initialViewport.bounds })
+    setViewport({ ...initialViewport })
   }, [initialViewport])
 
   const navigateTo = useCallback((interval: GenomicInterval) => {
-    setViewport((current) => ({
-      chromosome: interval.chromosome,
-      start: interval.start,
-      end: interval.end,
-      bounds: current.bounds,
-    }))
+    setViewport((current) => {
+      // Bounds describe the current contig; a different chromosome has
+      // unknown extent, so never carry stale bounds across a chromosome
+      // change (that would clamp against the wrong length).
+      const sameContig = interval.chromosome === current.chromosome
+      const bounds = sameContig ? current.bounds : undefined
+      const clamped = bounds ? clampToBounds(interval, bounds.length) : interval
+      return { ...clamped, bounds }
+    })
   }, [])
 
-  return { viewport, trackResults, zoomIn, zoomOut, panLeft, panRight, reset, navigateTo }
+  return { viewport, debouncedViewport, zoomIn, zoomOut, panLeft, panRight, reset, navigateTo }
 }

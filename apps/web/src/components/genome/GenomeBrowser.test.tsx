@@ -80,17 +80,26 @@ describe('GenomeBrowser', () => {
     })
   })
 
-  it('ignores invalid region input', async () => {
+  it('keeps invalid region input and announces the error without refetching', async () => {
     renderBrowser()
     await waitFor(() => expect(genesLoader).toHaveBeenCalled())
     const callsBefore = genesLoader.mock.calls.length
 
-    fireEvent.change(screen.getByPlaceholderText('chr1:100000-200000'), {
-      target: { value: 'not-a-region' },
-    })
+    const input = screen.getByPlaceholderText('chr1:100000-200000')
+    fireEvent.change(input, { target: { value: 'not-a-region' } })
     fireEvent.click(screen.getByRole('button', { name: 'Go' }))
 
-    await waitFor(() => expect(genesLoader.mock.calls.length).toBe(callsBefore))
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(/must look like chr1:100000-200000/),
+    )
+    expect(input).toHaveValue('not-a-region')
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(genesLoader.mock.calls.length).toBe(callsBefore)
+
+    // Editing clears the error.
+    fireEvent.change(input, { target: { value: 'chr17:10-100' } })
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(input).toHaveAttribute('aria-invalid', 'false')
   })
 
   it('zooms in the viewed region', async () => {

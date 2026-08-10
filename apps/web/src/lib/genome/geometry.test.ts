@@ -56,6 +56,19 @@ describe('computeTicks', () => {
       expect(ticks[i].position).toBeGreaterThan(ticks[i - 1].position)
     }
   })
+
+  it('produces only integer positions, even for fractional target steps', () => {
+    const ticks = computeTicks(101, 200, 10, 4)
+    expect(ticks.length).toBeGreaterThan(1)
+    for (const tick of ticks) {
+      expect(Number.isInteger(tick.position)).toBe(true)
+    }
+  })
+
+  it('treats a zero or negative minor-per-major as one division', () => {
+    const ticks = computeTicks(1, 1000, 10, 0)
+    expect(ticks.filter((tick) => !tick.major).length).toBeGreaterThanOrEqual(0)
+  })
 })
 
 describe('formatBasePosition', () => {

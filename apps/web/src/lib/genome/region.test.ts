@@ -68,4 +68,11 @@ describe('parseGenomeRegion', () => {
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.error.code).toBe('start_after_end')
   })
+
+  it('rejects coordinates beyond the safe integer range', () => {
+    const tooLarge = `${Number.MAX_SAFE_INTEGER}0`
+    const result = parseGenomeRegion(`chr1:1-${tooLarge}`)
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.code).toBe('invalid_end')
+  })
 })

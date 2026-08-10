@@ -42,7 +42,7 @@ interface PaginationPayload {
 
 interface CoordinateSearchPayload {
   items: unknown[]
-  pagination: PaginationPayload
+  pagination?: PaginationPayload
 }
 
 type RawSearchItem = Record<string, unknown>
@@ -152,32 +152,66 @@ export interface CoordinateSearchOptions {
   pageSize?: number
 }
 
+/** Hard cap applied by the Phase 5 coordinate-search backends. */
+const MAX_COORDINATE_RESULTS = 10_000
+
+/**
+ * Fetches every page of a coordinate search for the visible interval, up to
+ * `pagination.total_count`. The API caps result sets (Phase 5), so a dense
+ * region cannot silently truncate at the first page.
+ */
 async function requestCoordinateSearch(
   domain: CoordinateDomain,
   interval: GenomicInterval,
   signal: AbortSignal | undefined,
   pageSize: number,
 ): Promise<unknown[]> {
-  const response = await fetch(`${API_BASE_URL}/search/${domain}/coordinate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      interval: { chromosome: interval.chromosome, start: interval.start, end: interval.end },
-      match_type: 'overlap',
-      pagination: { page: 1, page_size: pageSize },
-    }),
-    signal,
-  })
+  const collected: unknown[] = []
+  let page = 1
 
-  if (!response.ok) {
-    throw new GenomeApiError(
-      `GenomeAI API returned ${response.status} for ${domain} region ${interval.chromosome}:${interval.start}-${interval.end}`,
-      response.status,
-    )
+  for (;;) {
+    if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError')
+
+    const response = await fetch(`${API_BASE_URL}/search/${domain}/coordinate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        interval: { chromosome: interval.chromosome, start: interval.start, end: interval.end },
+        match_type: 'overlap',
+        pagination: { page, page_size: pageSize },
+      }),
+      signal,
+    })
+
+    if (!response.ok) {
+      throw new GenomeApiError(
+        `GenomeAI API returned ${response.status} for ${domain} region ${interval.chromosome}:${interval.start}-${interval.end}`,
+        response.status,
+      )
+    }
+
+    const payload = (await response.json()) as CoordinateSearchPayload | null
+    if (payload === null || typeof payload !== 'object') {
+      throw new GenomeApiError(
+        `GenomeAI API returned an invalid payload for ${domain} region ${interval.chromosome}:${interval.start}-${interval.end}`,
+      )
+    }
+
+    const items = Array.isArray(payload.items) ? payload.items : []
+    collected.push(...items)
+
+    const totalCount = payload.pagination?.total_count
+    const fetched = collected.length
+    if (
+      items.length === 0 ||
+      totalCount === undefined ||
+      fetched >= totalCount ||
+      fetched >= MAX_COORDINATE_RESULTS
+    ) {
+      return collected
+    }
+    page += 1
   }
-
-  const payload = (await response.json()) as CoordinateSearchPayload
-  return Array.isArray(payload.items) ? payload.items : []
 }
 
 function asRawItems(items: unknown[]): RawSearchItem[] {

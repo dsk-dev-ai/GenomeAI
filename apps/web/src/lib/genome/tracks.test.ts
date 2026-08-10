@@ -52,4 +52,14 @@ describe('featuresInViewport', () => {
     const keep = featuresInViewport(features, { chromosome: 'chr1', start: 100, end: 800 })
     expect(keep).toEqual([features[1]])
   })
+
+  it('drops features whose coordinates overlap but are on another chromosome', () => {
+    const other = { ...feature('x', 250, 260), chromosome: 'chr2' }
+    const keep = featuresInViewport([other, feature('a', 250, 260)], {
+      chromosome: 'chr1',
+      start: 200,
+      end: 300,
+    })
+    expect(keep.map((f) => f.id)).toEqual(['a'])
+  })
 })

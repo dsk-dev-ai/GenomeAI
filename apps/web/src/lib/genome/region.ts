@@ -104,6 +104,25 @@ export function parseGenomeRegion(input: string): RegionParseResult {
   const start = Number(rawStart)
   const end = Number(rawEnd)
 
+  if (!Number.isSafeInteger(start)) {
+    return {
+      ok: false,
+      error: {
+        code: 'invalid_start',
+        message: 'Start coordinate is too large to represent safely.',
+      },
+    }
+  }
+  if (!Number.isSafeInteger(end)) {
+    return {
+      ok: false,
+      error: {
+        code: 'invalid_end',
+        message: 'End coordinate is too large to represent safely.',
+      },
+    }
+  }
+
   if (start < 1) {
     return {
       ok: false,

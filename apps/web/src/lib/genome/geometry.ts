@@ -81,7 +81,10 @@ export function computeTicks(
   const bases = Math.max(1, end - start + 1)
   const targetStep = bases / targetTicks
   const majorStep = niceTickStep(targetStep, 1)
-  const minorStep = majorStep / minorPerMajor
+  // Keep every step an integer (>= 1) so tick positions are whole base
+  // positions, consistent with the one-based coordinate model.
+  const divisions = Math.max(1, Math.floor(minorPerMajor))
+  const minorStep = Math.max(1, Math.floor(majorStep / divisions))
 
   const ticks: AxisTick[] = []
   const firstMajor = Math.ceil(start / majorStep) * majorStep
