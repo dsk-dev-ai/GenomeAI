@@ -18,7 +18,7 @@ afterEach(() => {
 describe('GeneTranscriptViewer', () => {
   it('renders a labelled SVG describing the gene', () => {
     renderViewer()
-    const svg = screen.getByRole('img')
+    const svg = screen.getByRole('group')
     expect(svg).toHaveAttribute('aria-label', 'TP53 chr17:7665901-7690000, strand +, 3 transcripts')
   })
 
@@ -61,13 +61,13 @@ describe('GeneTranscriptViewer', () => {
       />,
     )
     // The SVG and labels are still rendered, but no exon blocks appear.
-    expect(screen.getByRole('img')).toBeInTheDocument()
+    expect(screen.getByRole('group')).toBeInTheDocument()
     expect(screen.queryAllByTestId(/^exon-/)).toHaveLength(0)
   })
 
   it('aligns exon geometry with the shared label gutter', () => {
     renderViewer()
-    const svg = screen.getByRole('img')
+    const svg = screen.getByRole('group')
     expect(svg).toBeInTheDocument()
     // LABEL_GUTTER is the reserved left column width shared with the browser.
     expect(LABEL_GUTTER).toBeGreaterThan(0)
@@ -126,6 +126,8 @@ describe('GeneTranscriptViewer strands', () => {
       id: 'gene-brca1',
       symbol: 'BRCA1',
       strand: '-',
+      start: 43_044_295,
+      end: 43_125_483,
       transcripts: [
         {
           id: 'tx-rev',
@@ -144,7 +146,7 @@ describe('GeneTranscriptViewer strands', () => {
         viewport={{ chromosome: 'chr17', start: 43_000_000, end: 43_200_000 }}
       />,
     )
-    expect(screen.getByRole('img')).toHaveAttribute(
+    expect(screen.getByRole('group')).toHaveAttribute(
       'aria-label',
       expect.stringContaining('strand -'),
     )

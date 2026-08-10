@@ -66,11 +66,12 @@ function transcriptLabel(transcript: GeneTranscript): string {
  *
  * ## Accessibility
  *
- * The SVG carries a descriptive `aria-label` of the whole gene. Each
- * transcript row is a keyboard-focusable control (`role="button"`) with an
- * accessible name; pressing Enter/Space selects it, and the selected row is
- * visually highlighted and announced via `aria-pressed`. Hover reveals a
- * native `<title>` tooltip on transcripts and exons.
+ * The SVG is a labelled `group` (not `img`, so its interactive children stay
+ * in the accessibility tree) describing the whole gene. Each transcript row
+ * is a keyboard-focusable control (`role="button"`) with an accessible name;
+ * pressing Enter/Space selects it, and the selected row is visually
+ * highlighted and announced via `aria-pressed`. Hover reveals a native
+ * `<title>` tooltip on transcripts and exons.
  */
 export function GeneTranscriptViewer({
   gene,
@@ -106,7 +107,10 @@ export function GeneTranscriptViewer({
     <svg
       viewBox={`0 0 ${SVG_WIDTH} ${height}`}
       className="w-full"
-      role="img"
+      // biome-ignore lint/a11y/useSemanticElements: role="group" on an SVG would
+      // otherwise be flagged as a <fieldset> candidate; group is correct here so
+      // the interactive transcript controls below stay in the a11y tree.
+      role="group"
       aria-label={geneAriaLabel}
     >
       {/* Gene lane */}
@@ -240,12 +244,13 @@ function GeneGlyph({
   fill: string
 }) {
   const x = LABEL_GUTTER + span.x
-  const bodyWidth = Math.max(1, span.width - ARROW_LENGTH)
-  const bodyX = strand === '+' ? x : x + ARROW_LENGTH
+  const arrowLength = Math.min(ARROW_LENGTH, span.width)
+  const bodyWidth = Math.max(0, span.width - arrowLength)
+  const bodyX = strand === '+' ? x : x + arrowLength
   const arrow =
     strand === '+'
-      ? `M ${x + bodyWidth} ${y - height / 2} l ${ARROW_LENGTH} ${height / 2} l ${-ARROW_LENGTH} ${height / 2} Z`
-      : `M ${x + ARROW_LENGTH} ${y - height / 2} l ${-ARROW_LENGTH} ${height / 2} l ${ARROW_LENGTH} ${height / 2} Z`
+      ? `M ${x + bodyWidth} ${y - height / 2} l ${arrowLength} ${height / 2} l ${-arrowLength} ${height / 2} Z`
+      : `M ${x + arrowLength} ${y - height / 2} l ${-arrowLength} ${height / 2} l ${arrowLength} ${height / 2} Z`
   return (
     <g>
       <rect x={bodyX} y={y - height / 2} width={bodyWidth} height={height} rx={1} fill={fill} />
@@ -267,7 +272,8 @@ function StrandArrow({
   strand: '+' | '-'
 }) {
   const tip = strand === '+' ? x + width : x
-  const base = strand === '+' ? tip - ARROW_LENGTH : tip + ARROW_LENGTH
+  const arrowLength = Math.min(ARROW_LENGTH, width)
+  const base = strand === '+' ? tip - arrowLength : tip + arrowLength
   const points =
     strand === '+'
       ? `${tip},${y} ${base},${y - ARROW_HEIGHT / 2} ${base},${y + ARROW_HEIGHT / 2}`

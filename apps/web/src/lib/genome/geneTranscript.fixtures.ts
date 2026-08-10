@@ -18,6 +18,13 @@ import type { Gene, GeneTranscript } from './geneTranscript'
 
 const STRAND_PLUS = '+' as const
 
+/**
+ * Shared chr17 TP53 window used by the demos so the Genome Browser and the
+ * Gene / Transcript viewer render the same genomic coordinates at the same
+ * pixel positions (one-based inclusive).
+ */
+export const TP53_WINDOW = { chromosome: 'chr17', start: 7_650_000, end: 7_700_000 } as const
+
 /** A TP53-like transcript with a handful of exons (fixture coordinates). */
 const tp53Transcripts: GeneTranscript[] = [
   {
@@ -105,9 +112,9 @@ export const BRCA1_LIKE_FIXTURE: Gene = {
       transcriptId: 'ENST00000357654',
       transcriptType: 'protein_coding',
       exons: [
-        { id: 'exon-1', start: 43_044_295, end: 43_044_468, rank: 1 },
+        { id: 'exon-1', start: 43_044_295, end: 43_044_468, rank: 3 },
         { id: 'exon-2', start: 43_064_129, end: 43_064_571, rank: 2 },
-        { id: 'exon-3', start: 43_125_260, end: 43_125_483, rank: 3 },
+        { id: 'exon-3', start: 43_125_260, end: 43_125_483, rank: 1 },
       ],
     },
   ],

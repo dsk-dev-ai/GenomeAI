@@ -37,7 +37,7 @@ Implemented on branch `feat/visualization-gene-transcript`.
 
 ## Architecture and data flow
 
-```
+```text
 GeneTranscriptViewer (component)            apps/web/src/components/genome/
   scale = createScale(viewport, SVG_WIDTH)  + reuse lib/genome/geometry.ts
   lane layout / spans                       + lib/genome/geneTranscriptGeometry.ts
@@ -59,13 +59,15 @@ were made.
 
 `groupTranscriptsByGene` links a transcript to a gene when either:
 
-1. the transcript explicitly references the gene id, or
-2. (fallback) the transcript is on the same chromosome and its span is
-   contained within the gene span.
+1. the transcript explicitly references the gene id (matching the gene's
+   search-record id or its accession), or
+2. the transcript has no explicit gene link (fallback) and is on the same
+   chromosome with its span contained within the gene span.
 
-Unlinked transcripts are dropped rather than mis-assigned; genes and
-transcripts without usable spans are filtered out by `isValidGene` /
-`isValidTranscript`. Display order is deterministic
+Transcripts that carry a gene link to a different gene are never assigned by
+coordinate containment; unlinked transcripts are dropped rather than
+mis-assigned. Genes and transcripts without usable spans are filtered out by
+`isValidGene` / `isValidTranscript`. Display order is deterministic
 (`sortTranscripts`: start, then end, then name, then id).
 
 ## API contract used
@@ -79,7 +81,7 @@ Request body (one-based-inclusive, same shape as the browser):
 
 ```json
 {
-  "interval": { "chromosome": "chr17", "start": 7_650_000, "end": 7_700_000 },
+  "interval": { "chromosome": "chr17", "start": 7650000, "end": 7700000 },
   "match_type": "overlap",
   "pagination": { "page": 1, "page_size": 100 }
 }
@@ -143,7 +145,7 @@ structure. This milestone therefore:
 
 All commands green on the branch:
 
-```
+```shell
 make lint        # biome + ruff
 make typecheck   # pyright + tsc
 make test        # web vitest + sdk-ts + api pytest

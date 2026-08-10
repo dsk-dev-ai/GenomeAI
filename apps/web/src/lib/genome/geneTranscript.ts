@@ -206,12 +206,13 @@ export function sortTranscripts(transcripts: readonly GeneTranscript[]): GeneTra
  * A transcript is placed on a gene when:
  * 1. the transcript explicitly references the gene — matching either the gene's
  *    search-record id or its accession (`gene.geneId`), or
- * 2. (fallback) the transcript is on the same chromosome and its span is
- *    contained within the gene span.
+ * 2. the transcript has no explicit gene link (fallback) and is on the same
+ *    chromosome with its span contained within the gene span.
  *
- * Transcripts that cannot be linked are dropped rather than mis-assigned;
- * the returned genes are filtered to those with usable spans and receive
- * transcripts sorted for display.
+ * A transcript that carries a gene link to a *different* gene is never
+ * assigned by coordinate containment, so it is dropped rather than
+ * mis-assigned. The returned genes are filtered to those with usable spans
+ * and receive transcripts sorted for display.
  */
 export function groupTranscriptsByGene(
   genes: readonly Gene[],
@@ -226,6 +227,7 @@ export function groupTranscriptsByGene(
       const geneIds = [gene.id, gene.geneId].filter((value): value is string => value !== undefined)
       const explicit = transcript.geneId !== undefined && geneIds.includes(transcript.geneId)
       const contained =
+        transcript.geneId === undefined &&
         transcript.chromosome === gene.chromosome &&
         transcript.start >= gene.start &&
         transcript.end <= gene.end

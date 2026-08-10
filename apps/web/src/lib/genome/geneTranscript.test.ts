@@ -195,6 +195,12 @@ describe('groupTranscriptsByGene', () => {
     expect(result[0].transcripts).toEqual([])
   })
 
+  it('drops a contained transcript that links to a different gene', () => {
+    const tx = transcript({ id: 't1', geneId: 'gene-other', start: 200, end: 300 })
+    const result = groupTranscriptsByGene([gene], [tx])
+    expect(result[0].transcripts).toEqual([])
+  })
+
   it('assigns contained transcripts by coordinate fallback', () => {
     const tx = transcript({ id: 't1', start: 200, end: 300 })
     const result = groupTranscriptsByGene([gene], [tx])
