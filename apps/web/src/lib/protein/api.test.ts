@@ -187,6 +187,21 @@ describe('fetchProteins', () => {
     expect(proteins[0].features[0].id).toBe('f1')
   })
 
+  it('rejects features that fall outside the protein length', async () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse([{ id: 'p1', protein_name: 'p53', sequence: 'MEEPQ', length: 5 }]),
+      )
+    const proteins = await fetchProteins({
+      featureSource: () => [
+        { id: 'f-in', start: 1, end: 5, type: 'domain', label: 'In range' },
+        { id: 'f-out', start: 1, end: 9, type: 'domain', label: 'Past the end' },
+      ],
+    })
+    expect(proteins[0].features.map((feature) => feature.id)).toEqual(['f-in'])
+  })
+
   it('throws a GenomeApiError on a malformed catalog', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue(jsonResponse({ items: [] }))
     await expect(fetchProteins()).rejects.toBeInstanceOf(GenomeApiError)

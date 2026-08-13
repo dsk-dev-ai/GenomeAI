@@ -11,7 +11,7 @@
  * contig size is known (`bounds`); otherwise the high side is open-ended.
  */
 
-import type { GenomeViewport } from './types'
+import type { GenomeViewport, IntervalWindow } from './types'
 
 /** Minimum viewport width in bases (maximum zoom-in). */
 export const MIN_VIEWPORT_BASES = 1
@@ -23,18 +23,8 @@ export const PAN_FRACTION = 0.5
 export const ZOOM_FACTOR = 1.5
 
 /**
- * Structural shape required by the viewport math: a one-based inclusive
- * window with optional known upper bound. Both `GenomeViewport` and the
- * residue-based `ProteinViewport` satisfy it, so navigation (and its
- * clamping) is shared instead of duplicated.
+ * Number of one-based inclusive units spanned by a window.
  */
-export interface IntervalWindow {
-  start: number
-  end: number
-  bounds?: { length: number }
-}
-
-/** Number of one-based inclusive units spanned by a window. */
 export function viewportBaseCount(viewport: IntervalWindow): number {
   return Math.max(1, viewport.end - viewport.start + 1)
 }

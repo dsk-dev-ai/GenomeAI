@@ -37,8 +37,13 @@ const AXIS_BOTTOM = AXIS_HEIGHT + 6
 /** Minimum bar width (px) before a feature label is drawn. */
 const FEATURE_LABEL_MIN_PX = 40
 
-/** Minimum hit-target width (px) for a feature's selection control. */
-const FEATURE_HIT_MIN_PX = 6
+/**
+ * Minimum hit-target width (px) for a feature's selection control. Kept to a
+ * comfortable pointer target for small bars (a one-residue feature renders
+ * only a few pixels wide); the hit rect is transparent, full row height, and
+ * only expands to this minimum, so larger bars are unaffected.
+ */
+const FEATURE_HIT_MIN_PX = 24
 
 /** Minimum window width before per-residue letters are rendered. */
 const SEQUENCE_HINT = 'Zoom in to view residues'

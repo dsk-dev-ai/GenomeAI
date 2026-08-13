@@ -153,8 +153,14 @@ export interface RenderedSpan {
   visible: boolean
 }
 
-/** The structural window shape required by interval clipping. */
-export type IntervalWindow = { start: number; end: number }
+/**
+ * The structural window shape required by interval clipping. Defined in the
+ * shared genome types so navigation (`lib/genome/viewport.ts`) and pixel
+ * mapping share one `IntervalWindow` and cannot drift apart. Re-exported here
+ * for callers that reach for it at the geometry layer.
+ */
+import type { IntervalWindow } from './types'
+export type { IntervalWindow }
 
 /**
  * Clips an inclusive interval to a window and converts it to a pixel span.

@@ -21,7 +21,7 @@ Delivered:
 - Pure geometry (`lib/protein/geometry.ts`) — residue/feature pixel mapping and
   axis-critical ticks via the shared genome scale, stable row packing
 - Feature presentation helpers (`lib/protein/features.ts`) — type
-  normalization, colors, labels, accessible labels, detail rows
+  normalization, colours, labels, accessible labels, detail rows
 - Thin typed adapter (`lib/protein/api.ts`) over the existing protein endpoint
   (`GET /proteins/{id}`, no backend changes) with injectable feature source
 - `useProteinViewer` hook — protein load lifecycle (via the shared

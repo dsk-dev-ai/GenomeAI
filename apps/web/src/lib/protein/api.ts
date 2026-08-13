@@ -193,6 +193,8 @@ export async function fetchProteins(options: FetchProteinsOptions = {}): Promise
     .map((protein) => ({
       ...protein,
       features:
-        protein.features.length > 0 ? protein.features : prepareFeatures(featureSource(protein)),
+        protein.features.length > 0
+          ? protein.features
+          : prepareFeatures(featureSource(protein), protein.length),
     }))
 }
