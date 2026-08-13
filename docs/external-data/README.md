@@ -6,7 +6,7 @@ This area governs how GenomeAI integrates external scientific sources. It is the
 
 > GenomeAI must never make the frontend depend directly on 20–30 external APIs.
 
-```
+```text
 External sources → connectors/ingestion → normalized GenomeAI data → GenomeAI API → Web/AI
 ```
 

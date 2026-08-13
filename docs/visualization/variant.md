@@ -9,6 +9,18 @@ conventions. Selecting a variant reveals a readable detail panel.
 
 Implemented on branch `feat/visualization-variant`.
 
+> **Known limitation — live data blocked by the backend (pre-existing, not
+> from this phase).** The Phase 5 coordinate-search endpoints return raw
+> SQLAlchemy ORM objects in `items: list[Any]`, so any search that returns
+> rows fails JSON serialization with a `PydanticSerializationError` (HTTP 500),
+> and `/search/suggestions` fails on a `SELECT DISTINCT ... ORDER BY` error.
+> The demo therefore calls the **real** `/search/variant/coordinate` endpoint
+> (no fixtures or mocked responses) and renders the track's error state until
+> the backend is fixed; the fixture-based gene/transcript viewer is unaffected.
+> A backend fix is tracked as a separate issue in the repository (search
+> endpoints must serialize ORM rows to `RawSearchItem` records before
+> responding).
+
 ## Scope (delivered)
 
 - Typed domain model (`lib/genome/variant.ts`): `Variant` (reuses the existing

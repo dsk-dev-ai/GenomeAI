@@ -8,7 +8,7 @@
 
 ## 0. The architecture we will build
 
-```
+```text
                     PUBLIC SCIENTIFIC SOURCES
                               |
         +---------------------+---------------------+
@@ -85,7 +85,7 @@ Notes:
 
 One NCBI connector, not scattered clients.
 
-```
+```text
 GenomeAI NCBI Connector
 |
 +-- Datasets
@@ -130,7 +130,7 @@ ClinVar is reachable through E-utilities via `esearch`, `esummary`, `elink`, `ef
 
 Major gene/transcript/variant reference.
 
-```
+```text
 Ensembl
 |
 +-- Gene
@@ -159,7 +159,7 @@ Visualization/reference-track source. Do not hammer it.
 
 ## 5. Protein data
 
-```
+```text
 Gene -> Transcript -> Protein -> UniProt (sequence, annotation, domains, identifiers)
                               |-- RCSB PDB (experimental structure)
                               +-- AlphaFold DB (predicted structure)
@@ -172,7 +172,7 @@ Gene -> Transcript -> Protein -> UniProt (sequence, annotation, domains, identif
 
 ## 6. Variant data
 
-```
+```text
 Variant
 |
 +-- NCBI dbSNP
@@ -190,7 +190,7 @@ Enables the GenomeAI variant story: Genome position → Gene → Transcript → 
 
 ## 7. Expression
 
-```
+```text
 Gene -> GTEx (tissue expression, eQTL, sQTL)
      -> ENCODE (regulatory regions, TF binding, chromatin, epigenomics)
 ```
@@ -201,7 +201,7 @@ GTEx exposes a documented v2 OpenAPI service with eQTL/sQTL and related endpoint
 
 ## 8. Disease / phenotype
 
-```
+```text
 Disease
 |
 +-- Disease Ontology
@@ -219,7 +219,7 @@ Disease
 
 ## 9. Pathways / networks
 
-```
+```text
 Gene / Protein -> Reactome, STRING, BioGRID, IntAct, Gene Ontology
 ```
 
@@ -229,7 +229,7 @@ Feeds Phase 6 network visualization and Phase 9 analysis. Reactome has a REST Co
 
 ## 10. Literature
 
-```
+```text
 LiteratureConnector -> PubMed, PubMed Central, Europe PMC, Crossref, OpenAlex
 
 paper -> metadata -> full text -> chunking -> embeddings -> vector DB -> RAG -> Research Agent
@@ -241,7 +241,7 @@ Belongs primarily to Phase 8, not Phase 6.
 
 ## 11. Drug / chemical layer
 
-```
+```text
 Compound -> PubChem, ChEMBL, BindingDB, DrugCentral, PharmGKB
 
 Drug -> Target -> Gene -> Variant -> Disease
@@ -259,7 +259,7 @@ Canonical GenomeAI entities: Genome, Assembly, Chromosome, Gene, Transcript, Pro
 
 Plus **ExternalIdentifier** — identifier federation:
 
-```
+```text
 GenomeAI Gene
 |
 +-- internal_id
@@ -280,7 +280,7 @@ GenomeAI Gene
 
 Every imported record must be traceable.
 
-```
+```text
 Gene
 |
 +-- source = Ensembl
@@ -298,7 +298,7 @@ Required for scientific reproducibility.
 
 ## 14. Database architecture
 
-```
+```text
                     GenomeAI
                        |
           +------------+------------+
@@ -321,7 +321,7 @@ Required for scientific reproducibility.
 
 ## 15. Data ingestion pipeline
 
-```
+```text
 Connector -> Fetcher -> Raw Artifact -> Parser -> Validator -> Normalizer
 -> Identifier Mapper -> Deduplicator -> Database Writer -> Search Indexer
 ```
@@ -348,7 +348,10 @@ Three distinct layers — do not confuse them:
 - **Phase 5 — Search** (largely complete): full text, domain APIs, advanced query, suggestions, coordinates, DSL, backend abstraction. Next: external-source-aware search — but do not turn Phase 5 into a giant ingestion project.
 - **Phase 6 — Visualization** (CURRENT):
   - 6.1 Foundation · 6.2 Genome Browser · 6.3 Gene/Transcript Viewer — done.
-  - **6.4 Variant Viewer (next)** → use the GenomeAI API backed by ClinVar / gnomAD / dbSNP / Ensembl, never direct browser → external API.
+  - **6.4 Variant Viewer** — frontend done (Phase 6.4 variant track, merged to
+    `main`); live external-source integration is deferred until Phase 7
+    ingestion, so the track currently reads the GenomeAI API — never direct
+    browser → external API.
   - 6.5 Protein Viewer → UniProt, RCSB PDB, AlphaFold DB.
   - 6.6 Biological Network Viewer → STRING, Reactome, Gene Ontology, BioGRID.
   - 6.7 Expression Visualization → GTEx, ENCODE.
@@ -412,7 +415,7 @@ Locked integration sequence (strategic dependency order, not "connect all at onc
 
 Every external source gets a record:
 
-```
+```text
 DataSource
 +-- name
 +-- provider
@@ -439,8 +442,8 @@ Phase 4 (Biological Domains) near-complete · Phase 5 (Search & Query) done · P
 
 Do **not** jump to Phase 7 yet. Sequence:
 
-```
-Phase 6.4 Variant Viewer
+```text
+Phase 6.4 Variant Viewer      (frontend done; external data in Phase 7)
       |
 Phase 6.5 Protein Viewer
       |
