@@ -138,3 +138,41 @@ export function formatRegionLabel(chromosome: string, start: number, end: number
 function formatGrouped(value: number): string {
   return value.toLocaleString('en-US')
 }
+
+/** A horizontal segment with pixel coordinates ready for SVG rendering. */
+export interface PixelSpan {
+  x: number
+  width: number
+}
+
+/** Geometry of a rendered feature interval on the canvas. */
+export interface RenderedSpan {
+  /** Horizontal span in pixel space (may be partially clipped). */
+  span: PixelSpan
+  /** True when at least part of the span is inside the viewport. */
+  visible: boolean
+}
+
+/** The structural window shape required by interval clipping. */
+export type IntervalWindow = { start: number; end: number }
+
+/**
+ * Clips an inclusive interval to a window and converts it to a pixel span.
+ * Returns `visible: false` when the interval does not intersect the window
+ * at all. Works for any one-based-inclusive interval (genomic base positions,
+ * protein residues, ...) so it is shared by every visualization module.
+ */
+export function intervalToPixels(
+  scale: GenomeScale,
+  viewport: IntervalWindow,
+  start: number,
+  end: number,
+): RenderedSpan {
+  const clipStart = Math.max(start, viewport.start)
+  const clipEnd = Math.min(end, viewport.end)
+  if (clipStart > clipEnd) return { span: { x: 0, width: 0 }, visible: false }
+
+  const x = scale.toX(clipStart)
+  const width = scale.spanToPixels(clipEnd - clipStart + 1)
+  return { span: { x, width }, visible: true }
+}
