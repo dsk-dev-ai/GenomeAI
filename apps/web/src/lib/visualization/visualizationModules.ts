@@ -46,7 +46,8 @@ const MODULES: readonly VisualizationModule[] = [
   {
     id: 'network-viewer',
     title: 'Biological Network Viewer',
-    description: 'Gene and protein interaction networks.',
+    description:
+      'Deterministic 2D relationship networks: typed graph model, layout, filtering, and selection.',
     milestone: '6.6',
     source: { kind: 'api', reference: '/api/visualization/networks' },
   },
