@@ -190,8 +190,9 @@ export function categoryLabelTicks(
 ): Array<{ sample: string; x: number; visible: boolean }> {
   const count = scale.domain.length
   if (count === 0) return []
-  const step = plotWidth / Math.max(count, 1)
-  const everyNth = Math.max(1, Math.ceil(minLabelGap / Math.max(step, 1)))
+  // Category centers are `plotWidth / (count - 1)` apart (see createCategoryScale).
+  const spacing = count > 1 ? plotWidth / (count - 1) : plotWidth
+  const everyNth = Math.max(1, Math.ceil(minLabelGap / Math.max(spacing, 1)))
   return scale.domain.map((sample, index) => ({
     sample,
     x: scale.toPixel(sample),

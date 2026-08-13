@@ -130,13 +130,20 @@ export function dedupePoints(points: ExpressionPoint[]): ExpressionPoint[] {
  *   then identifier) so charts render identically across runs.
  * - Invalid points (empty identifier/sample or non-finite value) are dropped.
  * - Duplicate point identifiers within a series are deduped (first wins).
+ * - Duplicate series ids are deduped (first wins).
  *
  * The returned dataset is always structurally valid (`validateExpressionDataset`
  * passes) and never shares mutable state with the input.
  */
 export function normalizeExpressionDataset(dataset: ExpressionDataset): ExpressionDataset {
+  const seenSeriesIds = new Set<string>()
   const series = dataset.series
-    .filter((series) => isValidIdentifier(series.id) && isValidIdentifier(series.label))
+    .filter((series) => {
+      if (!isValidIdentifier(series.id) || !isValidIdentifier(series.label)) return false
+      if (seenSeriesIds.has(series.id)) return false
+      seenSeriesIds.add(series.id)
+      return true
+    })
     .map((series) => {
       const points = dedupePoints(series.points)
         .filter((point) => {
@@ -150,24 +157,41 @@ export function normalizeExpressionDataset(dataset: ExpressionDataset): Expressi
         })
         .sort(
           (left, right) =>
-            left.sample.localeCompare(right.sample) ||
-            left.identifier.localeCompare(right.identifier),
+            compareText(left.sample, right.sample) ||
+            compareText(left.identifier, right.identifier),
         )
-      return { ...series, points }
+      return { ...series, points: points.map(clonePoint) }
     })
-    .sort((left, right) => left.id.localeCompare(right.id))
+    .sort((left, right) => compareText(left.id, right.id))
 
   return {
     id: dataset.id.trim().length > 0 ? dataset.id : 'unnamed-dataset',
     title: dataset.title.trim().length > 0 ? dataset.title : 'Unnamed dataset',
     series,
-    ...(dataset.metadata !== undefined ? { metadata: dataset.metadata } : {}),
+    ...(dataset.metadata !== undefined ? { metadata: { ...dataset.metadata } } : {}),
+  }
+}
+
+/**
+ * Compares two strings in code-unit order. Unlike `String.prototype.localeCompare`
+ * (which depends on the runtime's active locale), this ordering is identical
+ * across every environment, keeping normalized output deterministic.
+ */
+function compareText(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0
+}
+
+/** Shallow copy of a point (including its metadata) so the input stays untouched. */
+function clonePoint(point: ExpressionPoint): ExpressionPoint {
+  return {
+    ...point,
+    ...(point.metadata !== undefined ? { metadata: { ...point.metadata } } : {}),
   }
 }
 
 /**
  * The sorted, unique set of sample names across every series. Drives the
- * categorical x-axis; ordering is deterministic (locale compare).
+ * categorical x-axis; ordering is deterministic (code-unit compare).
  */
 export function availableSamples(dataset: ExpressionDataset): string[] {
   const samples = new Set<string>()
@@ -176,7 +200,7 @@ export function availableSamples(dataset: ExpressionDataset): string[] {
       if (point.sample.trim().length > 0) samples.add(point.sample)
     }
   }
-  return [...samples].sort((left, right) => left.localeCompare(right))
+  return [...samples].sort((left, right) => compareText(left, right))
 }
 
 export interface ValueDomain {

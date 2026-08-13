@@ -71,22 +71,41 @@ export interface PointKey {
   sample: string
 }
 
-/** Renders a canonical, collision-free key for a `PointKey`. */
+/**
+ * Renders a canonical, collision-free key for a `PointKey`.
+ *
+ * Fields are length-prefixed (`<length>:<value>`) so the encoding is
+ * unambiguous even when series ids, point ids, or sample names contain `:`
+ * or `@`. Empty values are supported and parse back to their exact strings.
+ */
 export function pointKeyToString(key: PointKey): string {
-  return `${key.seriesId}:${key.pointId}@${key.sample}`
+  return `${key.seriesId.length}:${key.seriesId}${key.pointId.length}:${key.pointId}${key.sample.length}:${key.sample}`
+}
+
+/** Reads one `<length>:<value>` field, returning the value and next offset. */
+function readPrefixedField(
+  value: string,
+  start: number,
+): { field: string; next: number } | undefined {
+  const separator = value.indexOf(':', start)
+  if (separator === -1) return undefined
+  const lengthText = value.slice(start, separator)
+  if (lengthText.length === 0) return undefined
+  const length = Number(lengthText)
+  if (!Number.isInteger(length) || length < 0) return undefined
+  const fieldStart = separator + 1
+  const fieldEnd = fieldStart + length
+  if (fieldEnd > value.length) return undefined
+  return { field: value.slice(fieldStart, fieldEnd), next: fieldEnd }
 }
 
 /** Parses a string produced by `pointKeyToString` back into a `PointKey`. */
 export function parsePointKey(value: string): PointKey | undefined {
-  const atIndex = value.indexOf('@')
-  if (atIndex === -1) return undefined
-  const seriesPart = value.slice(0, atIndex)
-  const sample = value.slice(atIndex + 1)
-  const separatorIndex = seriesPart.indexOf(':')
-  if (separatorIndex === -1) return undefined
-  return {
-    seriesId: seriesPart.slice(0, separatorIndex),
-    pointId: seriesPart.slice(separatorIndex + 1),
-    sample,
-  }
+  const seriesId = readPrefixedField(value, 0)
+  if (seriesId === undefined) return undefined
+  const pointId = readPrefixedField(value, seriesId.next)
+  if (pointId === undefined) return undefined
+  const sample = readPrefixedField(value, pointId.next)
+  if (sample === undefined || sample.next !== value.length) return undefined
+  return { seriesId: seriesId.field, pointId: pointId.field, sample: sample.field }
 }

@@ -126,6 +126,52 @@ describe('normalizeExpressionDataset', () => {
     expect(normalizeExpressionDataset(input).series.map((s) => s.id)).toEqual(['keep'])
   })
 
+  it('dedupes series with the same id, keeping the first occurrence', () => {
+    const input = dataset([
+      { id: 'dup', label: 'First', points: [point('A', 'Tumor-1', 1)] },
+      { id: 'dup', label: 'Second', points: [point('B', 'Tumor-1', 2)] },
+      { id: 'keep', label: 'Keep', points: [point('C', 'Tumor-1', 3)] },
+    ])
+    const normalized = normalizeExpressionDataset(input)
+    expect(normalized.series.map((s) => s.id)).toEqual(['dup', 'keep'])
+    expect(normalized.series[0].label).toBe('First')
+    expect(validateExpressionDataset(normalized).valid).toBe(true)
+  })
+
+  it('sorts with locale-independent code-unit order', () => {
+    // In most collation locales 'ä' sorts as "a" (before 'z'); code-unit order
+    // places 'z' (0x7A) before 'ä' (0xE4). LocaleCompare would put 'ä' first.
+    const input = dataset([
+      {
+        id: 's1',
+        label: 'S1',
+        points: [point('X', 'ä', 1), point('X', 'z', 2), point('X', 'Z', 3)],
+      },
+    ])
+    const normalized = normalizeExpressionDataset(input)
+    const samples = normalized.series[0].points.map((p) => p.sample)
+    expect(samples).toEqual(['Z', 'z', 'ä'])
+    expect(availableSamples(input)).toEqual(['Z', 'z', 'ä'])
+  })
+
+  it('does not share mutable state with the input', () => {
+    const point = { identifier: 'TP53', sample: 'Tumor-1', value: 10, metadata: { status: 'on' } }
+    const input = dataset([{ id: 's1', label: 'S1', points: [point] }])
+    const normalized = normalizeExpressionDataset(input)
+
+    point.value = 999
+    point.metadata.status = 'off'
+    point.identifier = 'mutated'
+    input.series[0].label = 'Mutated'
+    input.metadata = { mutated: true }
+
+    const normalizedPoint = normalized.series[0].points[0]
+    expect(normalizedPoint.value).toBe(10)
+    expect(normalizedPoint.identifier).toBe('TP53')
+    expect(normalizedPoint.metadata?.status).toBe('on')
+    expect(normalized.series[0].label).toBe('S1')
+  })
+
   it('falls back to defaults for empty ids and titles', () => {
     const input = dataset([])
     const empty = normalizeExpressionDataset({ ...input, id: '', title: '' })

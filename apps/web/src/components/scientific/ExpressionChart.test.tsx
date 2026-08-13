@@ -11,9 +11,12 @@ import {
   buildExpressionDataset,
 } from '@/lib/scientific/expression.fixtures'
 import { SERIES_COLORS } from '@/lib/scientific/geometry'
+import { pointKeyToString } from '@/lib/scientific/types'
 import type { ExpressionChartResult } from '@/lib/scientific/useExpressionChart'
 
 import { ExpressionChart } from './ExpressionChart'
+
+const TP53_TUMOR_1_KEY = pointKeyToString({ seriesId: 'tp53', pointId: 'TP53', sample: 'Tumor-1' })
 
 function result(overrides: Partial<ExpressionChartResult> = {}): ExpressionChartResult {
   const data = TP53_PATHWAY_EXPRESSION_FIXTURE
@@ -98,7 +101,7 @@ describe('ExpressionChart', () => {
     const selectPoint = vi.fn()
     render(<ExpressionChart result={result({ selectPoint })} />)
     fireEvent.click(screen.getByRole('button', { name: /Select TP53: TP53 in Tumor-1 = 128.4/ }))
-    expect(selectPoint).toHaveBeenCalledWith('tp53:TP53@Tumor-1')
+    expect(selectPoint).toHaveBeenCalledWith(TP53_TUMOR_1_KEY)
   })
 
   it('supports keyboard selection via Enter and Space', () => {
@@ -106,13 +109,13 @@ describe('ExpressionChart', () => {
     render(<ExpressionChart result={result({ selectPoint })} />)
     const control = screen.getByRole('button', { name: /Select TP53: TP53 in Tumor-1 = 128.4/ })
     fireEvent.keyDown(control, { key: 'Enter' })
-    expect(selectPoint).toHaveBeenCalledWith('tp53:TP53@Tumor-1')
+    expect(selectPoint).toHaveBeenCalledWith(TP53_TUMOR_1_KEY)
 
     cleanup()
     const selectPoint2 = vi.fn()
     render(
       <ExpressionChart
-        result={result({ selectPoint: selectPoint2, selectedKey: 'tp53:TP53@Tumor-1' })}
+        result={result({ selectPoint: selectPoint2, selectedKey: TP53_TUMOR_1_KEY })}
       />,
     )
     const control2 = screen.getByRole('button', { name: /Select TP53: TP53 in Tumor-1 = 128.4/ })
@@ -134,7 +137,7 @@ describe('ExpressionChart', () => {
   })
 
   it('renders a detail panel for a controlled selection', () => {
-    render(<ExpressionChart result={result({ selectedKey: 'tp53:TP53@Tumor-1' })} />)
+    render(<ExpressionChart result={result({ selectedKey: TP53_TUMOR_1_KEY })} />)
     expect(screen.getByTestId('chart-selection-detail')).toBeInTheDocument()
     expect(screen.getByText('TP53', { selector: 'h3' })).toBeInTheDocument()
     expect(screen.getByText('Value', { selector: 'dt' })).toBeInTheDocument()
@@ -142,9 +145,7 @@ describe('ExpressionChart', () => {
 
   it('clears the selection from the detail panel', () => {
     const clearSelection = vi.fn()
-    render(
-      <ExpressionChart result={result({ selectedKey: 'tp53:TP53@Tumor-1', clearSelection })} />,
-    )
+    render(<ExpressionChart result={result({ selectedKey: TP53_TUMOR_1_KEY, clearSelection })} />)
     fireEvent.click(screen.getByRole('button', { name: /clear selection/i }))
     expect(clearSelection).toHaveBeenCalledTimes(1)
   })
@@ -202,6 +203,64 @@ describe('ExpressionChart', () => {
       />,
     )
     expect(screen.getByRole('button', { name: /Select S1/ })).toBeInTheDocument()
+  })
+
+  it('reports aria-pressed for selection, not hover', () => {
+    render(<ExpressionChart result={result()} />)
+    const control = screen.getByRole('button', { name: /Select TP53: TP53 in Tumor-1 = 128.4/ })
+    fireEvent.mouseEnter(control)
+    expect(control.getAttribute('aria-pressed')).toBe('false')
+    fireEvent.mouseLeave(control)
+    expect(control.getAttribute('aria-pressed')).toBe('false')
+  })
+
+  it('reports aria-pressed when selected', () => {
+    render(<ExpressionChart result={result({ selectedKey: TP53_TUMOR_1_KEY })} />)
+    const control = screen.getByRole('button', { name: /Select TP53: TP53 in Tumor-1 = 128.4/ })
+    expect(control.getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('shows a visible focus ring when a point is keyboard-focused', () => {
+    render(<ExpressionChart result={result()} />)
+    const control = screen.getByRole('button', { name: /Select TP53: TP53 in Tumor-1 = 128.4/ })
+    expect(screen.queryByTestId('point-tp53-TP53-Tumor-1-focus-ring')).not.toBeInTheDocument()
+    fireEvent.focus(control)
+    expect(screen.getByTestId('point-tp53-TP53-Tumor-1-focus-ring')).toBeInTheDocument()
+    fireEvent.blur(control)
+    expect(screen.queryByTestId('point-tp53-TP53-Tumor-1-focus-ring')).not.toBeInTheDocument()
+  })
+
+  it('renders metadata rows that collide with built-in labels', () => {
+    const withCollidingMetadata: Parameters<typeof ExpressionChart>[0]['result']['dataset'] = {
+      id: 'colliding',
+      title: 'Colliding metadata',
+      series: [
+        {
+          id: 's1',
+          label: 'S1',
+          points: [
+            {
+              identifier: 'TP53',
+              sample: 'Tumor-1',
+              value: 10,
+              metadata: { Value: 'x', Sample: 'y', Normalized: 'z' },
+            },
+          ],
+        },
+      ],
+    }
+    render(
+      <ExpressionChart
+        result={result({
+          dataset: withCollidingMetadata,
+          samples: availableSamples(withCollidingMetadata),
+          valueDomain: expressionValueDomain(withCollidingMetadata, 'value'),
+        })}
+      />,
+    )
+    const control = screen.getByRole('button', { name: /Select S1/ })
+    fireEvent.mouseEnter(control)
+    expect(screen.getByTestId('chart-tooltip')).toHaveTextContent('Value')
   })
 
   it('respects an explicit pixel width for responsive layouts', () => {

@@ -2,7 +2,10 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { TP53_PATHWAY_EXPRESSION_FIXTURE, buildExpressionDataset } from './expression.fixtures'
+import { pointKeyToString } from './types'
 import { useExpressionChart } from './useExpressionChart'
+
+const TP53_TUMOR_1_KEY = pointKeyToString({ seriesId: 'tp53', pointId: 'TP53', sample: 'Tumor-1' })
 
 function Harness({
   onModel,
@@ -120,8 +123,8 @@ describe('useExpressionChart', () => {
     const captured = renderHook({ loader })
     await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('success'))
 
-    captured.model.selectPoint('tp53:TP53@Tumor-1')
-    await waitFor(() => expect(captured.model.selectedKey).toBe('tp53:TP53@Tumor-1'))
+    captured.model.selectPoint(TP53_TUMOR_1_KEY)
+    await waitFor(() => expect(captured.model.selectedKey).toBe(TP53_TUMOR_1_KEY))
 
     current = { ...buildExpressionDataset({ series: [] }), id: 'expression-other' }
     captured.model.refetch()
@@ -134,5 +137,64 @@ describe('useExpressionChart', () => {
     await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('error'))
     // No backend during tests: fetch rejects, which is the expected lifecycle.
     expect(captured.model.error).toBeDefined()
+  })
+
+  it('reloads when the datasetId changes', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith('d1')) {
+        return {
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              id: 'd1',
+              title: 'Dataset 1',
+              series: [
+                {
+                  id: 's1',
+                  label: 'S1',
+                  points: [{ identifier: 'A', sample: 'Tumor-1', value: 1 }],
+                },
+              ],
+            }),
+        } as unknown as Response
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            id: 'd2',
+            title: 'Dataset 2',
+            series: [
+              { id: 's2', label: 'S2', points: [{ identifier: 'B', sample: 'Tumor-2', value: 2 }] },
+            ],
+          }),
+      } as unknown as Response
+    })
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+
+    let model: ReturnType<typeof useExpressionChart> | undefined
+    const { rerender } = render(
+      <Harness
+        options={{ datasetId: 'd1' }}
+        onModel={(next) => {
+          model = next
+        }}
+      />,
+    )
+    await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('success'))
+    expect(model?.dataset?.id).toBe('d1')
+
+    rerender(
+      <Harness
+        options={{ datasetId: 'd2' }}
+        onModel={(next) => {
+          model = next
+        }}
+      />,
+    )
+    await waitFor(() => expect(model?.dataset?.id).toBe('d2'))
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 })

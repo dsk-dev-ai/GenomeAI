@@ -136,6 +136,25 @@ describe('fetchExpressionDataset', () => {
     await expect(fetchExpressionDataset('d1')).rejects.toBeInstanceOf(GenomeApiError)
   })
 
+  it('throws a GenomeApiError when the response body is not JSON', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.reject(new SyntaxError('Unexpected token < in JSON')),
+    } as unknown as Response)
+    await expect(fetchExpressionDataset('d1')).rejects.toBeInstanceOf(GenomeApiError)
+  })
+
+  it('rethrows an abort error instead of converting it to a GenomeApiError', async () => {
+    const abortError = new DOMException('The operation was aborted', 'AbortError')
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.reject(abortError),
+    } as unknown as Response)
+    await expect(fetchExpressionDataset('d1')).rejects.toBe(abortError)
+  })
+
   it('throws a GenomeApiError on a malformed payload', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue(jsonResponse(null))
     await expect(fetchExpressionDataset('d1')).rejects.toBeInstanceOf(GenomeApiError)

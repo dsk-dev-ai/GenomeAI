@@ -121,4 +121,20 @@ describe('categoryLabelTicks', () => {
     expect(visible.length).toBeLessThan(ticks.length)
     expect(visible[0].sample).toBe('S0')
   })
+
+  it('labels every category when centers are wide enough to fit', () => {
+    // Two categories over a 60px plot: centers are 60px apart (not 30px),
+    // so both labels fit even at the default 36px minimum gap.
+    const scale = createCategoryScale(['A', 'B'], [0, 60])
+    const ticks = categoryLabelTicks(scale, 60, 36)
+    expect(ticks.map((tick) => tick.sample)).toEqual(['A', 'B'])
+    expect(ticks.every((tick) => tick.visible)).toBe(true)
+  })
+
+  it('labels every category for a single category', () => {
+    const scale = createCategoryScale(['A'], [0, 60])
+    const ticks = categoryLabelTicks(scale, 60, 36)
+    expect(ticks.map((tick) => tick.sample)).toEqual(['A'])
+    expect(ticks.every((tick) => tick.visible)).toBe(true)
+  })
 })

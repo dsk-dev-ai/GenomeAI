@@ -77,6 +77,17 @@ export function useExpressionChart(options: UseExpressionChartOptions = {}): Exp
     isEmpty: (dataset) => dataset.series.length === 0 || !hasRenderablePoints(dataset),
   })
 
+  // Reload whenever the requested dataset id changes. The loader reads the
+  // latest `datasetId` through a ref, but `useVisualizationData` only fetches
+  // on mount, so a changed id would otherwise silently keep the old data.
+  const previousDatasetIdRef = useRef(datasetId)
+  useEffect(() => {
+    if (previousDatasetIdRef.current !== datasetId) {
+      previousDatasetIdRef.current = datasetId
+      refetch()
+    }
+  }, [datasetId, refetch])
+
   const dataset = data
 
   const samples = useMemo(() => (dataset === undefined ? [] : availableSamples(dataset)), [dataset])

@@ -144,7 +144,22 @@ export async function fetchExpressionDataset(
       response.status,
     )
   }
-  const payload: unknown = await response.json()
+  let payload: unknown
+  try {
+    payload = await response.json()
+  } catch (cause) {
+    if (
+      typeof cause === 'object' &&
+      cause !== null &&
+      'name' in cause &&
+      (cause as { name?: unknown }).name === 'AbortError'
+    ) {
+      throw cause
+    }
+    throw new GenomeApiError(
+      `GenomeAI API returned an unreadable response for expression dataset ${datasetId}`,
+    )
+  }
   const dataset = expressionDatasetFromRecords(payload)
   if (dataset === undefined) {
     throw new GenomeApiError(

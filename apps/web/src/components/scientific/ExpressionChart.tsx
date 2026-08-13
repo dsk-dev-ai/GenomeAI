@@ -35,7 +35,6 @@ function SeriesPoint({
   color,
   label,
   selected,
-  pressed,
   testId,
   onMouseEnter,
   onMouseLeave,
@@ -46,16 +45,29 @@ function SeriesPoint({
   color: string
   label: string
   selected: boolean
-  pressed: boolean
   testId: string
   onMouseEnter: () => void
   onMouseLeave: () => void
   onSelect: () => void
 }) {
+  const [focused, setFocused] = useState(false)
   return (
     <g data-testid={testId} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
       <title>{label}</title>
       <circle cx={x} cy={y} r={selected ? POINT_RADIUS + 1 : POINT_RADIUS} fill={color} />
+      {focused ? (
+        <circle
+          cx={x}
+          cy={y}
+          r={HIT_RADIUS + 1}
+          fill="none"
+          stroke="#0f172a"
+          strokeWidth={2}
+          strokeDasharray="3 3"
+          pointerEvents="none"
+          data-testid={`${testId}-focus-ring`}
+        />
+      ) : null}
       <circle
         cx={x}
         cy={y}
@@ -64,9 +76,11 @@ function SeriesPoint({
         stroke="none"
         role="button"
         aria-label={`Select ${label}`}
-        aria-pressed={selected || pressed}
+        aria-pressed={selected}
         tabIndex={0}
         data-testid={`${testId}-hit`}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault()
@@ -165,8 +179,8 @@ function ChartDetail({ result }: { result: ExpressionChartResult }) {
       </h3>
       <p className="text-xs text-gray-500">{tooltip.subtitle}</p>
       <dl className="grid w-full grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
-        {tooltip.rows.map((row) => (
-          <div key={row.label} className="flex gap-2 text-sm">
+        {tooltip.rows.map((row, index) => (
+          <div key={`${row.label}-${index}`} className="flex gap-2 text-sm">
             <dt className="text-gray-500">{row.label}</dt>
             <dd className="text-gray-900">{row.value}</dd>
           </div>
@@ -288,6 +302,8 @@ export function ExpressionChart({
             <svg
               width={chartWidth}
               height={height}
+              viewBox={`0 0 ${chartWidth} ${height}`}
+              preserveAspectRatio="xMidYMid meet"
               // biome-ignore lint/a11y/useSemanticElements: role="group" on an SVG keeps
               // the interactive point controls inside the accessibility tree (see NetworkViewer).
               role="group"
@@ -320,7 +336,6 @@ export function ExpressionChart({
                     }
                     const key = keyFor(series, point)
                     const selected = result.selectedKey === key
-                    const pressed = hoveredKey !== null && pointKeyToString(hoveredKey) === key
                     const label = `${series.label}: ${point.identifier} in ${point.sample} = ${formatTooltipValue(value)}`
                     return (
                       <SeriesPoint
@@ -330,7 +345,6 @@ export function ExpressionChart({
                         color={color}
                         label={label}
                         selected={selected}
-                        pressed={pressed}
                         testId={`point-${series.id}-${point.identifier}-${point.sample}`}
                         onMouseEnter={() => setHoveredKey(pointKey)}
                         onMouseLeave={() => setHoveredKey(null)}
