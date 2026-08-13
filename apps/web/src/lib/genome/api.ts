@@ -48,15 +48,18 @@ interface CoordinateSearchPayload {
 /** A raw, untyped item from a search response. */
 export type RawSearchItem = Record<string, unknown>
 
-function asString(value: unknown): string | undefined {
+/** Shared string guard used by every domain adapter. */
+export function asString(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined
 }
 
-function asNumber(value: unknown): number | undefined {
+/** Shared number guard used by every domain adapter. */
+export function asNumber(value: unknown): number | undefined {
   return typeof value === 'number' ? value : undefined
 }
 
-function idOf(value: unknown): string {
+/** Extracts a stable string identity from `id` (or a nested `{ id }`). */
+export function idOf(value: unknown): string {
   if (typeof value === 'string' && value.length > 0) return value
   if (typeof value === 'object' && value !== null && 'id' in value) {
     return idOf((value as { id: unknown }).id)

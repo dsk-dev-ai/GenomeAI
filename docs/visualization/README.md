@@ -65,6 +65,26 @@ Browser foundation.
   description — never inferred from arbitrary strings.
 - Demo integrated at `/visualization`.
 
+## What Phase 6.5 Provides
+
+- Protein sequence + annotation visualization (see [Protein Viewer](./protein-viewer.md)):
+  a typed domain model over one-based-inclusive residue coordinates that mirror
+  the genome viewer's interval semantics, pure sequence/viewport/geometry
+  modules, and a thin adapter over the existing protein endpoint — no backend
+  changes.
+- A reusable `useProteinViewer` hook composing the shared data lifecycle with
+  the residue window and feature selection, and a `ProteinViewer` component
+  rendering a residue axis, stacked feature rows clipped to the visible window,
+  a residue-letter lane with per-residue numbering, a residue/range input, and
+  keyboard-accessible feature selection with a readable detail panel.
+- Generalized base utilities shared with the genome browser
+  (`intervalToPixels` → `lib/genome/geometry.ts`, `IntervalWindow` pan/zoom
+  navigation, and generic row packing).
+- A feature-data boundary: the backend exposes protein identity + sequence but
+  not yet annotation features, so the demo uses a clearly isolated dev fixture
+  routed through the same normalizers as production.
+- Demo integrated at `/visualization`.
+
 ## Documents
 
 | Document | Description |
@@ -73,6 +93,7 @@ Browser foundation.
 | [Genome Browser](genome-browser.md) | Phase 6.2 Genome Browser: scope, data flow, API, a11y, tests |
 | [Gene / Transcript](gene-transcript.md) | Phase 6.3 Gene / Transcript visualization: scope, data flow, API, a11y, tests |
 | [Variant](variant.md) | Phase 6.4 Variant visualization: scope, data flow, API, a11y, tests |
+| [Protein Viewer](protein-viewer.md) | Phase 6.5 Protein Viewer: scope, data flow, API, a11y, tests |
 | [Roadmap](roadmap.md) | Detailed phase tracking and future work |
 
 ## Technology Notes
@@ -83,6 +104,6 @@ primitives. No C++, WebAssembly, WebGPU, Three.js, Cytoscape.js, or D3.js is
 used — those are introduced only when the milestone that actually requires
 them arrives:
 
-- Three.js → Phase 6.5 (protein viewer, if 3D is required)
+- Three.js → a future 3D molecular structure milestone
 - Cytoscape.js → Phase 6.6 (networks)
 - D3.js → Phase 6.7 (scientific charts)

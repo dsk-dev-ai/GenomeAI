@@ -16,6 +16,7 @@
  * adapter module for the exact boundary.
  */
 
+import { asNumber, asString, idOf } from './api'
 import type { RawSearchItem } from './api'
 import type { Strand } from './types'
 
@@ -71,22 +72,6 @@ export interface Gene {
   biotype?: string
   /** Transcripts ordered for display (see `sortTranscripts`). */
   transcripts: GeneTranscript[]
-}
-
-function asString(value: unknown): string | undefined {
-  return typeof value === 'string' ? value : undefined
-}
-
-function asNumber(value: unknown): number | undefined {
-  return typeof value === 'number' ? value : undefined
-}
-
-function idOf(value: unknown): string {
-  if (typeof value === 'string' && value.length > 0) return value
-  if (typeof value === 'object' && value !== null && 'id' in value) {
-    return idOf((value as { id: unknown }).id)
-  }
-  return ''
 }
 
 function strandOf(value: unknown): Strand | undefined {

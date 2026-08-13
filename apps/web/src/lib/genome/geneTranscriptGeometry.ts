@@ -10,8 +10,12 @@
  */
 
 import type { GeneExon, GeneTranscript } from './geneTranscript'
-import type { GenomeScale } from './geometry'
+import { intervalToPixels } from './geometry'
+import type { GenomeScale, PixelSpan, RenderedSpan } from './geometry'
 import type { GenomeViewport } from './types'
+
+export type { PixelSpan, RenderedSpan }
+export { intervalToPixels }
 
 /** Vertical stride used between transcript lanes. */
 export const TRANSCRIPT_LANE_HEIGHT = 22
@@ -25,46 +29,12 @@ export const EXON_HEIGHT = 8
 /** Thickness (stroke-width) of the intron connector line. */
 export const INTRON_WIDTH = 1.5
 
-/** A horizontal segment with pixel coordinates ready for SVG rendering. */
-export interface PixelSpan {
-  x: number
-  width: number
-}
-
 /** Vertical placement of a transcript lane within the viewer. */
 export interface TranscriptLane {
   /** Index of the lane (0-based, in display order). */
   index: number
   /** Vertical offset (px) of the lane's centre line. */
   y: number
-}
-
-/** Geometry of a rendered gene/transcript/exon on the canvas. */
-export interface RenderedSpan {
-  /** Horizontal span in pixel space (may be partially clipped). */
-  span: PixelSpan
-  /** True when at least part of the span is inside the viewport. */
-  visible: boolean
-}
-
-/**
- * Clips an inclusive genomic interval to the viewport and converts it to a
- * pixel span. Returns `visible: false` when the interval does not intersect
- * the viewport at all.
- */
-export function intervalToPixels(
-  scale: GenomeScale,
-  viewport: GenomeViewport,
-  start: number,
-  end: number,
-): RenderedSpan {
-  const clipStart = Math.max(start, viewport.start)
-  const clipEnd = Math.min(end, viewport.end)
-  if (clipStart > clipEnd) return { span: { x: 0, width: 0 }, visible: false }
-
-  const x = scale.toX(clipStart)
-  const width = scale.spanToPixels(clipEnd - clipStart + 1)
-  return { span: { x, width }, visible: true }
 }
 
 /**

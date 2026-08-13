@@ -103,3 +103,17 @@ export interface GenomeViewport extends GenomicInterval {
   /** Optional known contig size used to clamp navigation. */
   bounds?: ContigBounds
 }
+
+/**
+ * The structural window shape shared by the viewport navigation math and the
+ * interval-to-pixel clipping. Any one-based-inclusive window — the genomic
+ * `GenomeViewport` or the residue-based `ProteinViewport` — satisfies it, so
+ * navigation, clamping, and pixel mapping are shared instead of duplicated
+ * across the genome and protein viewers.
+ */
+export interface IntervalWindow {
+  start: number
+  end: number
+  /** Optional known upper bound (contig length / protein length). */
+  bounds?: ContigBounds
+}

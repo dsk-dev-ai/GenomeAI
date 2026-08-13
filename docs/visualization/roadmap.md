@@ -4,7 +4,53 @@ Tracks the Phase 6 visualization platform milestones. See
 [Phase 6 of the project ROADMAP](</ROADMAP.md#phase-6--visualization-platform>) for
 the authoritative milestone list.
 
-## Current Milestone: 6.4 — Variant Visualization ✅
+## Current Milestone: 6.5 — Protein Viewer ✅
+
+Implemented on branch `feat/visualization-protein-viewer`, on top of 6.4.
+
+Delivered:
+
+- Typed domain model (`lib/protein/types.ts`) — `Protein`, `ProteinFeature`,
+  `ProteinFeatureType`, `ProteinViewport`, `ProteinResidue`, `ProteinViewerState`
+- Pure sequence helpers (`lib/protein/sequence.ts`) — 1-based residue indexing,
+  validators, and window slicing
+- Pure viewport math (`lib/protein/viewport.ts`) — opening window, clamped
+  zoom/pan/navigate, and typed region parsing, reusing the shared
+  `IntervalWindow` utilities so protein navigation cannot drift from genomic
+  navigation
+- Pure geometry (`lib/protein/geometry.ts`) — residue/feature pixel mapping and
+  axis-critical ticks via the shared genome scale, stable row packing
+- Feature presentation helpers (`lib/protein/features.ts`) — type
+  normalization, colours, labels, accessible labels, detail rows
+- Thin typed adapter (`lib/protein/api.ts`) over the existing protein endpoint
+  (`GET /proteins/{id}`, no backend changes) with injectable feature source
+- `useProteinViewer` hook — protein load lifecycle (via the shared
+  `useVisualizationData`) + viewport + feature selection
+- `ProteinViewer` SVG component — residue axis, stacked feature rows clipped to
+  the window, residue-letter lane with per-residue numbering, region input,
+  and keyboard-accessible feature selection with a detail panel
+- Generalized base utilities: `intervalToPixels` → `lib/genome/geometry.ts`,
+  `panViewport`/`zoomViewport` → `IntervalWindow` (shared with the protein
+  viewport), and generic row packing (`layoutRows`)
+- Demo integrated at `/visualization` (`ProteinDemo` uses the dev fixture)
+- Tests (104 across the protein modules) and docs (see
+  [Protein Viewer](protein-viewer.md))
+
+Constraints honored:
+
+- The viewer is the sequence/annotation foundation, NOT a 3D structure renderer;
+  3D work stays on a future milestone that requires it
+- Feature `type` is carried as opaque text and normalized only for presentation,
+  never inferred from labels or sequence
+- Backend annotation features are not yet exposed, so the demo uses a clearly
+  isolated dev fixture routed through the same normalizers as production
+  (see [Protein Viewer](protein-viewer.md#feature-data-boundary))
+- No C++, WebAssembly, WebGPU, Three.js, Cytoscape.js, or D3.js
+- Phase 5 search untouched; no new runtime dependencies
+
+## Previous milestones
+
+### 6.4 — Variant Visualization ✅
 
 Implemented on branch `feat/visualization-variant`, on top of 6.3.
 
@@ -34,8 +80,6 @@ Constraints honored:
   strings or `ref`/`alt`; only API-reported fields are displayed
 - No C++, WebAssembly, WebGPU, Three.js, Cytoscape.js, or D3.js
 - Phase 5 search untouched; no new runtime dependencies
-
-## Previous milestones
 
 ### 6.3 — Gene / Transcript Visualization ✅
 
@@ -120,9 +164,9 @@ Constraints honored:
 
 | # | Milestone | Notes |
 |---|-----------|-------|
-| 6.5 | Protein Structure Viewer | 3D; Three.js only if 3D is truly required |
 | 6.6 | Biological Network Visualization | Interaction graphs; Cytoscape.js |
 | 6.7 | Scientific Charts | Trend/QC plots; D3-based |
-| 6.8 | Integrated Research Workspace | Assembles 6.4–6.7 into a UI |
+| 6.8 | Integrated Research Workspace | Assembles 6.5–6.7 into a UI |
 | 6.9 | Visualization Performance & Optimization | Virtualization / density rendering for large data |
 | 6.10 | Visualization Testing & Documentation | Stabilization + docs pass |
+| 6.11 | Molecular Structure Viewer (3D) | 3D protein structures; Three.js only if 3D is truly required |

@@ -41,9 +41,16 @@ export const DEFAULT_TRACK_CONFIG: GenomeTrackConfig = {
 /** Per-row vertical stride (px) used by `layoutRows`. */
 export const TRACK_ROW_HEIGHT = 16
 
+/** Structural shape used by `layoutRows` (sort + non-overlap packing). */
+export interface RowFeature {
+  start: number
+  end: number
+  id: string
+}
+
 /** A non-overlapping row produced by {@link layoutRows}. */
-export interface FeatureRow {
-  features: GenomicFeature[]
+export interface FeatureRow<T extends RowFeature = GenomicFeature> {
+  features: T[]
   /** Vertical offset (px) from the track top. */
   yOffset: number
 }
@@ -53,14 +60,15 @@ export interface FeatureRow {
  * whose rightmost end lies before the feature's start. Results are
  * deterministic (stable sort by start, then end, then id) and O(n log n).
  * This is intentionally not optimal packing — visualizations only need a
- * deterministic, readable arrangement.
+ * deterministic, readable arrangement. Generic over the feature shape so
+ * genomic spans and protein feature spans share one implementation.
  */
-export function layoutRows(features: readonly GenomicFeature[]): FeatureRow[] {
+export function layoutRows<T extends RowFeature>(features: readonly T[]): FeatureRow<T>[] {
   const sorted = [...features].sort(
     (a, b) => a.start - b.start || a.end - b.end || a.id.localeCompare(b.id),
   )
 
-  const rows: FeatureRow[] = []
+  const rows: FeatureRow<T>[] = []
   const rowEnds: number[] = []
 
   for (const feature of sorted) {

@@ -37,8 +37,9 @@ const MODULES: readonly VisualizationModule[] = [
   },
   {
     id: 'protein-viewer',
-    title: 'Protein Structure Viewer',
-    description: 'Three-dimensional protein structure inspection.',
+    title: 'Protein Viewer',
+    description:
+      'Protein sequence and annotation visualization: residue window, features, and selection.',
     milestone: '6.5',
     source: { kind: 'api', reference: '/api/visualization/proteins' },
   },

@@ -11,7 +11,7 @@
  * contig size is known (`bounds`); otherwise the high side is open-ended.
  */
 
-import type { GenomeViewport } from './types'
+import type { GenomeViewport, IntervalWindow } from './types'
 
 /** Minimum viewport width in bases (maximum zoom-in). */
 export const MIN_VIEWPORT_BASES = 1
@@ -22,13 +22,15 @@ export const PAN_FRACTION = 0.5
 /** Factor applied to the viewport size per zoom action. */
 export const ZOOM_FACTOR = 1.5
 
-/** Number of one-based inclusive bases spanned by a viewport. */
-export function viewportBaseCount(viewport: GenomeViewport): number {
+/**
+ * Number of one-based inclusive units spanned by a window.
+ */
+export function viewportBaseCount(viewport: IntervalWindow): number {
   return Math.max(1, viewport.end - viewport.start + 1)
 }
 
-/** Upper coordinate limit of the contig when its size is known. */
-export function viewportEndBound(viewport: GenomeViewport): number | undefined {
+/** Upper coordinate limit of the window when its size is known. */
+export function viewportEndBound(viewport: IntervalWindow): number | undefined {
   return viewport.bounds?.length
 }
 
@@ -61,10 +63,12 @@ export function initialViewport(
 }
 
 /**
- * Zooms the viewport around its center by `factor` (values < 1 zoom in,
- * values > 1 zoom out), then clamps it to the contig bounds when known.
+ * Zooms the window around its center by `factor` (values < 1 zoom in,
+ * values > 1 zoom out), then clamps it to the bounds when known. Generic
+ * over the window type so genome and protein viewers share one
+ * implementation (see {@link IntervalWindow}).
  */
-export function zoomViewport(viewport: GenomeViewport, factor: number): GenomeViewport {
+export function zoomViewport<V extends IntervalWindow>(viewport: V, factor: number): V {
   if (factor <= 0 || !Number.isFinite(factor)) return viewport
 
   const span = viewportBaseCount(viewport)
@@ -87,14 +91,15 @@ export function zoomViewport(viewport: GenomeViewport, factor: number): GenomeVi
     start = Math.max(1, end - clampedSpan + 1)
   }
 
-  return { ...viewport, start, end, bounds: viewport.bounds }
+  return { ...viewport, start, end, bounds: viewport.bounds } as V
 }
 
 /**
- * Pans the viewport by `delta` bases (positive = right, negative = left),
- * clamping to the valid contig range when known.
+ * Pans the window by `delta` units (positive = right, negative = left),
+ * clamping to the valid range when known. Generic over the window type so
+ * genome and protein viewers share one implementation.
  */
-export function panViewport(viewport: GenomeViewport, delta: number): GenomeViewport {
+export function panViewport<V extends IntervalWindow>(viewport: V, delta: number): V {
   const span = viewportBaseCount(viewport)
   const endLimit = viewportEndBound(viewport)
 
@@ -110,5 +115,5 @@ export function panViewport(viewport: GenomeViewport, delta: number): GenomeView
     start = end - span + 1
   }
 
-  return { ...viewport, start, end, bounds: viewport.bounds }
+  return { ...viewport, start, end, bounds: viewport.bounds } as V
 }
