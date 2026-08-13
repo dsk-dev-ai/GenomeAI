@@ -83,4 +83,20 @@ describe('fetchVariants', () => {
     expect(variants).toHaveLength(1)
     expect(variants[0].id).toBe('good')
   })
+
+  it('filters out records with neither id nor variant_id so selection stays stable', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      jsonResponse({
+        items: [
+          { chromosome: 'chr7', position: 10 },
+          { id: 'named', variant_id: 'rs1', chromosome: 'chr7', position: 20 },
+        ],
+        pagination: { page: 1, page_size: 100, total_count: 2 },
+      }),
+    )
+
+    const variants = await fetchVariants({ chromosome: 'chr7', start: 1, end: 100 })
+    expect(variants).toHaveLength(1)
+    expect(variants[0].id).toBe('named')
+  })
 })

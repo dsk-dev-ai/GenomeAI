@@ -17,66 +17,34 @@
  * only as a display convenience, never as a classification.
  */
 
+import { toVariantFeature } from './api'
 import type { RawSearchItem } from './api'
 import type { VariantFeature } from './types'
 
 /** The typed variant record used by the variant visualization. */
 export type Variant = VariantFeature
 
-function asString(value: unknown): string | undefined {
-  return typeof value === 'string' ? value : undefined
-}
-
-function asNumber(value: unknown): number | undefined {
-  return typeof value === 'number' ? value : undefined
-}
-
-function idOf(value: unknown): string {
-  if (typeof value === 'string' && value.length > 0) return value
-  if (typeof value === 'object' && value !== null && 'id' in value) {
-    return idOf((value as { id: unknown }).id)
-  }
-  return ''
-}
-
 /**
  * Normalizes a raw variant record from the coordinate-search API.
  *
- * Mirrors `toVariantFeature` in `lib/genome/api.ts` so the model module is
- * self-contained; the shared request pipeline remains in `api.ts`.
+ * Delegates to the single shared mapper in `lib/genome/api.ts`
+ * (`toVariantFeature`) so the model and the data adapter can never drift
+ * apart when the variant schema changes.
  */
 export function toVariant(item: RawSearchItem): Variant {
-  const position = asNumber(item.position)
-  const chromosome = asString(item.chromosome)
-  if (chromosome === undefined || position === undefined || position < 1) {
-    return { id: '', type: 'variant', chromosome: '', start: 0, end: 0, position: 0 }
-  }
-  const ref = asString(item.ref)
-  const alt = asString(item.alt)
-  const quality = asNumber(item.quality)
-  return {
-    id: idOf(item.id) || asString(item.variant_id) || '',
-    type: 'variant',
-    chromosome,
-    start: position,
-    end: position,
-    position,
-    ref,
-    alt,
-    name: ref && alt ? `${ref}>${alt}` : undefined,
-    variantId: asString(item.variant_id),
-    variantType: asString(item.type),
-    ...(quality !== undefined ? { quality } : {}),
-    filterStatus: asString(item.filter_status),
-    geneId: asString(item.gene_id),
-    description: asString(item.description),
-  }
+  return toVariantFeature(item)
 }
 
-/** True when `variant` carries a usable 1-based point coordinate. */
+/**
+ * True when `variant` carries a usable 1-based point coordinate and a
+ * non-empty identity (used as the React key and selection identity).
+ */
 export function isValidVariant(variant: Variant): boolean {
   return (
-    variant.chromosome.length > 0 && Number.isSafeInteger(variant.position) && variant.position >= 1
+    variant.id.length > 0 &&
+    variant.chromosome.length > 0 &&
+    Number.isSafeInteger(variant.position) &&
+    variant.position >= 1
   )
 }
 

@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { VisualizationContainer } from '@/components/visualization/VisualizationContainer'
 import { createScale } from '@/lib/genome/geometry'
 import type { GenomeViewport, VariantFeature } from '@/lib/genome/types'
-import { type GenomeTrackDefinition, useGenomeTrack } from '@/lib/genome/useGenomeBrowser'
+import { type VariantTrackDefinition, useGenomeTrack } from '@/lib/genome/useGenomeBrowser'
 import { variantAccessibleLabel, variantDetailLines, variantLabel } from '@/lib/genome/variant'
 import {
   VARIANT_MARK_HALF_HEIGHT,
@@ -29,20 +29,22 @@ const SELECTED_MARK_COLOR = '#db2777'
  * Dense regions are stacked onto rows when marks would overlap. Each mark
  * carries a hover `<title>` and is a keyboard-focusable selection control;
  * selecting a variant reveals a readable detail panel beneath the lane.
+ *
+ * Owns its own track hook (called unconditionally); the browser passes the
+ * discriminated `VariantTrackDefinition`, so `data` resolves to
+ * `VariantFeature` records with no cast.
  */
 export function VariantTrack({
   track,
   debouncedViewport,
 }: {
-  track: GenomeTrackDefinition
+  track: VariantTrackDefinition
   debouncedViewport: GenomeViewport
 }) {
   const data = useGenomeTrack(track, debouncedViewport)
   const viewport = debouncedViewport
   const scale = createScale(viewport.start, viewport.end, SVG_WIDTH - TRACK_HEADER_WIDTH)
-  // The loader for a variant track returns VariantFeature records; the track
-  // hook types them as GenomicFeature, so narrow at the adapter boundary.
-  const variants = variantsInViewport((data.data ?? []) as VariantFeature[], viewport)
+  const variants = variantsInViewport(data.data ?? [], viewport)
   const marks = layoutVariantMarks(scale, variants)
 
   const [selectedId, setSelectedId] = useState<string | null>(null)

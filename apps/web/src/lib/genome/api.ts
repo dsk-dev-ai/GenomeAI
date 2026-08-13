@@ -137,7 +137,7 @@ export function toVariantFeature(item: RawSearchItem): VariantFeature {
   const alt = asString(item.alt)
   const quality = asNumber(item.quality)
   return {
-    id: idOf(item.id),
+    id: idOf(item.id) || asString(item.variant_id) || '',
     type: 'variant',
     chromosome,
     start: position,

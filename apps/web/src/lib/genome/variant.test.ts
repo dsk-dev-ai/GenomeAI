@@ -79,6 +79,10 @@ describe('isValidVariant', () => {
   it('rejects variants without a chromosome', () => {
     expect(isValidVariant(variant({ id: 'v5', chromosome: '' }))).toBe(false)
   })
+
+  it('rejects variants without a non-empty identity', () => {
+    expect(isValidVariant({ ...variant({ id: 'v6', position: 10 }), id: '' })).toBe(false)
+  })
 })
 
 describe('variantLabel', () => {

@@ -18,6 +18,7 @@ import {
   type GenomeBrowserResult,
   type GenomeTrackData,
   type GenomeTrackDefinition,
+  type SpanTrackDefinition,
   useGenomeBrowser,
   useGenomeTrack,
 } from '@/lib/genome/useGenomeBrowser'
@@ -212,26 +213,17 @@ function BrowserStatus({ viewport }: { viewport: GenomeViewport }) {
 }
 
 /**
- * Renders one track lane as its own stable component instance.
- *
- * Being a component (not a loop inside a hook) keeps the Rules of Hooks
- * satisfied as the track set grows, shrinks, or reorders. Span tracks
- * (genes/transcripts) render arrow glyphs; point variants render through the
- * reusable `VariantTrack` component.
+ * Renders one span-track lane (genes/transcripts). Owns its own track hook
+ * (called unconditionally) and draws arrow glyphs for in-viewport features.
  */
-function BrowserTrack({
+function SpanTrackLane({
   track,
-  debouncedViewport,
+  viewport,
 }: {
-  track: GenomeTrackDefinition
-  debouncedViewport: GenomeViewport
+  track: SpanTrackDefinition
+  viewport: GenomeViewport
 }) {
-  if (track.kind === 'variants') {
-    return <VariantTrack track={track} debouncedViewport={debouncedViewport} />
-  }
-
-  const data = useGenomeTrack(track, debouncedViewport)
-  const viewport = debouncedViewport
+  const data = useGenomeTrack(track, viewport)
   const features = featuresInViewport(data.data ?? [], viewport)
 
   return (
@@ -250,6 +242,30 @@ function BrowserTrack({
       </svg>
     </VisualizationContainer>
   )
+}
+
+/**
+ * Renders one track lane as its own stable component instance.
+ *
+ * Being a component (not a loop inside a hook) keeps the Rules of Hooks
+ * satisfied as the track set grows, shrinks, or reorders. Each lane is a
+ * separate component that calls `useGenomeTrack` unconditionally, so a
+ * retained instance that changes `track.kind` never trips a hook-order error
+ * — the definition union is narrowed on `kind`, so the variant lane receives
+ * its exact `VariantFeature` data type with no cast.
+ */
+function BrowserTrack({
+  track,
+  debouncedViewport,
+}: {
+  track: GenomeTrackDefinition
+  debouncedViewport: GenomeViewport
+}) {
+  if (track.kind === 'variants') {
+    return <VariantTrack track={track} debouncedViewport={debouncedViewport} />
+  }
+
+  return <SpanTrackLane track={track} viewport={debouncedViewport} />
 }
 
 export interface GenomeBrowserProps extends GenomeBrowserOptions {

@@ -2,12 +2,12 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { VariantFeature } from '@/lib/genome/types'
-import type { GenomeTrackDefinition } from '@/lib/genome/useGenomeBrowser'
+import type { VariantTrackDefinition } from '@/lib/genome/useGenomeBrowser'
 import { VariantTrack } from './VariantTrack'
 
 const variantsLoader = vi.fn()
 
-function trackDefinition(loader: typeof variantsLoader): GenomeTrackDefinition {
+function trackDefinition(loader: typeof variantsLoader): VariantTrackDefinition {
   return { id: 'variants', label: 'Variants', kind: 'variants', loader }
 }
 
