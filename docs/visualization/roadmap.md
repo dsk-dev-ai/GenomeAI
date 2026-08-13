@@ -4,7 +4,58 @@ Tracks the Phase 6 visualization platform milestones. See
 [Phase 6 of the project ROADMAP](</ROADMAP.md#phase-6--visualization-platform>) for
 the authoritative milestone list.
 
-## Current Milestone: 6.5 — Protein Viewer ✅
+## Current Milestone: 6.6 — Biological Network Viewer ✅
+
+Implemented on branch `feat/visualization-network-viewer`, on top of 6.5.
+
+Delivered:
+
+- Typed domain model (`lib/network/types.ts`) — `Graph`, `GraphNode`,
+  `GraphEdge`, `GraphLayout`, `NetworkViewport`, `GraphFilter`,
+  `GraphViewerState`; node/edge `type`s are opaque strings so the viewer is not
+  hard-wired to one annotation source
+- Pure model helpers (`lib/network/model.ts`) — lookups, degree, available
+  node/edge types, graph validation
+- Pure normalization (`lib/network/normalize.ts`) — dedupe ids, drop
+  self-loops and dangling edges, deterministic ordering
+- Pure filtering (`lib/network/filter.ts`) — node/edge-type filters with
+  no-dangling-edge guarantees
+- Pure deterministic layout (`lib/network/layout.ts`) — concentric rings by
+  degree (hubs in the centre) behind a pluggable `createLayout` /
+  `LayoutStrategy` seam; no Cytoscape.js (see
+  [Network Viewer](network-viewer.md#design-decision-deterministic-pure-svg-layout-no-cytoscapejs))
+- Pure 2D viewport (`lib/network/viewport.ts`) — identity/fit viewports,
+  clamped pan/zoom, projection; `ZOOM_FACTOR` mirrors the genome/protein
+  viewers
+- Pure render geometry (`lib/network/geometry.ts`) — SVG constants, edge
+  endpoints inset to node edges, node hit boxes
+- Presentation helpers (`lib/network/labels.ts`) — type colours, display +
+  accessible labels, detail-panel rows
+- Thin typed adapter (`lib/network/api.ts`) documenting the future
+  `GET /networks/{id}` contract (no backend changes)
+- `useNetworkViewer` hook — load lifecycle (via the shared
+  `useVisualizationData`) + deterministic layout + viewport + filter +
+  node/edge selection
+- `NetworkViewer` SVG component — pan/zoom/fit, wheel zoom, drag-to-pan,
+  keyboard-accessible node/edge selection, filter controls, detail panel
+- Demo integrated at `/visualization` (`NetworkDemo` uses the dev fixture)
+- Tests (98 across the network modules) and docs (see
+  [Network Viewer](network-viewer.md))
+
+Constraints honored:
+
+- The viewer is a visualization layer, never a source of scientific
+  relationship data; node/edge `type`s are never inferred from labels
+- Layout is deterministic ("same input, stable output") with no PRNG
+- Backend network endpoints are not yet exposed, so the demo uses a clearly
+  isolated dev fixture routed through the same normalizers as production
+- No C++, WebAssembly, WebGPU, Three.js, Cytoscape.js, or D3.js; no new
+  runtime dependencies
+- Phase 5 search untouched
+
+## Previous milestones
+
+### 6.5 — Protein Viewer ✅
 
 Implemented on branch `feat/visualization-protein-viewer`, on top of 6.4.
 
@@ -164,7 +215,6 @@ Constraints honored:
 
 | # | Milestone | Notes |
 |---|-----------|-------|
-| 6.6 | Biological Network Visualization | Interaction graphs; Cytoscape.js |
 | 6.7 | Scientific Charts | Trend/QC plots; D3-based |
 | 6.8 | Integrated Research Workspace | Assembles 6.5–6.7 into a UI |
 | 6.9 | Visualization Performance & Optimization | Virtualization / density rendering for large data |

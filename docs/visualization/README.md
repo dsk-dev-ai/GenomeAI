@@ -4,9 +4,9 @@ This directory documents the GenomeAI visualization platform (Phase 6).
 
 ## Status
 
-**Phase 6.4 — Variant Visualization** is the current milestone. It adds a
-reusable, coordinate-accurate variant track on top of the Phase 6.2 Genome
-Browser foundation.
+**Phase 6.5 — Protein Viewer** and **Phase 6.6 — Biological Network Viewer**
+are implemented. Phase 6.6 adds a deterministic, dependency-free relationship
+network viewer on top of the Phase 6.1 foundation.
 
 | Milestone | Description | Status |
 |-----------|-------------|--------|
@@ -14,8 +14,8 @@ Browser foundation.
 | 6.2 | Genome Browser | ✅ Implemented |
 | 6.3 | Gene / Transcript Visualization | ✅ Implemented |
 | 6.4 | Variant Visualization | ✅ Implemented |
-| 6.5 | Protein Structure Viewer | 📋 Planned |
-| 6.6 | Biological Network Visualization | 📋 Planned |
+| 6.5 | Protein Structure Viewer | ✅ Implemented |
+| 6.6 | Biological Network Visualization | ✅ Implemented |
 | 6.7 | Scientific Charts | 📋 Planned |
 | 6.8 | Integrated Research Workspace | 📋 Planned |
 | 6.9 | Visualization Performance & Optimization | 📋 Planned |
@@ -85,6 +85,26 @@ Browser foundation.
   routed through the same normalizers as production.
 - Demo integrated at `/visualization`.
 
+## What Phase 6.6 Provides
+
+- Biological network visualization (see [Network Viewer](./network-viewer.md)):
+  a typed relationship graph model over generic node/edge `type`s, pure
+  normalization/filtering/model helpers, and a thin adapter that documents the
+  future `GET /networks/{id}` contract — no backend changes.
+- A **deterministic concentric layout** computed in TypeScript (degree-
+  descending rings, hubs in the centre) behind a pluggable
+  `LayoutStrategy`/`createLayout` seam — no Cytoscape.js dependency. See the
+  design decision in [network-viewer.md](./network-viewer.md).
+- A reusable `useNetworkViewer` hook composing the shared data lifecycle with
+  the 2D viewport, filtering, and node/edge selection, and a `NetworkViewer`
+  component rendering an interactive SVG: pan/zoom/fit, wheel zoom, drag-to-
+  pan, keyboard-accessible node/edge selection, filter controls, and a
+  readable detail panel.
+- A network-data boundary: the backend does not yet expose a network endpoint,
+  so the demo uses a clearly isolated dev fixture routed through the same
+  normalizers as production.
+- Demo integrated at `/visualization`.
+
 ## Documents
 
 | Document | Description |
@@ -94,6 +114,7 @@ Browser foundation.
 | [Gene / Transcript](gene-transcript.md) | Phase 6.3 Gene / Transcript visualization: scope, data flow, API, a11y, tests |
 | [Variant](variant.md) | Phase 6.4 Variant visualization: scope, data flow, API, a11y, tests |
 | [Protein Viewer](protein-viewer.md) | Phase 6.5 Protein Viewer: scope, data flow, API, a11y, tests |
+| [Network Viewer](network-viewer.md) | Phase 6.6 Biological Network Viewer: scope, design decision, data flow, API, a11y, tests |
 | [Roadmap](roadmap.md) | Detailed phase tracking and future work |
 
 ## Technology Notes
@@ -105,5 +126,8 @@ used — those are introduced only when the milestone that actually requires
 them arrives:
 
 - Three.js → a future 3D molecular structure milestone
-- Cytoscape.js → Phase 6.6 (networks)
+- Cytoscape.js → deferred: Phase 6.6 ships a deterministic pure-SVG layout
+  behind the `createLayout` seam instead (see
+  [network-viewer.md](./network-viewer.md)); Cytoscape.js remains available
+  for later interactive/manipulation work
 - D3.js → Phase 6.7 (scientific charts)
