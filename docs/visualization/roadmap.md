@@ -4,9 +4,52 @@ Tracks the Phase 6 visualization platform milestones. See
 [Phase 6 of the project ROADMAP](</ROADMAP.md#phase-6--visualization-platform>) for
 the authoritative milestone list.
 
-## Current Milestone: 6.6 — Biological Network Viewer ✅
+## Current Milestone: 6.7 — Scientific Charts ✅
 
-Implemented on branch `feat/visualization-network-viewer`, on top of 6.5.
+Implemented on top of 6.6.
+
+Delivered:
+
+- Typed measurement data model (`lib/scientific/types.ts`) —
+  `ExpressionPoint`, `ExpressionSeries`, `ExpressionDataset`, `PointKey`;
+  generic enough for later chart types (coverage, statistical, QC)
+- Pure validation + normalization (`lib/scientific/expression.ts`) —
+  typed error reports, canonical ordering, dedupe by entity + sample,
+  sample/domain derivation, zero-anchored/padded y-domains
+- Native scales (`lib/scientific/scale.ts`) — invertible continuous scale,
+  category scale, 1/2/5 × 10^n `niceTicks`, deterministic label stepping; no
+  D3.js (see
+  [Scientific Charts](scientific-charts.md#design-decision-native-scales-no-d3js))
+- Pure chart geometry (`lib/scientific/geometry.ts`) — margins/plot area,
+  deterministic colorblind-aware palette
+- Tooltip mapping (`lib/scientific/tooltip.ts`) — shared labelled rows for the
+  hover tooltip and the accessible detail panel
+- Thin typed adapter (`lib/scientific/api.ts`) documenting the future
+  `GET /expression/datasets/{id}` contract (no backend changes)
+- `useExpressionChart` hook — load lifecycle (via the shared
+  `useVisualizationData`) + sorted samples + value-field toggle + y-domain +
+  point selection; `useChartSize` for responsive widths
+- Reusable chart primitives (`components/scientific/`) — `ChartAxes`,
+  `ChartLegend`, `ChartTooltip`, and the `ExpressionChart` SVG component
+  (gridlines, axes, legend, hover tooltips, keyboard-accessible point
+  selection, detail panel)
+- Demo integrated at `/visualization` (`ScientificDemo` uses the dev fixture)
+- Tests (85 across the scientific modules) and docs (see
+  [Scientific Charts](scientific-charts.md))
+
+Constraints honored:
+
+- The chart layer never asserts biological validity or hard-codes gene /
+  disease / database knowledge; expression values stay opaque finite numbers
+- Backend expression endpoints are not yet exposed, so the demo uses a clearly
+  isolated dev fixture routed through the same normalizers as production
+- No C++, WebAssembly, WebGPU, Three.js, Cytoscape.js, or D3.js; no new
+  runtime dependencies
+- Phase 5 search untouched
+
+## Previous milestones
+
+### 6.6 — Biological Network Viewer ✅
 
 Delivered:
 
@@ -98,8 +141,6 @@ Constraints honored:
   (see [Protein Viewer](protein-viewer.md#feature-data-boundary))
 - No C++, WebAssembly, WebGPU, Three.js, Cytoscape.js, or D3.js
 - Phase 5 search untouched; no new runtime dependencies
-
-## Previous milestones
 
 ### 6.4 — Variant Visualization ✅
 
@@ -215,7 +256,6 @@ Constraints honored:
 
 | # | Milestone | Notes |
 |---|-----------|-------|
-| 6.7 | Scientific Charts | Trend/QC plots; D3-based |
 | 6.8 | Integrated Research Workspace | Assembles 6.5–6.7 into a UI |
 | 6.9 | Visualization Performance & Optimization | Virtualization / density rendering for large data |
 | 6.10 | Visualization Testing & Documentation | Stabilization + docs pass |

@@ -4,9 +4,9 @@ This directory documents the GenomeAI visualization platform (Phase 6).
 
 ## Status
 
-**Phase 6.5 — Protein Viewer** and **Phase 6.6 — Biological Network Viewer**
-are implemented. Phase 6.6 adds a deterministic, dependency-free relationship
-network viewer on top of the Phase 6.1 foundation.
+**Phase 6.7 — Scientific Charts** is implemented, on top of the Phase 6.6
+network viewer and the Phase 6.1 foundation. Phase 6.7 adds a deterministic,
+dependency-free expression chart built on reusable chart primitives.
 
 | Milestone | Description | Status |
 |-----------|-------------|--------|
@@ -16,7 +16,7 @@ network viewer on top of the Phase 6.1 foundation.
 | 6.4 | Variant Visualization | ✅ Implemented |
 | 6.5 | Protein Structure Viewer | ✅ Implemented |
 | 6.6 | Biological Network Visualization | ✅ Implemented |
-| 6.7 | Scientific Charts | 📋 Planned |
+| 6.7 | Scientific Charts | ✅ Implemented |
 | 6.8 | Integrated Research Workspace | 📋 Planned |
 | 6.9 | Visualization Performance & Optimization | 📋 Planned |
 | 6.10 | Visualization Testing & Documentation | 📋 Planned |
@@ -105,6 +105,25 @@ network viewer on top of the Phase 6.1 foundation.
   normalizers as production.
 - Demo integrated at `/visualization`.
 
+## What Phase 6.7 Provides
+
+- Scientific charts (see [Scientific Charts](./scientific-charts.md)): a
+  typed measurement dataset model (`ExpressionPoint` / `ExpressionSeries` /
+  `ExpressionDataset`), pure validation + normalization, and native scales
+  (`ContinuousScale`, `CategoryScale`, `niceTicks`) — no D3.js dependency.
+- A reusable `useExpressionChart` hook composing the shared data lifecycle
+  with sorted samples, a raw/normalized value-field toggle, the y-domain, and
+  point selection, plus responsive sizing via `useChartSize`.
+- Reusable chart primitives (`ChartAxes`, `ChartLegend`, `ChartTooltip`) and an
+  `ExpressionChart` SVG component: samples on the x-axis, the active value on
+  the y-axis, one series (gene) per color, gridlines, axes, legend, hover
+  tooltips, and keyboard-accessible point selection with a readable detail
+  panel.
+- An expression-data boundary: the backend does not yet expose an expression
+  endpoint, so the demo uses a clearly isolated dev fixture routed through the
+  same normalizers as production.
+- Demo integrated at `/visualization`.
+
 ## Documents
 
 | Document | Description |
@@ -115,6 +134,7 @@ network viewer on top of the Phase 6.1 foundation.
 | [Variant](variant.md) | Phase 6.4 Variant visualization: scope, data flow, API, a11y, tests |
 | [Protein Viewer](protein-viewer.md) | Phase 6.5 Protein Viewer: scope, data flow, API, a11y, tests |
 | [Network Viewer](network-viewer.md) | Phase 6.6 Biological Network Viewer: scope, design decision, data flow, API, a11y, tests |
+| [Scientific Charts](scientific-charts.md) | Phase 6.7 Scientific Charts: scope, design decision, data flow, API, a11y, tests |
 | [Roadmap](roadmap.md) | Detailed phase tracking and future work |
 
 ## Technology Notes
@@ -130,4 +150,7 @@ them arrives:
   behind the `createLayout` seam instead (see
   [network-viewer.md](./network-viewer.md)); Cytoscape.js remains available
   for later interactive/manipulation work
-- D3.js → Phase 6.7 (scientific charts)
+- D3.js → deferred: Phase 6.7 ships native scales and tick generation behind
+  the `ContinuousScale` / `CategoryScale` seams instead (see
+  [scientific-charts.md](./scientific-charts.md)); D3.js remains available for
+  later heavy statistical charting work

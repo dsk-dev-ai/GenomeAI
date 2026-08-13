@@ -54,7 +54,8 @@ const MODULES: readonly VisualizationModule[] = [
   {
     id: 'scientific-charts',
     title: 'Scientific Charts',
-    description: 'Statistical and research-oriented charts.',
+    description:
+      'Expression charts: reusable chart primitives, native scales, axes, tooltips, legends, and selection.',
     milestone: '6.7',
     source: { kind: 'api', reference: '/api/visualization/charts' },
   },
