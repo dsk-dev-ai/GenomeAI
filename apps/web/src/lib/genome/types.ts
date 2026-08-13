@@ -72,6 +72,18 @@ export interface VariantFeature<Extra = FeatureMetadata> extends GenomicFeature<
   position: number
   ref?: string
   alt?: string
+  /** Source accession, e.g. `rs113488022`. */
+  variantId?: string
+  /** Biological variant class as reported by the API, e.g. `snv`. */
+  variantType?: string
+  /** Variant call quality score where the source reports one. */
+  quality?: number
+  /** Variant filter status, e.g. `PASS`. */
+  filterStatus?: string
+  /** Identifier of the linked gene where the source provides one. */
+  geneId?: string
+  /** Optional free-text description. */
+  description?: string
 }
 
 /** Known contig extents used to clamp navigation. */

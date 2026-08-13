@@ -24,32 +24,55 @@ import type { VisualizationStatus } from '@/lib/visualization/types'
 import { useVisualizationData } from '@/lib/visualization/useVisualizationData'
 
 import type { TrackKind } from './tracks'
-import type { GenomeViewport, GenomicFeature, GenomicInterval } from './types'
+import type { GenomeViewport, GenomicFeature, GenomicInterval, VariantFeature } from './types'
 import { PAN_FRACTION, ZOOM_FACTOR, panViewport, viewportBaseCount, zoomViewport } from './viewport'
 
 /** Loads a track's visible features for a one-based inclusive interval. */
-export type GenomeTrackLoader = (
+export type GenomeTrackLoader<T extends GenomicFeature = GenomicFeature> = (
   interval: GenomicInterval,
   signal: AbortSignal,
-) => Promise<GenomicFeature[]>
+) => Promise<T[]>
 
-/** Definition of a visible track (kind maps to rendering + colours). */
-export interface GenomeTrackDefinition {
+/** Definition of a span track lane (genes, transcripts, ...). */
+export interface SpanTrackDefinition {
+  id: string
+  label: string
+  kind: Exclude<TrackKind, 'variants'>
+  loader: GenomeTrackLoader<GenomicFeature>
+}
+
+/** Definition of a point-variant track lane. */
+export interface VariantTrackDefinition {
+  id: string
+  label: string
+  kind: 'variants'
+  loader: GenomeTrackLoader<VariantFeature>
+}
+
+/**
+ * Definition of a visible track; discriminated on `kind` so each lane
+ * receives the exact feature type its loader resolves to.
+ */
+export type GenomeTrackDefinition = SpanTrackDefinition | VariantTrackDefinition
+
+/** A track's data-layer result, keyed by `id`. */
+export interface GenomeTrackDataBase<T extends GenomicFeature> {
   id: string
   label: string
   kind: TrackKind
-  loader: GenomeTrackLoader
-}
-
-/** A track's data-layer result, keyed by `id`. */
-export interface GenomeTrackData extends GenomeTrackDefinition {
+  loader: GenomeTrackLoader<T>
   status: VisualizationStatus
-  data: GenomicFeature[] | undefined
+  data: T[] | undefined
   /** Present when `status === 'error'`. */
   errorMessage: string | undefined
   /** Re-runs the track's request (used by the retry UI). */
   refetch: () => void
 }
+
+export type GenomeTrackData<T extends GenomeTrackDefinition = GenomeTrackDefinition> =
+  T extends VariantTrackDefinition
+    ? GenomeTrackDataBase<VariantFeature> & { kind: 'variants' }
+    : GenomeTrackDataBase<GenomicFeature> & { kind: Exclude<TrackKind, 'variants'> }
 
 export interface GenomeBrowserOptions {
   /** Viewport shown on first render. */
@@ -99,10 +122,10 @@ function useDebouncedViewport(viewport: GenomeViewport, debounceMs: number): Gen
  * when the debounced viewport settles on a new region; the initial request
  * is fired by `useVisualizationData`.
  */
-export function useGenomeTrack(
-  definition: GenomeTrackDefinition,
+export function useGenomeTrack<T extends GenomeTrackDefinition>(
+  definition: T,
   debouncedViewport: GenomeViewport,
-): GenomeTrackData {
+): GenomeTrackData<T> {
   const definitionRef = useRef(definition)
   definitionRef.current = definition
 
@@ -143,6 +166,9 @@ export function useGenomeTrack(
     }
   }, [refetch, regionKey])
 
+  // `data` is narrowed to the definition's exact feature type by the
+  // `GenomeTrackData` mapped type; the hook is the single adapter boundary
+  // where the shared `GenomicFeature` result becomes the lane's typed data.
   return {
     id: definition.id,
     label: definition.label,
@@ -152,7 +178,7 @@ export function useGenomeTrack(
     data,
     errorMessage: error?.message,
     refetch,
-  }
+  } as GenomeTrackData<T>
 }
 
 /** Clamps an interval to contig bounds (inclusive 1..length). */

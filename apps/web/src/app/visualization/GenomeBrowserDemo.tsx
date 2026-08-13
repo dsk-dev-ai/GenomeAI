@@ -3,9 +3,10 @@
 import { useMemo } from 'react'
 
 import { GenomeBrowser } from '@/components/genome/GenomeBrowser'
-import { fetchIntervalFeatures, fetchVariantFeatures } from '@/lib/genome/api'
+import { fetchIntervalFeatures } from '@/lib/genome/api'
 import { TP53_WINDOW } from '@/lib/genome/geneTranscript.fixtures'
 import type { GenomeTrackDefinition } from '@/lib/genome/useGenomeBrowser'
+import { fetchVariants } from '@/lib/genome/variantApi'
 
 /**
  * Client-side Genome Browser demo (Phase 6.2).
@@ -28,7 +29,7 @@ export function GenomeBrowserDemo() {
         id: 'variants',
         label: 'Variants',
         kind: 'variants',
-        loader: (interval, signal) => fetchVariantFeatures(interval, signal),
+        loader: (interval, signal) => fetchVariants(interval, signal),
       },
     ],
     [],

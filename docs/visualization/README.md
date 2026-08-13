@@ -4,16 +4,16 @@ This directory documents the GenomeAI visualization platform (Phase 6).
 
 ## Status
 
-**Phase 6.3 — Gene / Transcript Visualization** is the current milestone. It
-adds isoform structure (gene lanes, transcript lanes, exon blocks) on top of
-the Phase 6.2 Genome Browser foundation.
+**Phase 6.4 — Variant Visualization** is the current milestone. It adds a
+reusable, coordinate-accurate variant track on top of the Phase 6.2 Genome
+Browser foundation.
 
 | Milestone | Description | Status |
 |-----------|-------------|--------|
 | 6.1 | Visualization Foundation | ✅ Implemented |
 | 6.2 | Genome Browser | ✅ Implemented |
 | 6.3 | Gene / Transcript Visualization | ✅ Implemented |
-| 6.4 | Variant Visualization | 📋 Planned |
+| 6.4 | Variant Visualization | ✅ Implemented |
 | 6.5 | Protein Structure Viewer | 📋 Planned |
 | 6.6 | Biological Network Visualization | 📋 Planned |
 | 6.7 | Scientific Charts | 📋 Planned |
@@ -51,6 +51,20 @@ the Phase 6.2 Genome Browser foundation.
   demo uses a dev-only fixture while production callers return no exons.
 - Demo integrated at `/visualization`.
 
+## What Phase 6.4 Provides
+
+- Variant visualization (see [Variant](./variant.md)): a typed domain model,
+  pure point geometry, and a thin adapter over the Phase 5 coordinate-search
+  API — no backend changes.
+- A reusable `VariantTrack` component that the Genome Browser renders for
+  `kind: 'variants'` tracks: coordinate-accurate point marks stacked onto
+  rows when they would overlap, hover titles, and keyboard-accessible variant
+  selection with a readable detail panel.
+- Rich variant detail surfaced per record when the API reports it: position,
+  `ref>alt`, variant `type`, quality, filter status, accession, gene, and
+  description — never inferred from arbitrary strings.
+- Demo integrated at `/visualization`.
+
 ## Documents
 
 | Document | Description |
@@ -58,6 +72,7 @@ the Phase 6.2 Genome Browser foundation.
 | [Architecture](architecture.md) | Component structure, data flow, and how future modules integrate |
 | [Genome Browser](genome-browser.md) | Phase 6.2 Genome Browser: scope, data flow, API, a11y, tests |
 | [Gene / Transcript](gene-transcript.md) | Phase 6.3 Gene / Transcript visualization: scope, data flow, API, a11y, tests |
+| [Variant](variant.md) | Phase 6.4 Variant visualization: scope, data flow, API, a11y, tests |
 | [Roadmap](roadmap.md) | Detailed phase tracking and future work |
 
 ## Technology Notes
