@@ -4,12 +4,13 @@ import { GeneTranscriptDemo } from './GeneTranscriptDemo'
 import { GenomeBrowserDemo } from './GenomeBrowserDemo'
 import { NetworkDemo } from './NetworkDemo'
 import { ProteinDemo } from './ProteinDemo'
+import { ScientificDemo } from './ScientificDemo'
 import { VisualizationDemo } from './VisualizationDemo'
 
 export const metadata: Metadata = {
   title: 'Visualization — GenomeAI',
   description:
-    'Visualization foundation, Genome Browser, Gene / Transcript viewer, Variant track, Protein Viewer, and Biological Network Viewer (Phase 6.1–6.6) for GenomeAI.',
+    'Visualization foundation, Genome Browser, Gene / Transcript viewer, Variant track, Protein Viewer, Biological Network Viewer, and Scientific Charts (Phase 6.1–6.7) for GenomeAI.',
 }
 
 export default function VisualizationPage() {
@@ -19,16 +20,18 @@ export default function VisualizationPage() {
         <h1 className="text-2xl font-bold text-gray-900">Visualization</h1>
         <p className="text-sm text-gray-600">
           Phase 6.1 foundation, the Phase 6.2 Genome Browser, the Phase 6.3 Gene / Transcript
-          viewer, the Phase 6.4 Variant track, the Phase 6.5 Protein Viewer, and the Phase 6.6
-          Biological Network Viewer — region parsing, viewport navigation, track rendering,
-          gene/transcript structure, point variants, protein sequence + annotation windows, and
-          deterministic relationship networks over the GenomeAI API and development fixtures.
+          viewer, the Phase 6.4 Variant track, the Phase 6.5 Protein Viewer, the Phase 6.6
+          Biological Network Viewer, and the Phase 6.7 Scientific Charts — region parsing, viewport
+          navigation, track rendering, gene/transcript structure, point variants, protein sequence +
+          annotation windows, deterministic relationship networks, and expression charts over the
+          GenomeAI API and development fixtures.
         </p>
       </div>
       <GenomeBrowserDemo />
       <GeneTranscriptDemo />
       <NetworkDemo />
       <ProteinDemo />
+      <ScientificDemo />
       <VisualizationDemo />
     </main>
   )
