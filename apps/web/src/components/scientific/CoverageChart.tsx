@@ -9,6 +9,7 @@ import type { AxisTick } from '@/lib/genome/geometry'
 import { createScale } from '@/lib/genome/geometry'
 import type { CoverageBin } from '@/lib/scientific/advancedTypes'
 import { coverageBinTooltip } from '@/lib/scientific/coverage'
+import { coverageColumns } from '@/lib/scientific/downsample'
 import {
   DEFAULT_CHART_HEIGHT,
   DEFAULT_CHART_MARGINS,
@@ -26,6 +27,7 @@ const AXIS_COLOR = '#cbd5e1'
 const GRID_COLOR = '#e2e8f0'
 const COVERAGE_COLOR = '#2563eb'
 const CAPTION_COLOR = '#94a3b8'
+const MAX_COVERAGE_COLUMNS = 2000
 
 export interface CoverageChartProps {
   /** View model produced by `useCoverageChart`. */
@@ -285,14 +287,30 @@ function CoverageBins({
     () => createScale(viewport.start, viewport.end, plot.width),
     [viewport, plot],
   )
-  if (dataset === undefined || chromosome === '') return null
-  const bins = dataset.bins.filter((bin) => bin.chromosome === chromosome)
+  const bins = useMemo(
+    () =>
+      dataset === undefined ? [] : dataset.bins.filter((bin) => bin.chromosome === chromosome),
+    [dataset, chromosome],
+  )
+  // When a chromosome has far more bins than pixels, aggregate to per-pixel
+  // peak-preserving columns so both the path and the interactive targets stay
+  // bounded (see docs/visualization/performance.md). Under the cap, bins are
+  // rendered exactly as provided.
+  const columns = useMemo(
+    () => coverageColumns(bins, (base) => scale.toX(base), plot.width, MAX_COVERAGE_COLUMNS),
+    [bins, scale, plot.width],
+  )
+  const points = useMemo(
+    () =>
+      columns.map((bin) => {
+        const x0 = scale.toX(bin.start)
+        const x1 = scale.toX(bin.end + 1)
+        return { bin, x0, x1, y: yScale.toPixel(bin.coverage) }
+      }),
+    [columns, scale, yScale],
+  )
 
-  const points = bins.map((bin) => {
-    const x0 = scale.toX(bin.start)
-    const x1 = scale.toX(bin.end + 1)
-    return { bin, x0, x1, y: yScale.toPixel(bin.coverage) }
-  })
+  if (dataset === undefined || chromosome === '') return null
 
   const areaPath = buildAreaPath(plot, points)
   const linePath = buildLinePath(points)

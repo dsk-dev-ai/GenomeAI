@@ -9,6 +9,7 @@ import {
   hasRenderableValues,
   normalizeDistributionDataset,
   validateDistributionDataset,
+  valuesByGroup,
   valuesForGroup,
 } from './distribution'
 
@@ -119,5 +120,28 @@ describe('hasRenderableValues / distributionTooltip', () => {
     expect(tooltip.rows[0]).toEqual({ label: 'Count', value: '3' })
     expect(tooltip.rows[1]).toEqual({ label: 'Mean', value: '2' })
     expect(tooltip.rows[2]).toEqual({ label: 'Median', value: '2' })
+  })
+})
+
+describe('valuesByGroup', () => {
+  it('groups all values in a single pass, preserving order', () => {
+    const data = dataset([value('Tumor', 3), value('Normal', 2), value('Tumor', 1)])
+    const grouped = valuesByGroup(data)
+    expect([...grouped.keys()]).toEqual(['Tumor', 'Normal'])
+    expect(grouped.get('Tumor')).toEqual([3, 1])
+    expect(grouped.get('Normal')).toEqual([2])
+  })
+
+  it('matches valuesForGroup for every group', () => {
+    const data = dataset([value('Tumor', 3), value('Normal', 2), value('Tumor', 1)])
+    const grouped = valuesByGroup(data)
+    for (const group of distributionGroups(data)) {
+      expect(grouped.get(group)).toEqual(valuesForGroup(data, group))
+    }
+  })
+
+  it('skips empty group identifiers', () => {
+    const data = dataset([value('', 1), value('Tumor', 2)])
+    expect(valuesByGroup(data).has('')).toBe(false)
   })
 })

@@ -4,6 +4,7 @@ import { useId, useMemo, useState } from 'react'
 
 import { VisualizationContainer } from '@/components/visualization/VisualizationContainer'
 import type { VolcanoDataset, VolcanoPoint } from '@/lib/scientific/advancedTypes'
+import { decimateItems } from '@/lib/scientific/downsample'
 import {
   DEFAULT_CHART_HEIGHT,
   DEFAULT_CHART_MARGINS,
@@ -24,6 +25,7 @@ const HIT_RADIUS = 11
 const HIGHLIGHT_COLOR = '#dc2626'
 const BASE_COLOR = '#94a3b8'
 const THRESHOLD_COLOR = '#94a3b8'
+const MAX_RENDERED_POINTS = 2000
 
 export interface VolcanoPlotProps {
   /** View model produced by `useVolcanoPlot`. */
@@ -67,6 +69,18 @@ export function VolcanoPlot({
       ? String(dataset.metadata.description)
       : `${dataset.points.length} features tested`
     : undefined
+
+  // Bound the rendered DOM for very large datasets: the full point list stays
+  // the source of truth for tooltips/selection, only the marks drawn are
+  // decimated (see docs/visualization/performance.md).
+  const renderedPoints = useMemo(
+    () => (dataset === undefined ? [] : decimateItems(dataset.points, MAX_RENDERED_POINTS)),
+    [dataset],
+  )
+  const significantCount = useMemo(
+    () => (dataset === undefined ? 0 : highlightCount(dataset, result.thresholds)),
+    [dataset, result.thresholds],
+  )
 
   const xScale = useMemo(
     () =>
@@ -118,8 +132,8 @@ export function VolcanoPlot({
       {result.status === 'success' && dataset ? (
         <div className="flex w-full flex-col gap-2">
           <output className="text-xs text-gray-500" aria-live="polite">
-            {dataset.points.length} features tested · {highlightCount(dataset, result.thresholds)}{' '}
-            significant at the current thresholds
+            {dataset.points.length} features tested · {significantCount} significant at the current
+            thresholds
           </output>
           <div
             ref={size.ref}
@@ -153,7 +167,7 @@ export function VolcanoPlot({
               />
               <ThresholdLines plot={plot} xScale={xScale} yScale={yScale} result={result} />
               <g data-testid="volcano-points">
-                {dataset.points.map((point) => {
+                {renderedPoints.map((point) => {
                   const highlighted = isVolcanoHighlighted(point, result.thresholds)
                   const key = point.identifier
                   const selected = result.selectedKey === key

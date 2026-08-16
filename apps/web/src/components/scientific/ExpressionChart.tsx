@@ -3,6 +3,7 @@
 import { useId, useMemo, useState } from 'react'
 
 import { VisualizationContainer } from '@/components/visualization/VisualizationContainer'
+import { decimateItems } from '@/lib/scientific/downsample'
 import {
   DEFAULT_CHART_HEIGHT,
   DEFAULT_CHART_MARGINS,
@@ -28,6 +29,7 @@ import { ChartTooltip } from './ChartTooltip'
 
 const POINT_RADIUS = 4
 const HIT_RADIUS = 11
+const MAX_SERIES_POINTS = 1000
 
 function SeriesPoint({
   x,
@@ -97,21 +99,21 @@ function SeriesPoint({
 }
 
 function SeriesLines({
-  dataset,
+  series,
   xScale,
   yScale,
   valueField,
 }: {
-  dataset: ExpressionDataset
+  series: ExpressionSeries[]
   xScale: ReturnType<typeof createCategoryScale>
   yScale: ReturnType<typeof createContinuousScale>
   valueField: 'value' | 'normalizedValue'
 }) {
   return (
     <g data-testid="chart-series-lines">
-      {dataset.series.map((series, seriesIndex) => {
+      {series.map((item, seriesIndex) => {
         const color = seriesColor(seriesIndex)
-        const positions = series.points
+        const positions = item.points
           .map((point) => {
             const value = point[valueField]
             if (value === undefined || !Number.isFinite(value)) return null
@@ -122,13 +124,13 @@ function SeriesLines({
         const pointsAttribute = positions.map((position) => `${position.x},${position.y}`).join(' ')
         return (
           <polyline
-            key={series.id}
+            key={item.id}
             points={pointsAttribute}
             fill="none"
             stroke={color}
             strokeWidth={1.5}
             opacity={0.7}
-            data-testid={`series-line-${series.id}`}
+            data-testid={`series-line-${item.id}`}
           />
         )
       })}
@@ -237,6 +239,18 @@ export function ExpressionChart({
   const dataset = result.dataset
   const field = result.valueField
 
+  // Bound the rendered points for very large datasets: the original series
+  // stay the source of truth for tooltips/selection; only the drawn marks are
+  // decimated (see docs/visualization/performance.md).
+  const renderedSeries = useMemo(
+    () =>
+      dataset?.series.map((series) => ({
+        ...series,
+        points: [...decimateItems(series.points, MAX_SERIES_POINTS)],
+      })) ?? [],
+    [dataset],
+  )
+
   const xScale = useMemo(
     () => createCategoryScale(result.samples, [plot.x0, plot.x0 + plot.width]),
     [result.samples, plot],
@@ -320,9 +334,14 @@ export function ExpressionChart({
                 yLabel={field === 'value' ? 'Expression value' : 'Normalized value'}
                 formatValue={formatTickValue}
               />
-              <SeriesLines dataset={dataset} xScale={xScale} yScale={yScale} valueField={field} />
+              <SeriesLines
+                series={renderedSeries}
+                xScale={xScale}
+                yScale={yScale}
+                valueField={field}
+              />
               <g data-testid="chart-points">
-                {dataset.series.map((series, seriesIndex) => {
+                {renderedSeries.map((series, seriesIndex) => {
                   const color = seriesColor(seriesIndex)
                   return series.points.map((point) => {
                     const value = point[field]
