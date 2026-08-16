@@ -4,7 +4,46 @@ Tracks the Phase 6 visualization platform milestones. See
 [Phase 6 of the project ROADMAP](</ROADMAP.md#phase-6--visualization-platform>) for
 the authoritative milestone list.
 
-## Current Milestone: 6.10 — Visualization Performance & Large Dataset Handling ✅
+## Current Milestone: 6.9 — Integrated Research Workspace ✅
+
+Implemented on top of 6.8 (and the Phase 6.10 performance work).
+
+Delivered:
+
+- A dedicated workspace route `/visualization/workspace` (linked from
+  `/visualization`) assembling the Phase 6.2–6.8 capabilities into one research
+  UI
+- A shared research context (preset TP53 / BRCA1 loci, or a custom region)
+  that drives the Genome Browser and the Gene / Transcript viewer to the same
+  genomic region (`lib/workspace/researchContext.ts`)
+- A pure `WorkspaceDataSource` seam (`lib/workspace/dataSources.ts`) with a
+  fixture-backed demo provider (`components/workspace/fixtureDataSources.ts`)
+  routed through the same normalizers as production; the existing Phase 5 /
+  typed adapters are the documented production path — no backend changes
+- Thin panels that reuse the shipped components/hooks unchanged (Genome
+  Browser, Gene / Transcript viewer, Network Viewer, Protein Viewer, and the
+  Phase 6.7/6.8 charts); region-driven panels are remounted on context change
+  while whole-dataset panels keep local, predictable state
+- A responsive panel grid, consistent loading / empty / error states via the
+  shared `VisualizationContainer`, and keyboard-accessible controls (labeled
+  context select, region form with `role="alert"` errors, `aria-live` region
+  announcements)
+- Tests (26 workspace tests) and docs (see
+  [Research Workspace](workspace.md))
+
+Constraints honored:
+
+- No C++, WebAssembly, WebGPU, Three.js, Cytoscape.js, D3.js, or a second
+  rendering architecture; no new runtime dependencies
+- Existing visualization components are reused, not rewritten; Phase 6.10
+  performance mechanisms remain intact (full datasets stay the source of truth)
+- The 6.1 `useVisualizationData` lifecycle remains the data authority
+- No invented backend endpoints; the fixture boundary is documented
+- Phase 5 search untouched
+
+## Previous milestones
+
+### 6.10 — Visualization Performance & Large Dataset Handling ✅
 
 Implemented on top of 6.8.
 
@@ -347,6 +386,5 @@ Constraints honored:
 
 | # | Milestone | Notes |
 |---|-----------|-------|
-| 6.9 | Integrated Research Workspace | Assembles 6.5–6.8 into a UI |
 | 6.11 | Visualization Testing & Documentation | Stabilization + docs pass |
 | 6.12 | Molecular Structure Viewer (3D) | 3D protein structures; Three.js only if 3D is truly required |

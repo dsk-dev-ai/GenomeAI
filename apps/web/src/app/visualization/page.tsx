@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 
 import { AdvancedScientificDemo } from './AdvancedScientificDemo'
 import { GeneTranscriptDemo } from './GeneTranscriptDemo'
@@ -29,6 +30,14 @@ export default function VisualizationPage() {
           charts over the GenomeAI API and development fixtures.
         </p>
       </div>
+      <nav aria-label="Visualization pages" className="flex w-full flex-wrap gap-3">
+        <Link
+          href="/visualization/workspace"
+          className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+        >
+          Open Integrated Research Workspace
+        </Link>
+      </nav>
       <GenomeBrowserDemo />
       <GeneTranscriptDemo />
       <NetworkDemo />
