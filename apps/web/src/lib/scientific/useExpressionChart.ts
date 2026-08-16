@@ -11,7 +11,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { VisualizationError, VisualizationStatus } from '@/lib/visualization/types'
-import { useVisualizationData } from '@/lib/visualization/useVisualizationData'
 
 import { fetchExpressionDataset } from './api'
 import {
@@ -22,6 +21,7 @@ import {
   hasRenderablePoints,
 } from './expression'
 import type { ExpressionDataset } from './types'
+import { useChartData } from './useChartData'
 
 /** Result shape of `useExpressionChart`, consumed by `ExpressionChart`. */
 export interface ExpressionChartResult {
@@ -60,33 +60,13 @@ const EMPTY_DOMAIN = { min: 0, max: 1 }
 export function useExpressionChart(options: UseExpressionChartOptions = {}): ExpressionChartResult {
   const { datasetId } = options
 
-  const loaderRef = useRef(options.loader)
-  const datasetIdRef = useRef(datasetId)
-  loaderRef.current = options.loader
-  datasetIdRef.current = datasetId
-
-  const loader = useCallback((signal: AbortSignal) => {
-    const custom = loaderRef.current
-    if (custom !== undefined) return custom(signal)
-    if (datasetIdRef.current !== undefined)
-      return fetchExpressionDataset(datasetIdRef.current, signal)
-    return Promise.reject(new Error('No expression dataset loader provided to useExpressionChart.'))
-  }, [])
-
-  const { status, data, error, refetch } = useVisualizationData<ExpressionDataset>(loader, {
+  const { status, data, error, refetch } = useChartData<ExpressionDataset>({
+    loader: options.loader,
+    datasetId,
+    defaultLoader: fetchExpressionDataset,
+    noLoaderMessage: 'No expression dataset loader provided to useExpressionChart.',
     isEmpty: (dataset) => dataset.series.length === 0 || !hasRenderablePoints(dataset),
   })
-
-  // Reload whenever the requested dataset id changes. The loader reads the
-  // latest `datasetId` through a ref, but `useVisualizationData` only fetches
-  // on mount, so a changed id would otherwise silently keep the old data.
-  const previousDatasetIdRef = useRef(datasetId)
-  useEffect(() => {
-    if (previousDatasetIdRef.current !== datasetId) {
-      previousDatasetIdRef.current = datasetId
-      refetch()
-    }
-  }, [datasetId, refetch])
 
   const dataset = data
 

@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { LONG_PROTEIN_FIXTURE, P53_PROTEIN_FIXTURE } from '@/lib/protein/protein.fixtures'
@@ -94,10 +94,10 @@ describe('useProteinViewer', () => {
     const loader = vi.fn(async () => LONG_PROTEIN_FIXTURE)
     const captured = renderHook({ loader })
     await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('success'))
-    await waitFor(() => expect(captured.model.viewport.end).toBe(100))
+    await act(async () => {})
     const before = captured.model.viewport
 
-    captured.model.zoomIn()
+    act(() => captured.model.zoomIn())
     await waitFor(() => {
       const viewport = captured.model.viewport
       expect(viewport.end - viewport.start + 1).toBeLessThan(before.end - before.start + 1)
@@ -105,7 +105,7 @@ describe('useProteinViewer', () => {
     })
 
     const zoomed = captured.model.viewport
-    captured.model.zoomOut()
+    act(() => captured.model.zoomOut())
     await waitFor(() => {
       const viewport = captured.model.viewport
       expect(viewport.end - viewport.start + 1).toBeGreaterThan(zoomed.end - zoomed.start + 1)
@@ -117,8 +117,9 @@ describe('useProteinViewer', () => {
     const loader = vi.fn(async () => P53_PROTEIN_FIXTURE)
     const captured = renderHook({ loader })
     await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('success'))
+    await act(async () => {})
 
-    for (let i = 0; i < 20; i += 1) captured.model.zoomOut()
+    for (let i = 0; i < 20; i += 1) act(() => captured.model.zoomOut())
     await waitFor(() =>
       expect(captured.model.viewport).toEqual({ start: 1, end: 120, bounds: { length: 120 } }),
     )
@@ -128,14 +129,15 @@ describe('useProteinViewer', () => {
     const loader = vi.fn(async () => LONG_PROTEIN_FIXTURE)
     const captured = renderHook({ loader })
     await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('success'))
+    await act(async () => {})
 
-    captured.model.panRight()
+    act(() => captured.model.panRight())
     await waitFor(() => expect(captured.model.viewport.start).toBeGreaterThan(1))
 
-    for (let i = 0; i < 100; i += 1) captured.model.panRight()
+    for (let i = 0; i < 100; i += 1) act(() => captured.model.panRight())
     await waitFor(() => expect(captured.model.viewport.end).toBe(1500))
 
-    captured.model.panLeft()
+    act(() => captured.model.panLeft())
     await waitFor(() => expect(captured.model.viewport.end).toBeLessThan(1500))
   })
 
@@ -143,13 +145,14 @@ describe('useProteinViewer', () => {
     const loader = vi.fn(async () => LONG_PROTEIN_FIXTURE)
     const captured = renderHook({ loader })
     await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('success'))
+    await act(async () => {})
 
-    captured.model.navigateTo(300, 400)
+    act(() => captured.model.navigateTo(300, 400))
     await waitFor(() =>
       expect(captured.model.viewport).toEqual({ start: 300, end: 400, bounds: { length: 1500 } }),
     )
 
-    captured.model.resetView()
+    act(() => captured.model.resetView())
     await waitFor(() =>
       expect(captured.model.viewport).toEqual({ start: 1, end: 100, bounds: { length: 1500 } }),
     )
@@ -159,8 +162,9 @@ describe('useProteinViewer', () => {
     const loader = vi.fn(async () => P53_PROTEIN_FIXTURE)
     const captured = renderHook({ loader })
     await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('success'))
+    await act(async () => {})
 
-    captured.model.navigateTo(1, 9999)
+    act(() => captured.model.navigateTo(1, 9999))
     await waitFor(() =>
       expect(captured.model.viewport).toEqual({ start: 1, end: 120, bounds: { length: 120 } }),
     )
@@ -170,11 +174,12 @@ describe('useProteinViewer', () => {
     const loader = vi.fn(async () => P53_PROTEIN_FIXTURE)
     const captured = renderHook({ loader })
     await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('success'))
+    await act(async () => {})
 
     expect(captured.model?.selectedFeatureId).toBeNull()
-    captured.model.selectFeature('feature-dna-binding')
+    act(() => captured.model.selectFeature('feature-dna-binding'))
     await waitFor(() => expect(captured.model.selectedFeatureId).toBe('feature-dna-binding'))
-    captured.model.selectFeature(null)
+    act(() => captured.model.selectFeature(null))
     await waitFor(() => expect(captured.model.selectedFeatureId).toBeNull())
   })
 

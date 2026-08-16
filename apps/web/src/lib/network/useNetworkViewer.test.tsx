@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { TP53_NETWORK_FIXTURE, buildTestNetwork } from './network.fixtures'
@@ -86,9 +86,10 @@ describe('useNetworkViewer', () => {
     const loader = vi.fn(async () => buildTestNetwork())
     const captured = renderHook({ loader })
     await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('success'))
+    await act(async () => {})
     const before = new Map(captured.model.layout.positions)
 
-    captured.model.setFilter({ nodeTypes: new Set(['gene']) })
+    act(() => captured.model.setFilter({ nodeTypes: new Set(['gene']) }))
     await waitFor(() => {
       expect(captured.model.filteredGraph.nodes.every((node) => node.type === 'gene')).toBe(true)
     })
@@ -102,28 +103,30 @@ describe('useNetworkViewer', () => {
     const loader = vi.fn(async () => TP53_NETWORK_FIXTURE)
     const captured = renderHook({ loader })
     await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('success'))
+    await act(async () => {})
 
-    captured.model.setFilter({ nodeTypes: new Set(['drug']) })
+    act(() => captured.model.setFilter({ nodeTypes: new Set(['drug']) }))
     await waitFor(() => expect(captured.model.filteredGraph.nodes).toHaveLength(2))
 
-    captured.model.resetFilter()
+    act(() => captured.model.resetFilter())
     await waitFor(() => expect(captured.model.filter).toBeNull())
-    expect(captured.model.filteredGraph.nodes).toHaveLength(11)
+    await waitFor(() => expect(captured.model.filteredGraph.nodes).toHaveLength(11))
   })
 
   it('zooms, pans, and fits to view', async () => {
     const loader = vi.fn(async () => buildTestNetwork())
     const captured = renderHook({ loader })
     await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('success'))
+    await act(async () => {})
 
     const initial = captured.model.viewport
-    captured.model.zoomIn()
+    act(() => captured.model.zoomIn())
     await waitFor(() => expect(captured.model.viewport.scale).toBeGreaterThan(initial.scale))
 
-    captured.model.panBy(10, 20)
+    act(() => captured.model.panBy(10, 20))
     await waitFor(() => expect(captured.model.viewport.x).toBeGreaterThan(initial.x))
 
-    captured.model.fitToView(800, 600)
+    act(() => captured.model.fitToView(800, 600))
     await waitFor(() => expect(captured.model.viewport).not.toEqual(initial))
   })
 
@@ -131,15 +134,16 @@ describe('useNetworkViewer', () => {
     const loader = vi.fn(async () => TP53_NETWORK_FIXTURE)
     const captured = renderHook({ loader })
     await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('success'))
+    await act(async () => {})
 
-    captured.model.selectNode('n-gene-tp53')
+    act(() => captured.model.selectNode('n-gene-tp53'))
     await waitFor(() => expect(captured.model.selectedNodeId).toBe('n-gene-tp53'))
 
-    captured.model.selectEdge('e-tp53-p53')
+    act(() => captured.model.selectEdge('e-tp53-p53'))
     await waitFor(() => expect(captured.model.selectedEdgeId).toBe('e-tp53-p53'))
     expect(captured.model.selectedNodeId).toBeNull()
 
-    captured.model.clearSelection()
+    act(() => captured.model.clearSelection())
     await waitFor(() => expect(captured.model.selectedNodeId).toBeNull())
     expect(captured.model.selectedEdgeId).toBeNull()
   })
@@ -149,17 +153,19 @@ describe('useNetworkViewer', () => {
     const loader = vi.fn(async () => current)
     const captured = renderHook({ loader })
     await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('success'))
+    await act(async () => {})
 
-    captured.model.selectNode('n-gene-tp53')
-    captured.model.setFilter({ nodeTypes: new Set(['gene']) })
+    act(() => captured.model.selectNode('n-gene-tp53'))
+    act(() => captured.model.setFilter({ nodeTypes: new Set(['gene']) }))
     await waitFor(() => expect(captured.model.selectedNodeId).toBe('n-gene-tp53'))
 
     current = { ...buildTestNetwork(8), id: 'network-other' }
-    captured.model.refetch()
+    act(() => captured.model.refetch())
     await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('success'))
     await waitFor(() => expect(captured.model.graph?.id).toBe('network-other'))
-    expect(captured.model.selectedNodeId).toBeNull()
-    expect(captured.model.filter).toBeNull()
+    await act(async () => {})
+    await waitFor(() => expect(captured.model.selectedNodeId).toBeNull())
+    await waitFor(() => expect(captured.model.filter).toBeNull())
   })
 
   it('loads through the default fetchNetworkGraph loader when only networkId is given', async () => {

@@ -4,9 +4,11 @@ This directory documents the GenomeAI visualization platform (Phase 6).
 
 ## Status
 
-**Phase 6.7 — Scientific Charts** is implemented, on top of the Phase 6.6
-network viewer and the Phase 6.1 foundation. Phase 6.7 adds a deterministic,
-dependency-free expression chart built on reusable chart primitives.
+**Phase 6.8 — Advanced Scientific Charts** is implemented, on top of the
+Phase 6.7 scientific charts and the Phase 6.1 foundation. Phase 6.8 adds four
+reusable scientific primitives — an expression heatmap, a volcano plot, a
+genomic coverage chart, and a statistical distribution chart — built on the
+Phase 6.7 chart infrastructure (native scales, tooltips, chart primitives).
 
 | Milestone | Description | Status |
 |-----------|-------------|--------|
@@ -17,9 +19,10 @@ dependency-free expression chart built on reusable chart primitives.
 | 6.5 | Protein Structure Viewer | ✅ Implemented |
 | 6.6 | Biological Network Visualization | ✅ Implemented |
 | 6.7 | Scientific Charts | ✅ Implemented |
-| 6.8 | Integrated Research Workspace | 📋 Planned |
-| 6.9 | Visualization Performance & Optimization | 📋 Planned |
-| 6.10 | Visualization Testing & Documentation | 📋 Planned |
+| 6.8 | Advanced Scientific Charts | ✅ Implemented |
+| 6.9 | Integrated Research Workspace | 📋 Planned |
+| 6.10 | Visualization Performance & Optimization | 📋 Planned |
+| 6.11 | Visualization Testing & Documentation | 📋 Planned |
 
 ## What Phase 6.1 Provides
 
@@ -124,6 +127,34 @@ dependency-free expression chart built on reusable chart primitives.
   same normalizers as production.
 - Demo integrated at `/visualization`.
 
+## What Phase 6.8 Provides
+
+- Advanced scientific charts (see
+  [Advanced Scientific Charts](./advanced-scientific-charts.md)): four
+  reusable, interactive scientific primitives — an expression heatmap, a
+  volcano plot, a genomic coverage chart, and a statistical distribution chart
+  — built on the Phase 6.7 chart foundation (native scales, `ChartAxes`,
+  `ChartTooltip`, responsive `useChartSize`). No D3.js or new dependencies.
+- Strongly typed data models (`advancedTypes.ts`) for heatmaps, volcano plots,
+  coverage bins, and distribution values, with pure validation +
+  normalization + derivation + tooltip mapping per chart
+  (`lib/scientific/{heatmap,volcano,coverage,distribution}.ts`).
+- Shared chart data lifecycle (`useChartData`) extracted from the expression
+  chart: custom-or-default loader, dataset-id reload, and the 6.1
+  loading/empty/error lifecycle reused by all four hooks.
+- A `ChartAxes` extension for continuous x-axes (used by the volcano plot).
+- Coverage chart reuses the Phase 6.2 genome coordinate utilities
+  (`createScale`, `computeTicks`, `formatBasePosition`) and viewport
+  navigation (`lib/genome/viewport.ts`), so intervals and zoom/pan are shared
+  with the Genome Browser rather than re-implemented.
+- A thin typed adapter (`advancedApi.ts`) documenting the future
+  `GET /advanced/{heatmaps|volcano|coverage|distributions}/{id}` contracts —
+  no backend changes.
+- An advanced-data boundary: the backend exposes none of these endpoints yet,
+  so the demos use clearly isolated dev fixtures routed through the same
+  normalizers as production.
+- Demo integrated at `/visualization` (`AdvancedScientificDemo`).
+
 ## Documents
 
 | Document | Description |
@@ -135,6 +166,7 @@ dependency-free expression chart built on reusable chart primitives.
 | [Protein Viewer](protein-viewer.md) | Phase 6.5 Protein Viewer: scope, data flow, API, a11y, tests |
 | [Network Viewer](network-viewer.md) | Phase 6.6 Biological Network Viewer: scope, design decision, data flow, API, a11y, tests |
 | [Scientific Charts](scientific-charts.md) | Phase 6.7 Scientific Charts: scope, design decision, data flow, API, a11y, tests |
+| [Advanced Scientific Charts](advanced-scientific-charts.md) | Phase 6.8 Advanced Scientific Charts: heatmap / volcano / coverage / distribution, data models, API, fixtures, a11y, tests |
 | [Roadmap](roadmap.md) | Detailed phase tracking and future work |
 
 ## Technology Notes
