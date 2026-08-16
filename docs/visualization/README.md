@@ -4,6 +4,11 @@ This directory documents the GenomeAI visualization platform (Phase 6).
 
 ## Status
 
+**Phase 6.9 — Integrated Research Workspace** is implemented, assembling the
+Phase 6.2–6.8 visualization capabilities into one research UI at
+`/visualization/workspace` around a shared genomic context, on top of the
+Phase 6.10 performance work. See [Research Workspace](./workspace.md).
+
 **Phase 6.10 — Visualization Performance & Large Dataset Handling** is
 implemented, on top of the Phase 6.8 advanced scientific charts and the Phase
 6.1 foundation. Phase 6.10 makes the whole platform scale to substantially
@@ -24,7 +29,7 @@ accessibility, and scientific meaning. See
 | 6.6 | Biological Network Visualization | ✅ Implemented |
 | 6.7 | Scientific Charts | ✅ Implemented |
 | 6.8 | Advanced Scientific Charts | ✅ Implemented |
-| 6.9 | Integrated Research Workspace | 📋 Planned |
+| 6.9 | Integrated Research Workspace | ✅ Implemented |
 | 6.10 | Visualization Performance & Optimization | ✅ Implemented |
 | 6.11 | Visualization Testing & Documentation | 📋 Planned |
 
@@ -159,6 +164,25 @@ accessibility, and scientific meaning. See
   normalizers as production.
 - Demo integrated at `/visualization` (`AdvancedScientificDemo`).
 
+## What Phase 6.9 Provides
+
+- An Integrated Research Workspace (see [Research Workspace](./workspace.md))
+  at `/visualization/workspace`, linked from `/visualization`, assembling the
+  Phase 6.2–6.8 visualization capabilities into one research UI.
+- A shared **research context** (preset loci or a custom region) that drives
+  the Genome Browser and the Gene / Transcript viewer to the same genomic
+  region, while the network, protein, and analysis panels reuse their existing
+  hooks/components unchanged with local, predictable panel state.
+- A pure `WorkspaceDataSource` seam (fixture-backed for the demo; the existing
+  Phase 5 / typed adapters are the documented production path) — no backend
+  changes, no new dependencies, and Phase 6.10 performance mechanisms intact.
+- A responsive panel grid (single column on small screens), consistent
+  loading / empty / error states through the shared `VisualizationContainer`,
+  and keyboard-accessible workspace controls (labeled context select, region
+  form with `role="alert"` errors, `aria-live` region announcements).
+- Focused tests for workspace state, context synchronization, panel rendering,
+  empty/error states, and control accessibility.
+
 ## What Phase 6.10 Provides
 
 - Visualization performance & large-dataset handling (see
@@ -192,6 +216,7 @@ accessibility, and scientific meaning. See
 | [Network Viewer](network-viewer.md) | Phase 6.6 Biological Network Viewer: scope, design decision, data flow, API, a11y, tests |
 | [Scientific Charts](scientific-charts.md) | Phase 6.7 Scientific Charts: scope, design decision, data flow, API, a11y, tests |
 | [Advanced Scientific Charts](advanced-scientific-charts.md) | Phase 6.8 Advanced Scientific Charts: heatmap / volcano / coverage / distribution, data models, API, fixtures, a11y, tests |
+| [Research Workspace](workspace.md) | Phase 6.9 Integrated Research Workspace: context, panels, state flow, API usage, fixture boundary, a11y, tests |
 | [Performance](performance.md) | Phase 6.10 Visualization performance & large-dataset handling: data flow, strategies, downsampling limitations, a11y, testing |
 | [Roadmap](roadmap.md) | Detailed phase tracking and future work |
 
