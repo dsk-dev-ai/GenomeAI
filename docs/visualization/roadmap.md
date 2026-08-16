@@ -4,7 +4,51 @@ Tracks the Phase 6 visualization platform milestones. See
 [Phase 6 of the project ROADMAP](</ROADMAP.md#phase-6--visualization-platform>) for
 the authoritative milestone list.
 
-## Current Milestone: 6.8 — Advanced Scientific Charts ✅
+## Current Milestone: 6.10 — Visualization Performance & Large Dataset Handling ✅
+
+Implemented on top of 6.8.
+
+Delivered:
+
+- Performance analysis across the Phase 6 platform identifying the real hot
+  spots before any change (per-mark geometry on every network render, one SVG
+  node per cell/point/bin, O(groups × values) distribution statistics, per-
+  render path/filter rebuilds) — see [Performance](performance.md)
+- Pure deterministic downsampling (`lib/scientific/downsample.ts`):
+  `decimateItems` (stride sample, first/last preserved, hard bound),
+  `coverageColumns` (peak-preserving pixel-column aggregation for coverage),
+  `aggregateHeatmap` (block-average for oversized matrices) — all no-ops below
+  their caps so typical datasets render unchanged
+- Component bounds: volcano (`MAX_RENDERED_POINTS = 2000`), expression chart
+  (`MAX_SERIES_POINTS = 1000`), distribution scatter (`MAX_SCATTER_POINTS_PER_GROUP
+  = 1000`, outliers always kept), coverage (`MAX_COVERAGE_COLUMNS = 2000`),
+  heatmap (`MAX_HEATMAP_ROWS/COLS = 150` with a "(block-summarized)" note)
+- Per-render work reduction: memoized chromosome bins / coverage columns /
+  rendered point+series sets / highlight counts / scatter samples; single-pass
+  `valuesByGroup` grouping in `useDistributionChart` (O(values) not
+  O(groups × values)); `React.memo` Network Viewer marks with primitive props so
+  selection/filter changes skip most re-renders
+- Genome Browser stays viewport-scoped (per-track loaders fetch only the
+  settled debounced interval)
+- Full data remains the source of truth for tooltips/selection/summaries —
+  downsampling only affects the marks drawn, never the interaction
+- Deterministic, non-flaky performance tests (`downsample.test.ts`, distribution
+  grouping tests) and docs (see [Performance](performance.md))
+
+Constraints honored:
+
+- No C++, WebAssembly, WebGPU, Three.js, Cytoscape.js, D3.js, or a second
+  rendering architecture; no new runtime dependencies
+- No new cache abstraction; memoization is scoped to justified derivations and
+  the existing `useVisualizationData` lifecycle remains the data authority
+- Downsampling is documented, deterministic, and never silently discards signal
+  (peaks, outliers, block means preserved); accessibility (labels, keyboard,
+  aria-pressed, focus rings) is unchanged for decimated marks
+- Phase 5 search untouched
+
+## Previous milestones
+
+### 6.8 — Advanced Scientific Charts ✅
 
 Implemented on top of 6.7.
 
@@ -304,6 +348,5 @@ Constraints honored:
 | # | Milestone | Notes |
 |---|-----------|-------|
 | 6.9 | Integrated Research Workspace | Assembles 6.5–6.8 into a UI |
-| 6.10 | Visualization Performance & Optimization | Virtualization / density rendering for large data |
 | 6.11 | Visualization Testing & Documentation | Stabilization + docs pass |
 | 6.12 | Molecular Structure Viewer (3D) | 3D protein structures; Three.js only if 3D is truly required |

@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react'
 import { VisualizationContainer } from '@/components/visualization/VisualizationContainer'
 import type { DistributionDataset } from '@/lib/scientific/advancedTypes'
 import { distributionTooltip, valuesForGroup } from '@/lib/scientific/distribution'
+import { decimateItems } from '@/lib/scientific/downsample'
 import {
   DEFAULT_CHART_HEIGHT,
   DEFAULT_CHART_MARGINS,
@@ -28,6 +29,7 @@ const MEDIAN_COLOR = '#0f172a'
 const OUTLIER_COLOR = '#dc2626'
 const JITTER_RADIUS = 2.5
 const HIT_RADIUS = 12
+const MAX_SCATTER_POINTS_PER_GROUP = 1000
 
 export interface DistributionChartProps {
   /** View model produced by `useDistributionChart`. */
@@ -212,7 +214,16 @@ function GroupBox({
   if (slot === undefined) return null
 
   const [focused, setFocused] = useState(false)
-  const values = useMemo(() => valuesForGroup(dataset, entry.group), [dataset, entry.group])
+  const scatterValues = useMemo(() => {
+    const all = valuesForGroup(dataset, entry.group)
+    if (all.length <= MAX_SCATTER_POINTS_PER_GROUP) return all
+    const isOutlier = (value: number) =>
+      whiskers !== undefined && (value < whiskers.lower || value > whiskers.upper)
+    const outliers = all.filter(isOutlier)
+    const rest = all.filter((value) => !isOutlier(value))
+    const sampled = decimateItems(rest, Math.max(0, MAX_SCATTER_POINTS_PER_GROUP - outliers.length))
+    return [...sampled, ...outliers]
+  }, [dataset, entry.group, whiskers])
 
   if (summary === undefined) return null
 
@@ -227,13 +238,13 @@ function GroupBox({
 
   const jitteredValues = useMemo(() => {
     const spread = Math.max(0, boxWidth - 14)
-    const count = Math.max(1, values.length)
-    return values.map((value, index) => {
+    const count = Math.max(1, scatterValues.length)
+    return scatterValues.map((value, index) => {
       const offset = count === 1 ? 0 : (index / (count - 1) - 0.5) * spread
       const isOutlier = whiskers !== undefined && (value < whiskers.lower || value > whiskers.upper)
       return { x: centerX + offset, y: yScale.toPixel(value), outlier: isOutlier, value }
     })
-  }, [values, whiskers, centerX, boxWidth, yScale])
+  }, [scatterValues, whiskers, centerX, boxWidth, yScale])
 
   return (
     <g

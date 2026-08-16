@@ -14,13 +14,9 @@ import type { VisualizationError, VisualizationStatus } from '@/lib/visualizatio
 
 import { fetchDistributionDataset } from './advancedApi'
 import type { DistributionDataset } from './advancedTypes'
-import {
-  distributionGroups,
-  groupStatistics,
-  groupWhiskers,
-  hasRenderableValues,
-} from './distribution'
+import { distributionGroups, hasRenderableValues, valuesByGroup } from './distribution'
 import type { SummaryStatistics, Whiskers } from './statistics'
+import { boxPlotWhiskers, summarize } from './statistics'
 import { useChartData } from './useChartData'
 
 export interface GroupStatistics {
@@ -74,16 +70,26 @@ export function useDistributionChart(
 
   const groups = useMemo(() => (data === undefined ? [] : distributionGroups(data)), [data])
 
+  // Single-pass grouping so per-group statistics are not re-scanned from the
+  // whole dataset for every group (O(values) instead of O(groups × values)).
+  const groupedValues = useMemo(
+    () => (data === undefined ? undefined : valuesByGroup(data)),
+    [data],
+  )
+
   const statistics = useMemo<GroupStatistics[]>(
     () =>
-      data === undefined
+      data === undefined || groupedValues === undefined
         ? []
-        : groups.map((group) => ({
-            group,
-            summary: groupStatistics(data, group),
-            whiskers: groupWhiskers(data, group),
-          })),
-    [data, groups],
+        : groups.map((group) => {
+            const values = groupedValues.get(group) ?? []
+            return {
+              group,
+              summary: summarize(values),
+              whiskers: boxPlotWhiskers(values),
+            }
+          }),
+    [data, groups, groupedValues],
   )
 
   const valueDomain = useMemo<ValueDomain>(() => {

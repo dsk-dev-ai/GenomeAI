@@ -109,9 +109,33 @@ export function distributionGroups(dataset: DistributionDataset): string[] {
   return [...groups].sort(compareText)
 }
 
-/** The values belonging to a group, in their stored order. */
+/**
+ * The values belonging to a group, in their stored order. This scans the
+ * whole dataset per call; prefer `valuesByGroup` (one pass) when summarizing
+ * many groups at once.
+ */
 export function valuesForGroup(dataset: DistributionDataset, group: string): number[] {
   return dataset.values.filter((value) => value.group === group).map((value) => value.value)
+}
+
+/**
+ * Groups all dataset values by group name in a single pass, preserving the
+ * stored order within each group. Used by the chart hook to derive every
+ * group's statistics without re-scanning the dataset per group (O(values)
+ * instead of O(groups × values)).
+ */
+export function valuesByGroup(dataset: DistributionDataset): Map<string, number[]> {
+  const grouped = new Map<string, number[]>()
+  for (const value of dataset.values) {
+    if (value.group.trim().length === 0) continue
+    const list = grouped.get(value.group)
+    if (list === undefined) {
+      grouped.set(value.group, [value.value])
+    } else {
+      list.push(value.value)
+    }
+  }
+  return grouped
 }
 
 /** Summary statistics for a single group, or `undefined` when empty. */

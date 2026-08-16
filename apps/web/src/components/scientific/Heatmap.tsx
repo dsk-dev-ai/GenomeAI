@@ -4,6 +4,7 @@ import { useId, useMemo, useState } from 'react'
 
 import { VisualizationContainer } from '@/components/visualization/VisualizationContainer'
 import type { HeatmapDataset } from '@/lib/scientific/advancedTypes'
+import { aggregateHeatmap } from '@/lib/scientific/downsample'
 import { DEFAULT_CHART_HEIGHT, DEFAULT_CHART_MARGINS, plotArea } from '@/lib/scientific/geometry'
 import type { PlotArea } from '@/lib/scientific/geometry'
 import {
@@ -20,6 +21,8 @@ import { ChartTooltip } from './ChartTooltip'
 
 const AXIS_COLOR = '#cbd5e1'
 const MISSING_FILL = '#eef2f7'
+const MAX_HEATMAP_ROWS = 150
+const MAX_HEATMAP_COLS = 150
 
 export interface HeatmapProps {
   /** View model produced by `useHeatmap`. */
@@ -62,6 +65,19 @@ export function Heatmap({
       : `${dataset.rows.length} rows · ${dataset.columns.length} columns`
     : undefined
 
+  // Oversized matrices are block-averaged for rendering so the SVG stays
+  // bounded; the original dataset remains the source of truth for counts and
+  // selection (see docs/visualization/performance.md).
+  const renderData = useMemo(
+    () =>
+      dataset === undefined
+        ? undefined
+        : aggregateHeatmap(dataset, MAX_HEATMAP_ROWS, MAX_HEATMAP_COLS),
+    [dataset],
+  )
+  const gridData = renderData ?? dataset
+  const aggregated = gridData !== dataset
+
   return (
     <VisualizationContainer
       title={title}
@@ -73,10 +89,11 @@ export function Heatmap({
       errorTitle="Failed to load heatmap data"
       onRetry={result.refetch}
     >
-      {result.status === 'success' && dataset ? (
+      {result.status === 'success' && gridData ? (
         <div className="flex w-full flex-col gap-2">
           <output className="text-xs text-gray-500" aria-live="polite">
-            {dataset.rows.length} rows · {dataset.columns.length} columns
+            {gridData.rows.length} rows · {gridData.columns.length} columns
+            {aggregated ? ' (block-summarized for display)' : ''}
           </output>
           <div
             ref={size.ref}
@@ -94,12 +111,12 @@ export function Heatmap({
               // biome-ignore lint/a11y/useSemanticElements: role="group" on an SVG keeps
               // the interactive cell controls inside the accessibility tree (see NetworkViewer).
               role="group"
-              aria-label={`${dataset.title} heatmap: ${dataset.rows.length} rows across ${dataset.columns.length} columns`}
+              aria-label={`${gridData.title} heatmap: ${gridData.rows.length} rows across ${gridData.columns.length} columns`}
               data-testid="heatmap-svg"
               className="block w-full rounded-md border border-gray-200 bg-white"
             >
               <HeatmapGrid
-                dataset={dataset}
+                dataset={gridData}
                 plot={plot}
                 colorScale={result.colorScale}
                 selectedKey={result.selectedKey}
@@ -112,14 +129,14 @@ export function Heatmap({
             </svg>
             {hoveredKey !== null && hoveredPosition !== null ? (
               <HeatmapHoverTooltip
-                dataset={dataset}
+                dataset={gridData}
                 cellKey={hoveredKey}
                 position={hoveredPosition}
                 width={chartWidth}
               />
             ) : null}
           </div>
-          <HeatmapDetail result={result} />
+          <HeatmapDetail result={result} gridData={gridData} />
         </div>
       ) : null}
     </VisualizationContainer>
@@ -281,19 +298,24 @@ function HeatmapHoverTooltip({
   return <ChartTooltip tooltip={tooltip} x={position.x} y={position.y} width={width} />
 }
 
-function HeatmapDetail({ result }: { result: HeatmapResult }) {
-  const dataset = result.dataset
+function HeatmapDetail({
+  result,
+  gridData,
+}: {
+  result: HeatmapResult
+  gridData: HeatmapDataset
+}) {
   const selectedKey = result.selectedKey
   const headingId = useId()
-  if (dataset === undefined || selectedKey === null) return null
+  if (selectedKey === null) return null
 
   const coords = parseHeatmapCellKey(selectedKey)
   if (coords === undefined) return null
-  const rowIndex = dataset.rows.indexOf(coords.row)
-  const columnIndex = dataset.columns.indexOf(coords.column)
+  const rowIndex = gridData.rows.indexOf(coords.row)
+  const columnIndex = gridData.columns.indexOf(coords.column)
   const value =
-    rowIndex >= 0 && columnIndex >= 0 ? dataset.values[rowIndex]?.[columnIndex] : undefined
-  const tooltip = heatmapCellTooltip(dataset, coords.row, coords.column, value)
+    rowIndex >= 0 && columnIndex >= 0 ? gridData.values[rowIndex]?.[columnIndex] : undefined
+  const tooltip = heatmapCellTooltip(gridData, coords.row, coords.column, value)
   return (
     <section
       className="mt-3 flex w-full flex-col gap-1 rounded-md border border-gray-200 p-3"

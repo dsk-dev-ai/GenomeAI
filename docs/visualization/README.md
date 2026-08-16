@@ -4,11 +4,15 @@ This directory documents the GenomeAI visualization platform (Phase 6).
 
 ## Status
 
-**Phase 6.8 — Advanced Scientific Charts** is implemented, on top of the
-Phase 6.7 scientific charts and the Phase 6.1 foundation. Phase 6.8 adds four
-reusable scientific primitives — an expression heatmap, a volcano plot, a
-genomic coverage chart, and a statistical distribution chart — built on the
-Phase 6.7 chart infrastructure (native scales, tooltips, chart primitives).
+**Phase 6.10 — Visualization Performance & Large Dataset Handling** is
+implemented, on top of the Phase 6.8 advanced scientific charts and the Phase
+6.1 foundation. Phase 6.10 makes the whole platform scale to substantially
+larger datasets by bounding the SVG/DOM work (deterministic downsampling,
+pixel-column aggregation, heatmap block-averaging), avoiding per-render
+recomputation (memoized derivations, single-pass grouping, `React.memo` marks),
+and keeping the Genome Browser viewport-scoped — while preserving correctness,
+accessibility, and scientific meaning. See
+[Performance](./performance.md).
 
 | Milestone | Description | Status |
 |-----------|-------------|--------|
@@ -21,7 +25,7 @@ Phase 6.7 chart infrastructure (native scales, tooltips, chart primitives).
 | 6.7 | Scientific Charts | ✅ Implemented |
 | 6.8 | Advanced Scientific Charts | ✅ Implemented |
 | 6.9 | Integrated Research Workspace | 📋 Planned |
-| 6.10 | Visualization Performance & Optimization | 📋 Planned |
+| 6.10 | Visualization Performance & Optimization | ✅ Implemented |
 | 6.11 | Visualization Testing & Documentation | 📋 Planned |
 
 ## What Phase 6.1 Provides
@@ -155,6 +159,27 @@ Phase 6.7 chart infrastructure (native scales, tooltips, chart primitives).
   normalizers as production.
 - Demo integrated at `/visualization` (`AdvancedScientificDemo`).
 
+## What Phase 6.10 Provides
+
+- Visualization performance & large-dataset handling (see
+  [Performance](./performance.md)) across every Phase 6 module — no new
+  dependencies, no C++/WebAssembly/WebGPU, no second rendering architecture.
+- Pure deterministic downsampling/aggregation
+  (`lib/scientific/downsample.ts`): stride-based `decimateItems` for points and
+  scatter (volcano, expression, distribution), **peak-preserving** pixel-column
+  aggregation for coverage bins, and block-average heatmap aggregation. Every
+  helper is a no-op below its cap, so typical datasets render at full
+  resolution.
+- Per-render work reduction: memoized derived data (chromosome bins, coverage
+  columns, rendered point/series sets, highlight counts, scatter samples),
+  single-pass distribution grouping (`valuesByGroup`), and `React.memo` marks
+  in the Network Viewer so selection changes do not recompute geometry or
+  re-render every node/edge.
+- The Genome Browser remains viewport-scoped: track loaders fetch only the
+  settled (debounced) visible interval.
+- Deterministic, non-flaky performance tests
+  (`downsample.test.ts`, distribution grouping tests) and updated docs.
+
 ## Documents
 
 | Document | Description |
@@ -167,6 +192,7 @@ Phase 6.7 chart infrastructure (native scales, tooltips, chart primitives).
 | [Network Viewer](network-viewer.md) | Phase 6.6 Biological Network Viewer: scope, design decision, data flow, API, a11y, tests |
 | [Scientific Charts](scientific-charts.md) | Phase 6.7 Scientific Charts: scope, design decision, data flow, API, a11y, tests |
 | [Advanced Scientific Charts](advanced-scientific-charts.md) | Phase 6.8 Advanced Scientific Charts: heatmap / volcano / coverage / distribution, data models, API, fixtures, a11y, tests |
+| [Performance](performance.md) | Phase 6.10 Visualization performance & large-dataset handling: data flow, strategies, downsampling limitations, a11y, testing |
 | [Roadmap](roadmap.md) | Detailed phase tracking and future work |
 
 ## Technology Notes

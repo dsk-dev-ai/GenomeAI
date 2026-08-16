@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useRef } from 'react'
+import { memo, useCallback, useMemo, useRef } from 'react'
 
 import { VisualizationContainer } from '@/components/visualization/VisualizationContainer'
 import {
@@ -24,7 +24,7 @@ import {
 } from '@/lib/network/labels'
 import { NODE_RADIUS } from '@/lib/network/layout'
 import { availableEdgeTypes, availableNodeTypes, edgeById, nodeById } from '@/lib/network/model'
-import type { GraphEdge, GraphNode } from '@/lib/network/types'
+import type { Graph, GraphEdge, GraphLayout, GraphNode, NetworkViewport } from '@/lib/network/types'
 import type { NetworkViewerResult } from '@/lib/network/useNetworkViewer'
 
 function NetworkSummary({ result }: { result: NetworkViewerResult }) {
@@ -138,11 +138,22 @@ function NetworkControls({ result }: { result: NetworkViewerResult }) {
   )
 }
 
-function EdgeElement({ edge, result }: { edge: GraphEdge; result: NetworkViewerResult }) {
-  const graph = result.graph
-  if (graph === undefined) return null
-  const points = edgeScreenPoints(edge, result.layout, result.viewport)
-  const selected = edge.id === result.selectedEdgeId
+const EdgeElement = memo(function EdgeElement({
+  edge,
+  graph,
+  layout,
+  viewport,
+  selected,
+  onSelect,
+}: {
+  edge: GraphEdge
+  graph: Graph
+  layout: GraphLayout
+  viewport: NetworkViewport
+  selected: boolean
+  onSelect: (edgeId: string | null) => void
+}) {
+  const points = edgeScreenPoints(edge, layout, viewport)
   const label = edgeAccessibleLabel(edge, graph)
   const color = edgeTypeColor(edge.type)
   return (
@@ -177,22 +188,33 @@ function EdgeElement({ edge, result }: { edge: GraphEdge; result: NetworkViewerR
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault()
-            result.selectEdge(selected ? null : edge.id)
+            onSelect(selected ? null : edge.id)
           }
         }}
-        onClick={() => result.selectEdge(selected ? null : edge.id)}
+        onClick={() => onSelect(selected ? null : edge.id)}
       />
     </g>
   )
-}
+})
 
-function NodeElement({ node, result }: { node: GraphNode; result: NetworkViewerResult }) {
-  const position = result.layout.positions.get(node.id)
+const NodeElement = memo(function NodeElement({
+  node,
+  layout,
+  viewport,
+  selected,
+  onSelect,
+}: {
+  node: GraphNode
+  layout: GraphLayout
+  viewport: NetworkViewport
+  selected: boolean
+  onSelect: (nodeId: string | null) => void
+}) {
+  const position = layout.positions.get(node.id)
   if (position === undefined) return null
-  const selected = node.id === result.selectedNodeId
   const label = nodeAccessibleLabel(node)
-  const box = nodeScreenBox(position, result.viewport)
-  const scale = result.viewport.scale
+  const box = nodeScreenBox(position, viewport)
+  const scale = viewport.scale
   const centerX = box.x + box.width / 2
   const centerY = box.y + NODE_RADIUS * scale
   return (
@@ -228,14 +250,14 @@ function NodeElement({ node, result }: { node: GraphNode; result: NetworkViewerR
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault()
-            result.selectNode(selected ? null : node.id)
+            onSelect(selected ? null : node.id)
           }
         }}
-        onClick={() => result.selectNode(selected ? null : node.id)}
+        onClick={() => onSelect(selected ? null : node.id)}
       />
     </g>
   )
-}
+})
 
 function NetworkGraph({ result }: { result: NetworkViewerResult }) {
   const graph = result.graph
@@ -305,10 +327,25 @@ function NetworkGraph({ result }: { result: NetworkViewerResult }) {
       {hasNodes ? (
         <g>
           {edges.map((edge) => (
-            <EdgeElement key={edge.id} edge={edge} result={result} />
+            <EdgeElement
+              key={edge.id}
+              edge={edge}
+              graph={graph}
+              layout={result.layout}
+              viewport={result.viewport}
+              selected={result.selectedEdgeId === edge.id}
+              onSelect={result.selectEdge}
+            />
           ))}
           {nodes.map((node) => (
-            <NodeElement key={node.id} node={node} result={result} />
+            <NodeElement
+              key={node.id}
+              node={node}
+              layout={result.layout}
+              viewport={result.viewport}
+              selected={result.selectedNodeId === node.id}
+              onSelect={result.selectNode}
+            />
           ))}
         </g>
       ) : (
