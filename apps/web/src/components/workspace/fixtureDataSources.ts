@@ -24,7 +24,7 @@ import {
   TP53_WINDOW_COVERAGE_FIXTURE,
 } from '@/lib/scientific/advanced.fixtures'
 import { TP53_PATHWAY_EXPRESSION_FIXTURE } from '@/lib/scientific/expression.fixtures'
-import { type WorkspaceDataSource, resolveFixture } from '@/lib/workspace/dataSources'
+import { type WorkspaceDataSource, abortAware, resolveFixture } from '@/lib/workspace/dataSources'
 
 /** The two gene-structure fixtures, filtered to those overlapping a region. */
 function fixtureGenesForInterval(interval: GenomicInterval): Gene[] {
@@ -34,17 +34,6 @@ function fixtureGenesForInterval(interval: GenomicInterval): Gene[] {
       gene.start <= interval.end &&
       gene.end >= interval.start,
   )
-}
-
-function abortAware<T>(
-  resolver: (signal: AbortSignal) => Promise<T>,
-): (signal: AbortSignal) => Promise<T> {
-  return (signal: AbortSignal): Promise<T> => {
-    if (signal.aborted) {
-      return Promise.reject(new DOMException('Aborted', 'AbortError'))
-    }
-    return resolver(signal)
-  }
 }
 
 /** Default demo data source backed entirely by the Phase 6 dev fixtures. */
