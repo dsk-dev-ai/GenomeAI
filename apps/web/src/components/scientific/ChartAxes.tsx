@@ -7,12 +7,16 @@ import type { CategoryScale, ContinuousScale } from '@/lib/scientific/scale'
 export interface ChartAxesProps {
   /** Data plot area (see `lib/scientific/geometry.ts`). */
   plot: PlotArea
-  /** Sample categories on the x-axis. */
-  xScale: CategoryScale
+  /** Sample categories on the x-axis (categorical mode). */
+  xScale?: CategoryScale
+  /** Continuous x-axis scale (numeric mode, e.g. volcano effect size). */
+  xContinuousScale?: ContinuousScale
   /** Value scale on the y-axis. */
   yScale: ContinuousScale
   /** Ascending tick values to render gridlines + labels for. */
   yTicks: number[]
+  /** Continuous x-axis tick values (numeric mode, e.g. volcano effect size). */
+  xTicks?: number[]
   /** Optional x-axis caption (e.g. "Sample"). */
   xLabel?: string
   /** Optional y-axis caption (e.g. "Expression value"). */
@@ -28,20 +32,25 @@ const CAPTION_COLOR = '#94a3b8'
 
 /**
  * Reusable SVG axes for scientific charts: gridlines, y tick labels, the
- * sample labels along the x-axis, and optional axis captions. Pure layout is
- * computed from the supplied scales so the component stays presentation-only.
+ * sample labels along the x-axis (categorical) or numeric tick labels
+ * (continuous), and optional axis captions. Pure layout is computed from the
+ * supplied scales so the component stays presentation-only.
  */
 export function ChartAxes({
   plot,
   xScale,
+  xContinuousScale,
   yScale,
   yTicks,
+  xTicks = [],
   xLabel,
   yLabel,
   formatValue = (value) => String(value),
 }: ChartAxesProps) {
   const baselineY = plot.y0 + plot.height
-  const sampleTicks = categoryLabelTicks(xScale, plot.width)
+  const categorical = xScale !== undefined
+  const continuous = xContinuousScale !== undefined
+  const sampleTicks = categorical ? categoryLabelTicks(xScale, plot.width) : []
 
   return (
     <g data-testid="chart-axes">
@@ -90,20 +99,33 @@ export function ChartAxes({
         </text>
       ) : null}
       <g data-testid="chart-x-labels">
-        {sampleTicks.map((tick) =>
-          tick.visible ? (
-            <text
-              key={tick.sample}
-              x={tick.x}
-              y={baselineY + 18}
-              textAnchor="middle"
-              fontSize={11}
-              fill={TICK_COLOR}
-            >
-              {tick.sample}
-            </text>
-          ) : null,
-        )}
+        {categorical
+          ? sampleTicks.map((tick) =>
+              tick.visible ? (
+                <text
+                  key={tick.sample}
+                  x={tick.x}
+                  y={baselineY + 18}
+                  textAnchor="middle"
+                  fontSize={11}
+                  fill={TICK_COLOR}
+                >
+                  {tick.sample}
+                </text>
+              ) : null,
+            )
+          : xTicks.map((tick) => (
+              <text
+                key={tick}
+                x={continuous ? xContinuousScale.toPixel(tick) : 0}
+                y={baselineY + 18}
+                textAnchor="middle"
+                fontSize={11}
+                fill={TICK_COLOR}
+              >
+                {formatValue(tick)}
+              </text>
+            ))}
       </g>
       {xLabel !== undefined ? (
         <text

@@ -4,7 +4,60 @@ Tracks the Phase 6 visualization platform milestones. See
 [Phase 6 of the project ROADMAP](</ROADMAP.md#phase-6--visualization-platform>) for
 the authoritative milestone list.
 
-## Current Milestone: 6.7 — Scientific Charts ✅
+## Current Milestone: 6.8 — Advanced Scientific Charts ✅
+
+Implemented on top of 6.7.
+
+Delivered:
+
+- Strongly typed data models (`lib/scientific/advancedTypes.ts`) — heatmap
+  matrix (`HeatmapDataset`), volcano points (`VolcanoPoint`/`VolcanoDataset`),
+  coverage bins (`CoverageBin`/`CoverageDataset`), distribution values
+  (`DistributionValue`/`DistributionDataset`); generic and opaque about the
+  biological *meaning* of values
+- Pure per-chart transformation modules (`lib/scientific/heatmap.ts`,
+  `volcano.ts`, `coverage.ts`, `distribution.ts`) — typed validation, canonical
+  normalization (deterministic ordering, dedupe, invalid drops), domains,
+  color scale, highlight thresholds, and tooltip mapping
+- Pure statistics (`lib/scientific/statistics.ts`) — sorted sample, R-7
+  quantiles, `summarize`, box-plot whiskers; kept separate from rendering
+- Shared chart data lifecycle (`lib/scientific/useChartData.ts`) — extracted
+  from `useExpressionChart` and reused by all four advanced hooks (custom /
+  default loader, dataset-id reload, 6.1 loading/empty/error lifecycle)
+- Thin typed adapter (`lib/scientific/advancedApi.ts`) documenting the future
+  `GET /advanced/{heatmaps|volcano|coverage|distributions}/{id}` contracts
+  (no backend changes)
+- View-model hooks (`useHeatmap`, `useVolcanoPlot`, `useCoverageChart`,
+  `useDistributionChart`) — load lifecycle, derived domains/groups/statistics,
+  selection; the coverage hook drives a Phase 6.2 `GenomeViewport`
+- Components (`components/scientific/`): `Heatmap` (diverging color grid with
+  missing-value cells), `VolcanoPlot` (effect-size vs significance, threshold
+  lines, highlighted points), `CoverageChart` (genomic area chart reusing
+  `lib/genome` coordinates + viewport, zoom/pan/reset + chromosome controls),
+  `DistributionChart` (box plot with deterministic jitter and outliers);
+  `ChartAxes` extended with a continuous x-axis
+- Demo integrated at `/visualization` (`AdvancedScientificDemo` uses the dev
+  fixtures)
+- Tests (282 across the scientific modules) and docs (see
+  [Advanced Scientific Charts](advanced-scientific-charts.md))
+
+Constraints honored:
+
+- The charts never assert biological validity or hard-code gene / disease /
+  database knowledge; values stay opaque finite numbers, and the volcano plot
+  treats `significance` as whatever finite score the caller provides (no
+  p-value assumptions)
+- Backend advanced endpoints are not yet exposed, so the demos use clearly
+  isolated dev fixtures routed through the same normalizers as production
+- The coverage chart reuses the Phase 6.2 genome coordinate types/utilities and
+  viewport instead of duplicating interval logic
+- No C++, WebAssembly, WebGPU, Three.js, Cytoscape.js, or D3.js; no new
+  runtime dependencies
+- Phase 5 search untouched
+
+## Previous milestones
+
+### 6.7 — Scientific Charts ✅
 
 Implemented on top of 6.6.
 
@@ -46,8 +99,6 @@ Constraints honored:
 - No C++, WebAssembly, WebGPU, Three.js, Cytoscape.js, or D3.js; no new
   runtime dependencies
 - Phase 5 search untouched
-
-## Previous milestones
 
 ### 6.6 — Biological Network Viewer ✅
 
@@ -95,8 +146,6 @@ Constraints honored:
 - No C++, WebAssembly, WebGPU, Three.js, Cytoscape.js, or D3.js; no new
   runtime dependencies
 - Phase 5 search untouched
-
-## Previous milestones
 
 ### 6.5 — Protein Viewer ✅
 
@@ -226,8 +275,6 @@ Constraints honored:
 - No C++, WebAssembly, WebGPU, Three.js, Cytoscape.js, or D3.js
 - Phase 5 search untouched; no new runtime dependencies
 
-## Previous milestones
-
 ### 6.1 — Visualization Foundation ✅
 
 Implemented on branch `feat/visualization-foundation`.
@@ -256,7 +303,7 @@ Constraints honored:
 
 | # | Milestone | Notes |
 |---|-----------|-------|
-| 6.8 | Integrated Research Workspace | Assembles 6.5–6.7 into a UI |
-| 6.9 | Visualization Performance & Optimization | Virtualization / density rendering for large data |
-| 6.10 | Visualization Testing & Documentation | Stabilization + docs pass |
-| 6.11 | Molecular Structure Viewer (3D) | 3D protein structures; Three.js only if 3D is truly required |
+| 6.9 | Integrated Research Workspace | Assembles 6.5–6.8 into a UI |
+| 6.10 | Visualization Performance & Optimization | Virtualization / density rendering for large data |
+| 6.11 | Visualization Testing & Documentation | Stabilization + docs pass |
+| 6.12 | Molecular Structure Viewer (3D) | 3D protein structures; Three.js only if 3D is truly required |
