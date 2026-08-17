@@ -10,10 +10,9 @@ import {
 /**
  * Client-side demonstration of the Phase 6.1 visualization foundation.
  *
- * Shows the data lifecycle (loading → success / empty / error) flowing
- * through the reusable `VisualizationContainer`. The module catalog maps the
- * full Phase 6.2–6.11 platform, each entry resolving to the viewer(s) shown
- * above on this page.
+ * Shows the module catalog flowing through the reusable
+ * `VisualizationContainer`. The catalog maps the full Phase 6.2–6.12
+ * platform, each entry resolving to the viewer(s) shown above on this page.
  */
 export function VisualizationDemo() {
   const { status, data, error, refetch } = useVisualizationData(
@@ -22,7 +21,7 @@ export function VisualizationDemo() {
   )
 
   return (
-    <div className="grid w-full grid-cols-1 gap-6 lg:grid-cols-2">
+    <div className="flex w-full flex-col gap-6">
       <VisualizationContainer
         title="Delivered visualization modules"
         description="Foundation demo loading the visualization module catalog."
@@ -45,19 +44,6 @@ export function VisualizationDemo() {
           ))}
         </ul>
       </VisualizationContainer>
-
-      <div className="flex w-full flex-col gap-6">
-        <VisualizationContainer
-          title="Empty state"
-          status="empty"
-          emptyMessage="No samples match the current selection."
-        />
-        <VisualizationContainer
-          title="Error state"
-          status="error"
-          error={{ message: 'The visualization service could not be reached.' }}
-        />
-      </div>
     </div>
   )
 }

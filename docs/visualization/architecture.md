@@ -42,6 +42,7 @@ apps/web/src/
 │   ├── scientific/               ExpressionChart, Heatmap, VolcanoPlot,
 │   │                             CoverageChart, DistributionChart, ChartAxes,
 │   │                             ChartLegend, ChartTooltip
+│   ├── molecular/                MolecularStructureViewer (Three.js-backed)
 │   └── workspace/                ResearchWorkspace + panels + fixture data source
 ├── lib/
 │   ├── visualization/            types, useVisualizationData, module catalog
@@ -51,11 +52,15 @@ apps/web/src/
 │   ├── network/                  types, model/normalize/filter/layout/viewport, API
 │   ├── scientific/               chart types/scales/geometry, statistics, downsample,
 │   │                             heatmap/volcano/coverage/distribution, hooks, API adapters
+│   ├── molecular/                structure types/validation/geometry, representations,
+│   │                             useMolecularStructureViewer, render (Three.js seam), API
 │   └── workspace/                researchContext, dataSources
 └── app/visualization/
     ├── page.tsx                  Route (/visualization) — demo catalog
     ├── VisualizationDemo.tsx     Client demo proving the architecture
-    └── workspace/page.tsx        Research Workspace route (/visualization/workspace)
+    ├── workspace/page.tsx        Research Workspace route (/visualization/workspace)
+    └── molecular-structure/      Molecular Structure Viewer route
+                                  (/visualization/molecular-structure)
 ```
 
 ## Data Flow

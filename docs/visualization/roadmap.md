@@ -4,7 +4,78 @@ Tracks the Phase 6 visualization platform milestones. See
 [Phase 6 of the project ROADMAP](</ROADMAP.md#phase-6--visualization-platform>) for
 the authoritative milestone list.
 
-## Current Milestone: 6.11 — Visualization Testing & Documentation ✅
+## Current Milestone: 6.12 — Molecular Structure Viewer ✅
+
+The first production-quality 3D molecular structure viewer, on top of the
+whole Phase 6 platform.
+
+Delivered:
+
+- **Typed canonical structure model** (`lib/molecular/types.ts`) — angstrom
+  coordinates, 1-based atom serials and residue numbers (mirroring the Phase
+  6.5 protein residue convention), chains/residues/bonds, and free-form
+  metadata; deliberately independent of any file format or backend.
+- **Pure validation** (`lib/molecular/validate.ts`) — reports structural
+  issues (missing ids, no atoms, invalid/duplicate serials, non-finite
+  coordinates, dangling/self/duplicate bonds, missing chain/residue ids,
+  dangling residue references, unreferenced atoms) instead of silently
+  rendering malformed data; `isUsableStructure` gates rendering.
+- **Pure geometry** (`lib/molecular/geometry.ts`) — CPK element presentation,
+  bounding boxes, centroids, camera framing (`cameraFocusForStructure`),
+  per-chain backbone traces, element counts, and human-readable summaries.
+- **Three.js behind a pure seam** — the React layer talks only to a
+  `MolecularViewer` interface (`render/types.ts`); the WebGL implementation
+  (`render/threeViewer.ts`) owns the scene, perspective camera, lights,
+  `OrbitControls`, `ResizeObserver`, animation loop, and full disposal, with
+  an injectable renderer so tests never need a GPU. The object-graph builder
+  (`render/representationBuilder.ts`) creates only Three.js objects and is
+  unit-tested in jsdom.
+- **Three representations** — cartoon / ribbon (smooth tube through the
+  C-alpha trace), ball-and-stick (CPK-coloured spheres + bond cylinders), and
+  space-filling (van der Waals spheres), behind a small extensible
+  `RepresentationId` catalog.
+- **`useMolecularStructureViewer` hook** — composes the Phase 6.1 data
+  lifecycle with representation, visibility, and camera-framing intent
+  (target/radius/version bumped on reset/fit).
+- **`MolecularStructureViewer` component** — creates the viewer once per mount
+  and updates it in place; labelled `role="img"` canvas, live structure
+  summary, representation select, reset/fit buttons, and show/hide with
+  `aria-pressed`.
+- **Data boundary** — the backend exposes no structure endpoint yet, so
+  `lib/molecular/api.ts` documents the future `GET /structures/{id}` contract
+  and normalizes any source via `toStructure`; the demo renders a clearly
+  isolated, deterministically generated synthetic development fixture routed
+  through the same normalizer as production (mirroring the Phase 6.5/6.6/6.7
+  fixture boundaries).
+- **Route + demo** — `/visualization/molecular-structure` (linked from
+  `/visualization`), a catalog entry (`molecular-structure-viewer`, milestone
+  `6.12`) with its data-contract test updated to 11 modules.
+- **Tests** (84 new web tests) — validation codes, geometry math, catalog
+  contracts, API normalization + malformed records, hook lifecycle (success /
+  empty / error / representation / visibility / focus), component lifecycle
+  with an injected fake viewer (create-once, setStructure/focusCamera,
+  representation select, visibility toggle, dispose on unmount), and Three.js
+  lifecycle with a fake renderer (frame loop, camera framing, resize, dispose).
+- **Docs** — this roadmap, [Molecular Structure](./molecular-structure.md),
+  README milestone table + "What Phase 6.12 Provides" + technology notes
+  (Three.js is now used, behind the seam).
+
+Constraints honored:
+
+- No C++, WebAssembly, WebGPU, CUDA, or a second framework; Three.js is the
+  only new runtime dependency and is isolated behind the `MolecularViewer`
+  seam (WebGL is only touched by `render/threeViewer.ts`)
+- No docking, dynamics, prediction, alignment, or analysis work; the viewer is
+  a visualization layer only
+- No invented backend structure endpoint; the fixture boundary is documented
+- Existing Genome Browser, Workspace, charts, and network viewers keep working
+  unchanged; the visualization UI is not redesigned
+- All new tests pass in jsdom (no GPU required); no flaky or timing-based
+  benchmarks
+
+## Previous milestones
+
+### 6.11 — Visualization Testing & Documentation ✅
 
 A stabilization + docs pass over the whole Phase 6 platform, on top of 6.10.
 
@@ -44,15 +115,13 @@ Delivered:
 
 Constraints honored:
 
-- No new visualization features, architecture redesign, or Phase 6.12 work;
-  no C++/WebAssembly/WebGPU/Three.js/Cytoscape.js/D3.js; no new runtime
-  dependencies; Phase 5 untouched
+- No new visualization features, architecture redesign, or Phase 6.12 work at
+  the time; no C++/WebAssembly/WebGPU/Three.js/Cytoscape.js/D3.js; no new
+  runtime dependencies; Phase 5 untouched
 - No tests deleted, weakened, or skipped; additions are behavior-oriented
   (never implementation-detail fakes)
 - Docs claims are accurate against the current repo (test counts, milestone
   status, component tree)
-
-## Previous milestones
 
 ### 6.9 — Integrated Research Workspace ✅
 
@@ -438,4 +507,3 @@ Constraints honored:
 
 | # | Milestone | Notes |
 |---|-----------|-------|
-| 6.12 | Molecular Structure Viewer (3D) | 3D protein structures; Three.js only if 3D is truly required |

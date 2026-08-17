@@ -35,9 +35,9 @@ Implemented on branch `feat/visualization-protein-viewer`.
 ## Out of scope (later milestones or explicitly excluded)
 
 - **3D molecular structure rendering** — this phase is sequence/annotation
-  only. Structure viewing is a future milestone that would introduce
-  Three.js only if 3D is truly required (see
-  [README](README.md) technology notes).
+  only. 3D structure viewing shipped separately in Phase 6.12 (the
+  [Molecular Structure Viewer](molecular-structure.md), which introduced
+  Three.js exactly because 3D is truly required there).
 - D3.js / Cytoscape.js / WebAssembly / WebGPU / C++
 - Backend annotation-feature support (see
   [Feature data boundary](#feature-data-boundary))
