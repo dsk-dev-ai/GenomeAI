@@ -76,7 +76,8 @@ Consequences and rationale:
 - Cytoscape.js / D3.js / WebAssembly / WebGPU (see design decision above).
 - Backend network/relationship endpoints (see
   [API limitation](#api-limitation)).
-- Large-graph performance work (deferred to 6.9; see the roadmap).
+- Large-graph performance work beyond the Phase 6.10 downsampling/`React.memo`
+  work (measured future option; see the roadmap).
 - Import from external biological databases (STRING, Reactome, BioGRID,
   IntAct, Open Targets, ...). The browser never talks to them; they feed
   GenomeAI through the later connector/ingestion architecture.

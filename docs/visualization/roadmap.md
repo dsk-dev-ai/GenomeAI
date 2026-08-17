@@ -4,7 +4,57 @@ Tracks the Phase 6 visualization platform milestones. See
 [Phase 6 of the project ROADMAP](</ROADMAP.md#phase-6--visualization-platform>) for
 the authoritative milestone list.
 
-## Current Milestone: 6.9 — Integrated Research Workspace ✅
+## Current Milestone: 6.11 — Visualization Testing & Documentation ✅
+
+A stabilization + docs pass over the whole Phase 6 platform, on top of 6.10.
+
+Delivered:
+
+- **Coverage audit** across every Phase 6 module (foundation, genome,
+  scientific, network, protein, workspace): mapped tested vs untested modules,
+  components, and a11y semantics; identified `visualizationModules.ts` and
+  `useChartSize.ts` as untested modules and the chart primitives + workspace
+  panels as untested components.
+- **Latent bug fixed by the audit**: `panViewport` produced a start below base 1
+  when a window wider than the contig panned right; it now clamps like
+  `zoomViewport` (`lib/genome/viewport.ts`).
+- **Data-contract tests** (`visualizationModules.test.ts`): catalog ids,
+  titles, milestones, fresh-copy semantics, delay/failure/abort behavior.
+- **Responsive sizing tests** (`useChartSize.test.tsx`): default/custom
+  fallbacks, resize observation, zero-measurement guard, unmount cleanup.
+- **Edge/correctness expansion** across the suite: downsampling boundaries
+  (exact caps, non-positive limits, ragged blocks, NaN/Infinity),
+  genome coordinate + viewport boundaries (invalid regions, overflow, pan/zoom
+  clamps), Genome Browser lifecycle (debounce collapse, in-flight abort,
+  navigation clamps), API contracts (paginated coordinate search, page_size,
+  abort between pages, malformed payloads), track layout (stacking,
+  tie-break ordering, empty views), statistics (single-element summaries,
+  quantile interpolation, whiskers/outliers), and data-lifecycle races
+  (stale errors ignored, selection cleared on reload, data cleared during
+  refetch).
+- **Focused component + a11y tests**: `ChartAxes`, `ChartLegend`,
+  `ChartTooltip` (labels, list semantics, tooltip clamping), and the workspace
+  panels (loading state, error + retry, whole-dataset panels independent of
+  context changes).
+- **Reconciled documentation**: README, architecture tree, roadmap test
+  counts, module out-of-scope references, and the module catalog comment now
+  match the shipped platform; new [Testing](testing.md) guide.
+- Web suite grows from 725 to **813 tests** (68 files) — deterministic, no
+  timing-based benchmarks; full validation green.
+
+Constraints honored:
+
+- No new visualization features, architecture redesign, or Phase 6.12 work;
+  no C++/WebAssembly/WebGPU/Three.js/Cytoscape.js/D3.js; no new runtime
+  dependencies; Phase 5 untouched
+- No tests deleted, weakened, or skipped; additions are behavior-oriented
+  (never implementation-detail fakes)
+- Docs claims are accurate against the current repo (test counts, milestone
+  status, component tree)
+
+## Previous milestones
+
+### 6.9 — Integrated Research Workspace ✅
 
 Implemented on top of 6.8 (and the Phase 6.10 performance work).
 
@@ -28,7 +78,7 @@ Delivered:
   shared `VisualizationContainer`, and keyboard-accessible controls (labeled
   context select, region form with `role="alert"` errors, `aria-live` region
   announcements)
-- Tests (26 workspace tests) and docs (see
+- Tests (30 workspace tests) and docs (see
   [Research Workspace](workspace.md))
 
 Constraints honored:
@@ -121,7 +171,8 @@ Delivered:
   `ChartAxes` extended with a continuous x-axis
 - Demo integrated at `/visualization` (`AdvancedScientificDemo` uses the dev
   fixtures)
-- Tests (282 across the scientific modules) and docs (see
+- Tests (282 across the scientific modules at delivery; 343 across the
+  scientific modules today) and docs (see
   [Advanced Scientific Charts](advanced-scientific-charts.md))
 
 Constraints honored:
@@ -170,7 +221,8 @@ Delivered:
   (gridlines, axes, legend, hover tooltips, keyboard-accessible point
   selection, detail panel)
 - Demo integrated at `/visualization` (`ScientificDemo` uses the dev fixture)
-- Tests (85 across the scientific modules) and docs (see
+- Tests (85 across the scientific modules at delivery; 343 across the
+  scientific modules today) and docs (see
   [Scientific Charts](scientific-charts.md))
 
 Constraints honored:
@@ -386,5 +438,4 @@ Constraints honored:
 
 | # | Milestone | Notes |
 |---|-----------|-------|
-| 6.11 | Visualization Testing & Documentation | Stabilization + docs pass |
 | 6.12 | Molecular Structure Viewer (3D) | 3D protein structures; Three.js only if 3D is truly required |

@@ -1,15 +1,15 @@
 import type { VisualizationDataSource, VisualizationMetadata } from './types'
 
 /**
- * Placeholder catalog for the planned visualization modules.
+ * Catalog of the visualization modules delivered across Phase 6.
  *
- * Phase 6.1 is foundation only — this data describes future modules so the
- * architecture (data flow through the visualization foundation) can be
- * demonstrated end to end. None of these modules are implemented yet.
+ * This started as a placeholder catalog for the Phase 6.1 foundation-only
+ * demo. It now reflects the modules actually implemented in Phase 6.2–6.11, so
+ * the demo catalog is an accurate map of the platform.
  */
 export interface VisualizationModule extends VisualizationMetadata {
   source: VisualizationDataSource
-  /** Roadmap milestone that will deliver this module (e.g. `6.2`). */
+  /** Roadmap milestone that delivered this module (e.g. `6.2`). */
   milestone: string
 }
 
@@ -59,6 +59,37 @@ const MODULES: readonly VisualizationModule[] = [
     milestone: '6.7',
     source: { kind: 'api', reference: '/api/visualization/charts' },
   },
+  {
+    id: 'advanced-scientific-charts',
+    title: 'Advanced Scientific Charts',
+    description:
+      'Expression heatmap, volcano plot, genomic coverage, and statistical distribution charts.',
+    milestone: '6.8',
+    source: { kind: 'api', reference: '/api/visualization/advanced-charts' },
+  },
+  {
+    id: 'integrated-research-workspace',
+    title: 'Integrated Research Workspace',
+    description:
+      'One research UI assembling the Phase 6.2–6.8 viewers around a shared genomic context.',
+    milestone: '6.9',
+    source: { kind: 'api', reference: '/api/visualization/workspace' },
+  },
+  {
+    id: 'performance-large-datasets',
+    title: 'Performance & Large-Dataset Handling',
+    description:
+      'Deterministic downsampling, aggregation, and per-render work reduction for large datasets.',
+    milestone: '6.10',
+    source: { kind: 'api', reference: '/api/visualization/performance' },
+  },
+  {
+    id: 'testing-documentation',
+    title: 'Testing & Documentation',
+    description: 'Platform-wide coverage audit, edge-case tests, and reconciled documentation.',
+    milestone: '6.11',
+    source: { kind: 'api', reference: '/api/visualization/testing' },
+  },
 ]
 
 export interface FetchVisualizationModulesOptions {
@@ -69,12 +100,12 @@ export interface FetchVisualizationModulesOptions {
 }
 
 /**
- * Placeholder loader for the visualization module catalog.
+ * Demo loader for the visualization module catalog.
  *
  * Resolves a typed list of `VisualizationModule`s after a short simulated
- * delay. This stands in for a future API endpoint — later milestones will
- * replace it with a real GenomeAI API/SDK-backed loader while the
- * component and data-layer contracts stay the same.
+ * delay. This stands in for a future API endpoint — production callers will
+ * replace it with a real GenomeAI API/SDK-backed loader while the component
+ * and data-layer contracts stay the same.
  */
 export function fetchVisualizationModules(
   signal: AbortSignal,

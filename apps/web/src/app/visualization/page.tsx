@@ -12,7 +12,7 @@ import { VisualizationDemo } from './VisualizationDemo'
 export const metadata: Metadata = {
   title: 'Visualization — GenomeAI',
   description:
-    'Visualization foundation, Genome Browser, Gene / Transcript viewer, Variant track, Protein Viewer, Biological Network Viewer, Scientific Charts, and Advanced Scientific Charts (Phase 6.1–6.8) for GenomeAI.',
+    'Visualization foundation, Genome Browser, Gene / Transcript viewer, Variant track, Protein Viewer, Biological Network Viewer, Scientific Charts, Advanced Scientific Charts, and the Integrated Research Workspace (Phase 6.1–6.11) for GenomeAI.',
 }
 
 export default function VisualizationPage() {
@@ -23,11 +23,12 @@ export default function VisualizationPage() {
         <p className="text-sm text-gray-600">
           Phase 6.1 foundation, the Phase 6.2 Genome Browser, the Phase 6.3 Gene / Transcript
           viewer, the Phase 6.4 Variant track, the Phase 6.5 Protein Viewer, the Phase 6.6
-          Biological Network Viewer, the Phase 6.7 Scientific Charts, and the Phase 6.8 Advanced
-          Scientific Charts — region parsing, viewport navigation, track rendering, gene/transcript
-          structure, point variants, protein sequence + annotation windows, deterministic
-          relationship networks, expression charts, and heatmap / volcano / coverage / distribution
-          charts over the GenomeAI API and development fixtures.
+          Biological Network Viewer, the Phase 6.7 Scientific Charts, the Phase 6.8 Advanced
+          Scientific Charts, the Phase 6.9 Integrated Research Workspace, the Phase 6.10 performance
+          work, and the Phase 6.11 testing & documentation pass — region parsing, viewport
+          navigation, track rendering, gene/transcript structure, point variants, protein sequence +
+          annotation windows, deterministic relationship networks, expression charts, and heatmap /
+          volcano / coverage / distribution charts over the GenomeAI API and development fixtures.
         </p>
       </div>
       <nav aria-label="Visualization pages" className="flex w-full flex-wrap gap-3">

@@ -99,4 +99,37 @@ describe('useVolcanoPlot', () => {
     act(() => captured.model.clearSelection())
     await waitFor(() => expect(captured.model.selectedKey).toBeNull())
   })
+
+  it('clears the selection when a new dataset loads', async () => {
+    const first = {
+      id: 'a',
+      title: 'A',
+      points: [{ identifier: 'g1', effect_size: 1, significance: 2 }],
+    }
+    const second = {
+      id: 'b',
+      title: 'B',
+      points: [{ identifier: 'g1', effect_size: -1, significance: 3 }],
+    }
+    const loader = vi.fn().mockResolvedValueOnce(first).mockResolvedValueOnce(second)
+    const captured = renderHook({ loader })
+    await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('success'))
+    await act(async () => {})
+    act(() => captured.model.selectPoint('g1'))
+    await waitFor(() => expect(captured.model.selectedKey).toBe('g1'))
+
+    act(() => captured.model.refetch())
+    await waitFor(() => expect(captured.model.dataset?.id).toBe('b'))
+    await waitFor(() => expect(captured.model.selectedKey).toBeNull())
+  })
+
+  it('clears the selection when passed null', async () => {
+    const loader = vi.fn(async () => DIFFERENTIAL_EXPRESSION_VOLCANO_FIXTURE)
+    const captured = renderHook({ loader })
+    await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('success'))
+    act(() => captured.model.selectPoint('TP53'))
+    await waitFor(() => expect(captured.model.selectedKey).toBe('TP53'))
+    act(() => captured.model.selectPoint(null))
+    await waitFor(() => expect(captured.model.selectedKey).toBeNull())
+  })
 })

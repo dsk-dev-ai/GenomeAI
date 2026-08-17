@@ -28,6 +28,13 @@ describe('quantile', () => {
     expect(quantile([1, 2, 3, 4], 0.5)).toBe(2.5)
   })
 
+  it('interpolates at fractional ranks (R-7 convention)', () => {
+    // position = 0.25 * 3 = 0.75 → 1 + (2 - 1) * 0.75 = 1.75
+    expect(quantile([1, 2, 3, 4], 0.25)).toBe(1.75)
+    // position = 0.75 * 3 = 2.25 → 3 + (4 - 3) * 0.25 = 3.25
+    expect(quantile([1, 2, 3, 4], 0.75)).toBe(3.25)
+  })
+
   it('returns min/max for q=0 and q=1', () => {
     expect(quantile([1, 2, 3], 0)).toBe(1)
     expect(quantile([1, 2, 3], 1)).toBe(3)
@@ -61,6 +68,24 @@ describe('summarize', () => {
   it('returns undefined for an empty sample', () => {
     expect(summarize([])).toBeUndefined()
   })
+
+  it('summarizes a single-element sample with a zero IQR', () => {
+    const summary = summarize([7])
+    expect(summary).toEqual({
+      count: 1,
+      mean: 7,
+      min: 7,
+      max: 7,
+      q1: 7,
+      q2: 7,
+      q3: 7,
+      iqr: 0,
+    })
+  })
+
+  it('ignores non-finite values while summarizing', () => {
+    expect(summarize([1, Number.NaN, Number.POSITIVE_INFINITY, 3])?.count).toBe(2)
+  })
 })
 
 describe('boxPlotWhiskers', () => {
@@ -81,5 +106,18 @@ describe('boxPlotWhiskers', () => {
 
   it('returns undefined for an empty sample', () => {
     expect(boxPlotWhiskers([])).toBeUndefined()
+  })
+
+  it('reports low-side outliers below the lower whisker', () => {
+    const whiskers = boxPlotWhiskers([-100, 1, 2, 3, 4, 5, 6, 7, 8])
+    expect(whiskers?.lower).toBe(1)
+    expect(whiskers?.outliers).toEqual([-100])
+  })
+
+  it('collapses whiskers when every value is identical', () => {
+    const whiskers = boxPlotWhiskers([5, 5, 5, 5])
+    expect(whiskers?.lower).toBe(5)
+    expect(whiskers?.upper).toBe(5)
+    expect(whiskers?.outliers).toEqual([])
   })
 })

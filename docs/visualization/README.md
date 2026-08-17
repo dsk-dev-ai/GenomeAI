@@ -19,6 +19,15 @@ and keeping the Genome Browser viewport-scoped — while preserving correctness,
 accessibility, and scientific meaning. See
 [Performance](./performance.md).
 
+**Phase 6.11 — Visualization Testing & Documentation** is implemented: a
+testing and documentation pass over the whole Phase 6 platform. It audits
+coverage across every Phase 6 module, adds behavior/correctness/edge tests
+where they were thin (foundation, genome, scientific, and workspace modules),
+fixes latent bugs the audit uncovered (viewport pan clamping), adds focused
+accessibility and component tests for previously untested chart primitives and
+workspace panels, and reconciles the docs with the shipped platform. See
+[Testing](./testing.md) and the [Roadmap](./roadmap.md).
+
 | Milestone | Description | Status |
 |-----------|-------------|--------|
 | 6.1 | Visualization Foundation | ✅ Implemented |
@@ -31,7 +40,7 @@ accessibility, and scientific meaning. See
 | 6.8 | Advanced Scientific Charts | ✅ Implemented |
 | 6.9 | Integrated Research Workspace | ✅ Implemented |
 | 6.10 | Visualization Performance & Optimization | ✅ Implemented |
-| 6.11 | Visualization Testing & Documentation | 📋 Planned |
+| 6.11 | Visualization Testing & Documentation | ✅ Implemented |
 
 ## What Phase 6.1 Provides
 
@@ -204,6 +213,32 @@ accessibility, and scientific meaning. See
 - Deterministic, non-flaky performance tests
   (`downsample.test.ts`, distribution grouping tests) and updated docs.
 
+## What Phase 6.11 Provides
+
+- A **coverage audit** of every Phase 6 module (foundation, genome, scientific,
+  network, protein, workspace) identifying untested modules, untested
+  components, and a11y gaps.
+- **Behavior/correctness/edge tests** added across the suite: data-contract
+  tests for the visualization-module catalog (`visualizationModules.test.ts`),
+  responsive sizing (`useChartSize.test.tsx`), downsampling/aggregation edge
+  cases, genome coordinate + viewport boundaries, Genome Browser track/region
+  lifecycle (debounce, stale-abort), coordinate-search and advanced API
+  contracts (pagination, malformed input, abort), track layout stacking,
+  statistics (quantiles, whiskers), and data-lifecycle races (stale errors,
+  selection clearing).
+- **Focused component and accessibility tests** for the previously untested
+  chart primitives (`ChartAxes`, `ChartLegend`, `ChartTooltip`) and workspace
+  panels (loading/error states, context-change independence, `aria-live` /
+  `role` semantics).
+- **A latent bug fixed by the audit**: `panViewport` could produce a start
+  below base 1 when a window wider than the contig panned right; it now clamps
+  like `zoomViewport`.
+- **Reconciled documentation**: architecture and roadmap now match the shipped
+  platform (accurate tree, milestone status, test counts), plus a
+  [Testing](./testing.md) guide describing coverage and how to run the suite.
+- The web suite grows from 725 to 813 tests with no flaky or timing-based
+  benchmarks.
+
 ## Documents
 
 | Document | Description |
@@ -218,6 +253,7 @@ accessibility, and scientific meaning. See
 | [Advanced Scientific Charts](advanced-scientific-charts.md) | Phase 6.8 Advanced Scientific Charts: heatmap / volcano / coverage / distribution, data models, API, fixtures, a11y, tests |
 | [Research Workspace](workspace.md) | Phase 6.9 Integrated Research Workspace: context, panels, state flow, API usage, fixture boundary, a11y, tests |
 | [Performance](performance.md) | Phase 6.10 Visualization performance & large-dataset handling: data flow, strategies, downsampling limitations, a11y, testing |
+| [Testing](testing.md) | Phase 6.11 Testing & documentation pass: coverage map, test conventions, and how to run the suite |
 | [Roadmap](roadmap.md) | Detailed phase tracking and future work |
 
 ## Technology Notes

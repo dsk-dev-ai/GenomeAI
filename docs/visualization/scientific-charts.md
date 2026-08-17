@@ -83,7 +83,8 @@ Consequences and rationale:
 - Logarithmic / transformed scales and error bars.
 - D3.js / WebAssembly / WebGPU (see design decision above).
 - Backend expression endpoints (see [API limitation](#api-limitation)).
-- Large-data rendering work (deferred to 6.9; see the roadmap).
+- Large-data rendering work beyond the Phase 6.10 downsampling caps (measured
+  future option; see the roadmap).
 - Import from external biological databases (GEO, ArrayExpress, TCGA, ...).
   The browser never talks to them; they feed GenomeAI through the later
   connector/ingestion architecture.

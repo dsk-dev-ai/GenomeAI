@@ -45,7 +45,7 @@ Implemented on branch `feat/visualization-variant`.
 - D3.js / Three.js / Cytoscape.js / WebAssembly / WebGPU / C++ (see
   [README](README.md) technology notes)
 - Dense variant-call / histogram density rendering at population scale
-  (deferred to 6.9 performance work)
+  (measured future option; see [Performance](performance.md))
 - Protein / network / chart views (6.5–6.7)
 
 ## Architecture and data flow

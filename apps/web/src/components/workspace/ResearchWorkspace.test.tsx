@@ -128,4 +128,42 @@ describe('ResearchWorkspace', () => {
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Network unavailable'))
     expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument()
   })
+
+  it('shows a loading state while a panel loader is pending', () => {
+    const dataSource: WorkspaceDataSource = {
+      ...fixtureWorkspaceDataSource,
+      loadGenes: () => new Promise(() => undefined),
+    }
+    render(<ResearchWorkspace dataSource={dataSource} />)
+
+    expect(
+      screen
+        .getAllByRole('status')
+        .some((node) => node.textContent?.includes('Loading gene structure...')),
+    ).toBe(true)
+  })
+
+  it('keeps whole-dataset panels independent when the context region changes', async () => {
+    const loadNetwork = vi.fn(fixtureWorkspaceDataSource.loadNetwork)
+    const loadProtein = vi.fn(fixtureWorkspaceDataSource.loadProtein)
+    const dataSource: WorkspaceDataSource = {
+      ...fixtureWorkspaceDataSource,
+      loadNetwork,
+      loadProtein,
+    }
+    render(<ResearchWorkspace dataSource={dataSource} />)
+
+    await waitFor(() => expect(loadNetwork).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(loadProtein).toHaveBeenCalledTimes(1))
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Research context' }), {
+      target: { value: 'brca1-locus' },
+    })
+    await waitFor(() =>
+      expect(screen.getByTestId('active-context')).toHaveTextContent('BRCA1 locus (chr17)'),
+    )
+
+    expect(loadNetwork).toHaveBeenCalledTimes(1)
+    expect(loadProtein).toHaveBeenCalledTimes(1)
+  })
 })

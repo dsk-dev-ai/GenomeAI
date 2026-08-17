@@ -11,9 +11,9 @@ import {
  * Client-side demonstration of the Phase 6.1 visualization foundation.
  *
  * Shows the data lifecycle (loading → success / empty / error) flowing
- * through the reusable `VisualizationContainer`. The module catalog itself
- * is a placeholder — the individual visualizations arrive in later
- * milestones.
+ * through the reusable `VisualizationContainer`. The module catalog maps the
+ * full Phase 6.2–6.11 platform, each entry resolving to the viewer(s) shown
+ * above on this page.
  */
 export function VisualizationDemo() {
   const { status, data, error, refetch } = useVisualizationData(
@@ -24,7 +24,7 @@ export function VisualizationDemo() {
   return (
     <div className="grid w-full grid-cols-1 gap-6 lg:grid-cols-2">
       <VisualizationContainer
-        title="Planned visualization modules"
+        title="Delivered visualization modules"
         description="Foundation demo loading the visualization module catalog."
         status={status}
         error={error}

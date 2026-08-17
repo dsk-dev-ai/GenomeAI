@@ -36,6 +36,39 @@ describe('decimateItems', () => {
     expect(sampled.length).toBeLessThan(items.length)
     expect(sampled).toEqual([...sampled].sort((a, b) => a - b))
   })
+
+  it('returns the same array when the length exactly matches the limit', () => {
+    const items = [1, 2, 3, 4, 5]
+    expect(decimateItems(items, 5)).toBe(items)
+  })
+
+  it('returns the same (empty) array for an empty input', () => {
+    const items: number[] = []
+    expect(decimateItems(items, 5)).toBe(items)
+  })
+
+  it('returns an empty sample for a negative limit', () => {
+    expect(decimateItems([1, 2, 3], -2)).toEqual([])
+  })
+
+  it('returns exactly the first element when the limit is one', () => {
+    const sampled = decimateItems([1, 2, 3, 4], 1)
+    expect([...sampled]).toEqual([1])
+  })
+
+  it('returns exactly the first and last elements when the limit is two', () => {
+    const sampled = decimateItems([1, 2, 3, 4, 5, 6, 7], 2)
+    expect([...sampled]).toEqual([1, 7])
+  })
+
+  it('samples odd-sized inputs deterministically with first and last preserved', () => {
+    const items = [0, 1, 2, 3, 4, 5, 6]
+    const sampled = [...decimateItems(items, 3)]
+    expect(sampled[0]).toBe(0)
+    expect(sampled[sampled.length - 1]).toBe(6)
+    expect(sampled.length).toBeLessThanOrEqual(3)
+    expect(sampled).toEqual([...sampled].sort((a, b) => a - b))
+  })
 })
 
 describe('coverageColumns', () => {
@@ -95,6 +128,78 @@ describe('coverageColumns', () => {
       coverage: index % 9,
     }))
     expect(coverageColumns(bins, toX, 300, 80)).toEqual(coverageColumns(bins, toX, 300, 80))
+  })
+
+  it('returns the same bins for a non-positive column limit or plot width', () => {
+    const bins: CoverageBin[] = [
+      { chromosome: 'chr1', start: 1, end: 10, coverage: 5 },
+      { chromosome: 'chr1', start: 11, end: 20, coverage: 8 },
+    ]
+    expect(coverageColumns(bins, toX, 100, 0)).toBe(bins)
+    expect(coverageColumns(bins, toX, 0, 50)).toBe(bins)
+    expect(coverageColumns(bins, toX, -1, 50)).toBe(bins)
+  })
+
+  it('returns the same bins when the count exactly matches the column limit', () => {
+    const bins: CoverageBin[] = [
+      { chromosome: 'chr1', start: 1, end: 10, coverage: 5 },
+      { chromosome: 'chr1', start: 11, end: 20, coverage: 8 },
+    ]
+    expect(coverageColumns(bins, toX, 100, 2)).toBe(bins)
+  })
+
+  it('collapses the whole track into one column carrying the global peak when the limit is one', () => {
+    const bins: CoverageBin[] = Array.from({ length: 100 }, (_, index) => ({
+      chromosome: 'chr1',
+      start: index * 10 + 1,
+      end: index * 10 + 10,
+      coverage: index % 7,
+    }))
+    const columns = coverageColumns(bins, toX, 200, 1)
+    expect(columns).toHaveLength(1)
+    expect(columns[0]?.coverage).toBe(6)
+    expect(columns[0]?.start).toBe(1)
+    expect(columns[0]?.end).toBe(1000)
+  })
+
+  it('merges bins into the span of the whole bucket and keeps the first chromosome', () => {
+    const bins: CoverageBin[] = [
+      { chromosome: 'chr1', start: 10, end: 20, coverage: 1 },
+      { chromosome: 'chr2', start: 30, end: 40, coverage: 5 },
+      { chromosome: 'chr1', start: 50, end: 60, coverage: 2 },
+    ]
+    const columns = coverageColumns(bins, toX, 10, 1)
+    expect(columns).toHaveLength(1)
+    expect(columns[0]?.start).toBe(10)
+    expect(columns[0]?.end).toBe(60)
+    expect(columns[0]?.chromosome).toBe('chr1')
+  })
+
+  it('returns columns sorted ascending by start', () => {
+    const bins: CoverageBin[] = Array.from({ length: 500 }, (_, index) => ({
+      chromosome: 'chr1',
+      start: index * 5 + 1,
+      end: index * 5 + 5,
+      coverage: 1,
+    }))
+    const columns = coverageColumns(bins, toX, 50, 10)
+    const starts = columns.map((column) => column.start)
+    expect(starts).toEqual([...starts].sort((a, b) => a - b))
+  })
+
+  it('clamps bins mapped to negative pixels into the first bucket', () => {
+    const toNegative = () => -5
+    const bins: CoverageBin[] = Array.from({ length: 8 }, (_, index) => ({
+      chromosome: 'chr1',
+      start: index * 10 + 1,
+      end: index * 10 + 10,
+      coverage: index % 4,
+    }))
+    const columns = coverageColumns(bins, toNegative, 100, 5)
+    expect(columns).toHaveLength(1)
+    expect(columns[0]?.coverage).toBe(3)
+    expect(columns[0]?.start).toBe(1)
+    expect(columns[0]?.end).toBe(80)
   })
 })
 
@@ -162,5 +267,124 @@ describe('aggregateHeatmap', () => {
     const aggregated = aggregateHeatmap(dataset, 1, 1)
     // Whole matrix collapses to one block; finite values are 1 and 3.
     expect(aggregated.values[0]?.[0]).toBe(2)
+  })
+
+  it('collapses a whole matrix to one block for non-positive limits', () => {
+    const dataset: HeatmapDataset = {
+      id: 'h',
+      title: 'All',
+      rows: ['r1', 'r2', 'r3'],
+      columns: ['c1', 'c2', 'c3'],
+      values: [
+        [1, 2, 3],
+        [4, 5, 6],
+        [7, 8, 9],
+      ],
+    }
+    for (const maxRows of [0, -1]) {
+      for (const maxCols of [0, -1]) {
+        const aggregated = aggregateHeatmap(dataset, maxRows, maxCols)
+        expect(aggregated.rows).toEqual(['r1'])
+        expect(aggregated.columns).toEqual(['c1'])
+        expect(aggregated.values[0]).toEqual([5])
+      }
+    }
+  })
+
+  it('aggregates along a single axis when only the other is oversized', () => {
+    const dataset: HeatmapDataset = {
+      id: 'h',
+      title: 'ColumnsOnly',
+      rows: ['r1', 'r2'],
+      columns: ['c1', 'c2', 'c3', 'c4'],
+      values: [
+        [1, 2, 3, 4],
+        [5, 6, 7, 8],
+      ],
+    }
+    const rowsOnly = aggregateHeatmap(dataset, 1, 100)
+    expect(rowsOnly.rows).toEqual(['r1'])
+    expect(rowsOnly.columns).toEqual(['c1', 'c2', 'c3', 'c4'])
+    expect(rowsOnly.values[0]).toEqual([3, 4, 5, 6])
+
+    const colsOnly = aggregateHeatmap(dataset, 100, 2)
+    expect(colsOnly.rows).toEqual(['r1', 'r2'])
+    expect(colsOnly.columns).toEqual(['c1', 'c3'])
+    expect(colsOnly.values[0]).toEqual([1.5, 3.5])
+    expect(colsOnly.values[1]).toEqual([5.5, 7.5])
+  })
+
+  it('skips NaN and Infinity values when averaging a block', () => {
+    const dataset: HeatmapDataset = {
+      id: 'h',
+      title: 'NonFinite',
+      rows: ['r1', 'r2'],
+      columns: ['c1'],
+      values: [[Number.NaN], [6]],
+    }
+    const aggregated = aggregateHeatmap(dataset, 1, 1)
+    expect(aggregated.values[0]?.[0]).toBe(6)
+
+    const infinite: HeatmapDataset = {
+      id: 'h2',
+      title: 'Infinite',
+      rows: ['r1', 'r2'],
+      columns: ['c1'],
+      values: [[Number.POSITIVE_INFINITY], [undefined]],
+    }
+    const aggregatedInfinite = aggregateHeatmap(infinite, 1, 1)
+    expect(aggregatedInfinite.values[0]?.[0]).toBeUndefined()
+  })
+
+  it('averages ragged boundary blocks', () => {
+    const dataset: HeatmapDataset = {
+      id: 'h',
+      title: 'Ragged',
+      rows: ['r1', 'r2', 'r3', 'r4', 'r5'],
+      columns: ['c1', 'c2', 'c3', 'c4', 'c5'],
+      values: Array.from({ length: 5 }, (_, r) =>
+        Array.from({ length: 5 }, (_, c) => r * 5 + c + 1),
+      ),
+    }
+    const aggregated = aggregateHeatmap(dataset, 2, 2)
+    // Block size ceil(5/2) = 3, so rows/columns sample at indices 0 and 3.
+    expect(aggregated.rows).toEqual(['r1', 'r4'])
+    expect(aggregated.columns).toEqual(['c1', 'c4'])
+    // Bottom-right block spans rows r4..r5, columns c4..c5: mean(19,20,24,25) = 22.
+    expect(aggregated.values[1]?.[1]).toBe(22)
+  })
+
+  it('tolerates ragged rows with missing value arrays', () => {
+    const dataset: HeatmapDataset = {
+      id: 'h',
+      title: 'MissingRow',
+      rows: ['r1', 'r2'],
+      columns: ['c1', 'c2'],
+      values: [[1, 2], undefined],
+    } as HeatmapDataset
+    const aggregated = aggregateHeatmap(dataset, 1, 1)
+    expect(aggregated.values[0]?.[0]).toBe(1.5)
+  })
+
+  it('propagates id, title, labels, and metadata through aggregation', () => {
+    const dataset: HeatmapDataset = {
+      id: 'h-id',
+      title: 'Named',
+      rows: ['r1', 'r2'],
+      columns: ['c1', 'c2'],
+      values: [
+        [1, 2],
+        [3, 4],
+      ],
+      rowLabels: { r1: 'Row One' },
+      columnLabels: { c1: 'Col One' },
+      metadata: { source: 'fixture' },
+    }
+    const aggregated = aggregateHeatmap(dataset, 1, 1)
+    expect(aggregated.id).toBe('h-id')
+    expect(aggregated.title).toBe('Named')
+    expect(aggregated.rowLabels).toEqual({ r1: 'Row One' })
+    expect(aggregated.columnLabels).toEqual({ c1: 'Col One' })
+    expect(aggregated.metadata).toEqual({ source: 'fixture' })
   })
 })

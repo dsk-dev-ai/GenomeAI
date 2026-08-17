@@ -112,7 +112,7 @@ export function panViewport<V extends IntervalWindow>(viewport: V, delta: number
   }
   if (endLimit !== undefined && end > endLimit) {
     end = endLimit
-    start = end - span + 1
+    start = Math.max(1, end - span + 1)
   }
 
   return { ...viewport, start, end, bounds: viewport.bounds } as V

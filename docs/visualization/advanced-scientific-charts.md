@@ -263,9 +263,10 @@ the real `use*` hooks with a custom loader; the loader flips to the
 - Domains, statistics, and geometry are `useMemo`-cached; derivation is
   O(n) over the dataset (no O(n²) matrix rescans per render).
 - Cell/point/bin hit areas are flat SVG controls — no per-frame work.
-- Large-data rendering (virtualization, density downsampling) is deferred to
-  Phase 6.9 per the roadmap; the transform/render separation is designed so
-  that work lands without component changes.
+- Large-data rendering is handled deterministically in the client via the
+  Phase 6.10 downsampling/aggregation layer (see [Performance](performance.md));
+  a second rendering architecture (virtualization, canvas/WebGL fallback)
+  remains a measured future option.
 
 ## Testing
 
