@@ -58,16 +58,26 @@ export interface WorkspaceDataSource {
 }
 
 /**
- * Resolves a constant fixture through the loader contract, rejecting with an
- * `AbortError` once the signal has aborted. Mirrors the demo loader pattern
- * (`resolveFixture` in the Phase 6.7/6.8 demos) so fixtures honour the shared
- * cancellation contract.
+ * Wraps a loader so it rejects with an `AbortError` as soon as its signal is
+ * already aborted, before the resolver runs. This is the single cancellation
+ * point for fixture-backed workspace loaders, so whole-dataset and interval
+ * loaders share identical abort behavior.
  */
-export function resolveFixture<T>(fixture: T): WorkspaceLoader<T> {
+export function abortAware<T>(resolver: WorkspaceLoader<T>): WorkspaceLoader<T> {
   return (signal: AbortSignal): Promise<T> => {
     if (signal.aborted) {
       return Promise.reject(new DOMException('Aborted', 'AbortError'))
     }
-    return Promise.resolve(fixture)
+    return resolver(signal)
   }
+}
+
+/**
+ * Resolves a constant fixture through the loader contract, rejecting with an
+ * `AbortError` once the signal has aborted (via `abortAware`). Mirrors the demo
+ * loader pattern (`resolveFixture` in the Phase 6.7/6.8 demos) so fixtures
+ * honour the shared cancellation contract.
+ */
+export function resolveFixture<T>(fixture: T): WorkspaceLoader<T> {
+  return abortAware(() => Promise.resolve(fixture))
 }
