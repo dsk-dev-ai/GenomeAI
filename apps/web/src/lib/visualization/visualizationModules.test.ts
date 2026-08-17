@@ -21,6 +21,7 @@ describe('fetchVisualizationModules', () => {
       'integrated-research-workspace',
       'performance-large-datasets',
       'testing-documentation',
+      'molecular-structure-viewer',
     ])
     for (const module of modules) {
       expect(module.title).toBeTruthy()
@@ -35,7 +36,7 @@ describe('fetchVisualizationModules', () => {
     const second = await fetchVisualizationModules(signal, { delayMs: 0 })
     expect(first).not.toBe(second)
     first.pop()
-    expect((await fetchVisualizationModules(signal, { delayMs: 0 })).length).toBe(10)
+    expect((await fetchVisualizationModules(signal, { delayMs: 0 })).length).toBe(11)
   })
 
   it('honours the simulated latency before resolving', async () => {

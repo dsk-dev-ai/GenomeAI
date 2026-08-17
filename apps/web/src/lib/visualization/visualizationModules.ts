@@ -4,7 +4,7 @@ import type { VisualizationDataSource, VisualizationMetadata } from './types'
  * Catalog of the visualization modules delivered across Phase 6.
  *
  * This started as a placeholder catalog for the Phase 6.1 foundation-only
- * demo. It now reflects the modules actually implemented in Phase 6.2–6.11, so
+ * demo. It now reflects the modules actually implemented in Phase 6.2–6.12, so
  * the demo catalog is an accurate map of the platform.
  */
 export interface VisualizationModule extends VisualizationMetadata {
@@ -89,6 +89,14 @@ const MODULES: readonly VisualizationModule[] = [
     description: 'Platform-wide coverage audit, edge-case tests, and reconciled documentation.',
     milestone: '6.11',
     source: { kind: 'api', reference: '/api/visualization/testing' },
+  },
+  {
+    id: 'molecular-structure-viewer',
+    title: 'Molecular Structure Viewer',
+    description:
+      'Interactive 3D molecular structure rendering: cartoon, ball-and-stick, and space-filling representations over a synthetic development fixture.',
+    milestone: '6.12',
+    source: { kind: 'api', reference: '/api/visualization/structures' },
   },
 ]
 
