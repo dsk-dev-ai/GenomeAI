@@ -27,6 +27,9 @@ function RenderViewport() {
       <button type="button" data-testid="pan-left" onClick={browser.panLeft}>
         pan left
       </button>
+      <button type="button" data-testid="pan-right" onClick={browser.panRight}>
+        pan right
+      </button>
       <button type="button" data-testid="reset" onClick={browser.reset}>
         reset
       </button>
@@ -130,6 +133,73 @@ describe('useGenomeBrowser', () => {
     fireEvent.click(screen.getByTestId('reset'))
     expect(screen.getByTestId('viewport').textContent).toBe('chr1:1-100')
   })
+
+  it('pans right and returns to the initial viewport on reset', () => {
+    render(<RenderViewport />)
+    fireEvent.click(screen.getByTestId('pan-right'))
+    const [, coords] = (screen.getByTestId('viewport').textContent ?? '').split(':')
+    const [start, end] = coords.split('-').map(Number)
+    expect(end - start + 1).toBe(100)
+    expect(start).toBeGreaterThan(1)
+
+    fireEvent.click(screen.getByTestId('reset'))
+    expect(screen.getByTestId('viewport').textContent).toBe('chr1:1-100')
+  })
+
+  it('clamps a same-chromosome interval to base 1', async () => {
+    function Bounded() {
+      const browser = useGenomeBrowser({
+        initialViewport: {
+          chromosome: 'chr1',
+          start: 100,
+          end: 200,
+          bounds: { length: 500 },
+        },
+      })
+      return (
+        <div>
+          <span data-testid="viewport">
+            {browser.viewport.chromosome}:{browser.viewport.start}-{browser.viewport.end}
+          </span>
+          <button
+            type="button"
+            data-testid="navigate"
+            onClick={() => browser.navigateTo({ chromosome: 'chr1', start: -50, end: 50 })}
+          >
+            go
+          </button>
+        </div>
+      )
+    }
+    render(<Bounded />)
+    fireEvent.click(screen.getByTestId('navigate'))
+    await waitFor(() => expect(screen.getByTestId('viewport').textContent).toBe('chr1:1-50'))
+  })
+
+  it('stores an unbounded interval verbatim on an open-ended viewport', async () => {
+    function Open() {
+      const browser = useGenomeBrowser({
+        initialViewport: { chromosome: 'chr1', start: 1, end: 100 },
+      })
+      return (
+        <div>
+          <span data-testid="viewport">
+            {browser.viewport.chromosome}:{browser.viewport.start}-{browser.viewport.end}
+          </span>
+          <button
+            type="button"
+            data-testid="navigate"
+            onClick={() => browser.navigateTo({ chromosome: 'chr2', start: 300, end: 400 })}
+          >
+            go
+          </button>
+        </div>
+      )
+    }
+    render(<Open />)
+    fireEvent.click(screen.getByTestId('navigate'))
+    await waitFor(() => expect(screen.getByTestId('viewport').textContent).toBe('chr2:300-400'))
+  })
 })
 
 function RenderTrack({ definition }: { definition: GenomeTrackDefinition }) {
@@ -180,6 +250,116 @@ describe('useGenomeTrack', () => {
 
     await waitFor(() => expect(screen.getByTestId('track-status').textContent).toBe('error'))
     expect(screen.getByTestId('track-error').textContent).toBe('genes unavailable')
+  })
+
+  it('reports an empty status for a track with no features', async () => {
+    const loadGenes = vi.fn().mockResolvedValue([])
+    const definition: GenomeTrackDefinition = {
+      id: 'genes',
+      label: 'Genes',
+      kind: 'genes',
+      loader: loadGenes,
+    }
+
+    render(<RenderTrack definition={definition} />)
+
+    await waitFor(() => expect(screen.getByTestId('track-status').textContent).toBe('empty'))
+  })
+
+  it('collapses rapid viewport changes into a single refetch', async () => {
+    vi.useFakeTimers()
+    const loadGenes = vi.fn().mockResolvedValue([])
+    const definition: GenomeTrackDefinition = {
+      id: 'genes',
+      label: 'Genes',
+      kind: 'genes',
+      loader: loadGenes,
+    }
+
+    function BrowserWithTrack() {
+      const browser = useGenomeBrowser({
+        initialViewport: { chromosome: 'chr1', start: 1, end: 100 },
+        debounceMs: 200,
+      })
+      const track = useGenomeTrack(definition, browser.debouncedViewport)
+      return (
+        <div>
+          <span data-testid="track-status">{track.status}</span>
+          <button type="button" data-testid="zoom-in" onClick={browser.zoomIn}>
+            zoom in
+          </button>
+        </div>
+      )
+    }
+
+    render(<BrowserWithTrack />)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    expect(loadGenes).toHaveBeenCalledTimes(1)
+
+    fireEvent.click(screen.getByTestId('zoom-in'))
+    fireEvent.click(screen.getByTestId('zoom-in'))
+    fireEvent.click(screen.getByTestId('zoom-in'))
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100)
+    })
+    expect(loadGenes).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100)
+    })
+    expect(loadGenes).toHaveBeenCalledTimes(2)
+
+    vi.useRealTimers()
+  })
+
+  it('aborts an in-flight track request when the region changes', async () => {
+    vi.useFakeTimers()
+    let capturedSignal: AbortSignal | undefined
+    const loadGenes = vi.fn((_interval: unknown, signal: AbortSignal) => {
+      if (capturedSignal === undefined) capturedSignal = signal
+      return new Promise<never>(() => undefined)
+    })
+    const definition: GenomeTrackDefinition = {
+      id: 'genes',
+      label: 'Genes',
+      kind: 'genes',
+      loader: loadGenes,
+    }
+
+    function BrowserWithTrack() {
+      const browser = useGenomeBrowser({
+        initialViewport: { chromosome: 'chr1', start: 1, end: 100 },
+        debounceMs: 200,
+      })
+      const track = useGenomeTrack(definition, browser.debouncedViewport)
+      return (
+        <div>
+          <span data-testid="track-status">{track.status}</span>
+          <button type="button" data-testid="zoom-in" onClick={browser.zoomIn}>
+            zoom in
+          </button>
+        </div>
+      )
+    }
+
+    render(<BrowserWithTrack />)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    expect(loadGenes).toHaveBeenCalledTimes(1)
+    expect(capturedSignal?.aborted).toBe(false)
+
+    fireEvent.click(screen.getByTestId('zoom-in'))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300)
+    })
+    expect(loadGenes).toHaveBeenCalledTimes(2)
+    expect(capturedSignal?.aborted).toBe(true)
+
+    vi.useRealTimers()
   })
 
   it('refetches when the debounced viewport settles on a new region', async () => {

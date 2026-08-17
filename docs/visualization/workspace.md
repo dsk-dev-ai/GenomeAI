@@ -169,10 +169,12 @@ Every panel routes through the shared lifecycle (`useVisualizationData` /
 | `lib/workspace/dataSources.test.ts` | `resolveFixture` contract (resolve / abort / no cache) |
 | `components/workspace/fixtureDataSources.test.ts` | interval filtering, abort handling, fixture resolution for every loader |
 | `components/workspace/ResearchContextSelector.test.tsx` | labeled select, aria-live output, preset change, valid/invalid custom region, alert |
-| `components/workspace/ResearchWorkspace.test.tsx` | panel rendering, context→browser sync, custom-region navigation, gene empty state, panel error + retry, controls a11y |
+| `components/workspace/ResearchWorkspace.test.tsx` | panel rendering, context→browser sync, custom-region navigation, gene empty state, panel error + retry, loading state, whole-dataset panel independence, controls a11y |
 
-Existing tests are unchanged; the full suite must stay green (see
-`Makefile` targets `lint` / `typecheck` / `test` / `build`).
+Phase 6.11 added the loading-state, panel error, and context-change
+independence tests (30 workspace tests today). Existing tests are unchanged;
+the full suite must stay green (see `Makefile` targets `lint` / `typecheck` /
+`test` / `build`).
 
 ## Limitations
 

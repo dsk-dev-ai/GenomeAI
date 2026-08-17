@@ -106,6 +106,63 @@ describe('useVisualizationData', () => {
     expect(screen.getByTestId('data').textContent).toBe('"second"')
   })
 
+  it('ignores a stale error when a newer request already succeeded', async () => {
+    const first = deferred<string>()
+    const second = deferred<string>()
+    let callCount = 0
+    const loader = () => (callCount++ === 0 ? first.promise : second.promise)
+
+    render(<Harness loader={loader} />)
+    await waitFor(() => expect(statusText()).toBe('loading'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'refetch' }))
+
+    await act(async () => {
+      second.resolve('second')
+    })
+    expect(statusText()).toBe('success')
+
+    await act(async () => {
+      first.reject(new Error('stale failure'))
+    })
+    expect(statusText()).toBe('success')
+    expect(screen.getByTestId('error').textContent).toBe('')
+  })
+
+  it('normalizes string and object rejections into error messages', async () => {
+    render(<Harness loader={() => Promise.reject('plain string failure')} />)
+    await waitFor(() => expect(statusText()).toBe('error'))
+    expect(screen.getByTestId('error').textContent).toBe('plain string failure')
+    cleanup()
+
+    render(<Harness loader={() => Promise.reject({ message: 'object failure' })} />)
+    await waitFor(() => expect(statusText()).toBe('error'))
+    expect(screen.getByTestId('error').textContent).toBe('object failure')
+  })
+
+  it('clears the previous data while a refetch is loading', async () => {
+    const first = deferred<string>()
+    const second = deferred<string>()
+    let callCount = 0
+    const loader = () => (callCount++ === 0 ? first.promise : second.promise)
+
+    render(<Harness loader={loader} />)
+    await act(async () => {
+      first.resolve('loaded')
+    })
+    await waitFor(() => expect(statusText()).toBe('success'))
+    expect(screen.getByTestId('data').textContent).toBe('"loaded"')
+
+    fireEvent.click(screen.getByRole('button', { name: 'refetch' }))
+    expect(statusText()).toBe('loading')
+    expect(screen.getByTestId('data').textContent).toBe('')
+
+    await act(async () => {
+      second.resolve('reloaded')
+    })
+    expect(screen.getByTestId('data').textContent).toBe('"reloaded"')
+  })
+
   it('does not surface an error when the request is aborted by the hook', async () => {
     let capturedSignal: AbortSignal | undefined
     const loader = (signal: AbortSignal) => {

@@ -84,13 +84,17 @@ export function ResearchWorkspace({
             dataSource={dataSource}
           />
         </div>
-        <GeneTranscriptPanel
-          key={regionKey}
-          region={activeContext.region}
-          dataSource={dataSource}
-        />
+        <div className="lg:col-span-2">
+          <GeneTranscriptPanel
+            key={regionKey}
+            region={activeContext.region}
+            dataSource={dataSource}
+          />
+        </div>
         <NetworkPanel dataSource={dataSource} />
-        <ProteinPanel dataSource={dataSource} />
+        <div className="lg:col-span-2">
+          <ProteinPanel dataSource={dataSource} />
+        </div>
         <ExpressionPanel dataSource={dataSource} />
         <HeatmapPanel dataSource={dataSource} />
         <VolcanoPanel dataSource={dataSource} />

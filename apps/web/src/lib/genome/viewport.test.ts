@@ -88,6 +88,12 @@ describe('zoomViewport', () => {
     const viewport = { start: 1, end: 100, bounds: undefined }
     expect(zoomViewport(viewport, 0)).toBe(viewport)
     expect(zoomViewport(viewport, Number.NaN)).toBe(viewport)
+    expect(zoomViewport(viewport, -1)).toBe(viewport)
+  })
+
+  it('preserves the bounds on the returned window', () => {
+    const viewport = { start: 100, end: 200, bounds: { length: 1000 } }
+    expect(zoomViewport(viewport, 0.5).bounds).toEqual({ length: 1000 })
   })
 })
 
@@ -111,6 +117,18 @@ describe('panViewport', () => {
     const panned = panViewport(viewport, 400)
     expect(panned.end).toBe(250)
     expect(panned.start).toBe(150)
+  })
+
+  it('never produces a start below base 1 when the window is wider than the contig', () => {
+    const viewport = { start: 1, end: 1000, bounds: { length: 500 } }
+    const panned = panViewport(viewport, 100)
+    expect(panned.start).toBeGreaterThanOrEqual(1)
+    expect(panned.end).toBe(500)
+  })
+
+  it('preserves the bounds on the returned window', () => {
+    const viewport = { start: 100, end: 200, bounds: { length: 1000 } }
+    expect(panViewport(viewport, 50).bounds).toEqual({ length: 1000 })
   })
 
   it('pans unbounded windows without changing width', () => {

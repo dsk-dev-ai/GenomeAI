@@ -30,7 +30,7 @@ Implemented on branch `feat/visualization-protein-viewer`.
   visible window, residue-letter lane with per-residue numbering, region
   input, and keyboard-accessible feature selection with a detail panel
 - Demo integrated at `/visualization` (`ProteinDemo`)
-- Tests (104 across the protein modules) and docs
+- Tests (105 across the protein modules) and docs
 
 ## Out of scope (later milestones or explicitly excluded)
 
@@ -41,8 +41,8 @@ Implemented on branch `feat/visualization-protein-viewer`.
 - D3.js / Cytoscape.js / WebAssembly / WebGPU / C++
 - Backend annotation-feature support (see
   [Feature data boundary](#feature-data-boundary))
-- Dense population-scale sequence statistics / conservation plots
-  (deferred to 6.9 performance work)
+- Dense population-scale sequence statistics / conservation plots (measured
+  future option; see [Performance](performance.md))
 
 ## Coordinate conventions
 

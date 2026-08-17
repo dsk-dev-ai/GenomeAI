@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { featuresInViewport, layoutRows } from './tracks'
+import { DEFAULT_TRACK_CONFIG, TRACK_ROW_HEIGHT, featuresInViewport, layoutRows } from './tracks'
 import type { GenomicFeature } from './types'
 
 function feature(id: string, start: number, end: number): GenomicFeature {
@@ -8,6 +8,27 @@ function feature(id: string, start: number, end: number): GenomicFeature {
 }
 
 describe('layoutRows', () => {
+  it('stacks features whose ends touch the next start (one-based inclusive)', () => {
+    const rows = layoutRows([feature('a', 100, 200), feature('b', 200, 250)])
+    expect(rows).toHaveLength(2)
+    expect(rows[0].features.map((f) => f.id)).toEqual(['a'])
+    expect(rows[1].features.map((f) => f.id)).toEqual(['b'])
+  })
+
+  it('breaks ties on start and end by id deterministically', () => {
+    const rows = layoutRows([
+      feature('b', 100, 100),
+      feature('a', 100, 100),
+      feature('c', 100, 100),
+    ])
+    expect(rows.map((row) => row.features[0].id)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('sets exact y offsets as the row index times the row height', () => {
+    const rows = layoutRows([feature('a', 1, 10), feature('b', 5, 15), feature('c', 9, 19)])
+    expect(rows.map((row) => row.yOffset)).toEqual([0, TRACK_ROW_HEIGHT, TRACK_ROW_HEIGHT * 2])
+  })
+
   it('stacks overlapping features into separate rows', () => {
     const rows = layoutRows([feature('a', 100, 200), feature('b', 150, 250)])
     expect(rows).toHaveLength(2)
@@ -47,6 +68,10 @@ describe('featuresInViewport', () => {
     expect(keep.map((f) => f.id)).toEqual(['a', 'b'])
   })
 
+  it('handles an empty feature list', () => {
+    expect(featuresInViewport([], { chromosome: 'chr1', start: 1, end: 100 })).toEqual([])
+  })
+
   it('drops features fully outside the range', () => {
     const features = [feature('a', 1, 50), feature('b', 700, 900)]
     const keep = featuresInViewport(features, { chromosome: 'chr1', start: 100, end: 800 })
@@ -61,5 +86,11 @@ describe('featuresInViewport', () => {
       end: 300,
     })
     expect(keep.map((f) => f.id)).toEqual(['a'])
+  })
+})
+
+describe('default track configuration', () => {
+  it('enables the genes and variants tracks by default', () => {
+    expect(DEFAULT_TRACK_CONFIG.enabled).toEqual({ genes: true, variants: true })
   })
 })

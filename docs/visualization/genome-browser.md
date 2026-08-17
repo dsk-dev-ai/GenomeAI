@@ -30,7 +30,8 @@ Implemented on branch `feat/visualization-genome-browser`.
 - D3.js / Three.js / Cytoscape.js / WebAssembly / WebGPU / C++ (see
   [README](README.md) technology notes)
 - Full variant-call density rendering (6.4), transcript structure (6.3)
-- Chromosome-ideogram virtualized mega-contigs (6.9 performance work)
+- Chromosome-ideogram virtualized mega-contigs (measured future option; see
+  [Performance](performance.md))
 
 ## Architecture and data flow
 

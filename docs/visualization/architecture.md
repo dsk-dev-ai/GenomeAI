@@ -11,14 +11,15 @@ API/SDK.
 Next.js / React (UI)
       │
       ▼
-Visualization Components          e.g. GenomeBrowser, GeneViewer (future)
-      │
+Visualization Components          e.g. GenomeBrowser, ExpressionChart, NetworkViewer,
+      │                                 ProteinViewer, ResearchWorkspace, chart primitives
       ▼
 Visualization Foundation
       ├── Types            (apps/web/src/lib/visualization/types.ts)
       ├── Container        (apps/web/src/components/visualization/VisualizationContainer.tsx)
       ├── States           (VisualizationLoading / VisualizationEmpty / VisualizationErrorState)
-      └── Data Adapter     (apps/web/src/lib/visualization/useVisualizationData.ts)
+      ├── Data Adapter     (apps/web/src/lib/visualization/useVisualizationData.ts)
+      └── Catalog          (apps/web/src/lib/visualization/visualizationModules.ts)
       │
       ▼
 GenomeAI API / SDK
@@ -29,22 +30,32 @@ FastAPI → PostgreSQL
 
 ## Component Structure
 
-The foundation lives in the web application:
+The foundation and all Phase 6 modules live in the web application:
 
 ```text
 apps/web/src/
-├── components/visualization/
-│   ├── VisualizationContainer.tsx      Composes heading, description, and one state
-│   ├── VisualizationLoading.tsx        Loading state (implicit role="status")
-│   ├── VisualizationEmpty.tsx          Empty state
-│   └── VisualizationErrorState.tsx     Error state with optional retry
-├── lib/visualization/
-│   ├── types.ts                        Visualization TypeScript types
-│   ├── useVisualizationData.ts         Data adapter hook (loading/error/cancellation)
-│   └── visualizationModules.ts         Placeholder catalog for future modules
+├── components/
+│   ├── visualization/            VisualizationContainer + loading/empty/error states
+│   ├── genome/                   GenomeBrowser, VariantTrack, GeneTranscriptViewer
+│   ├── protein/                  ProteinViewer
+│   ├── network/                  NetworkViewer
+│   ├── scientific/               ExpressionChart, Heatmap, VolcanoPlot,
+│   │                             CoverageChart, DistributionChart, ChartAxes,
+│   │                             ChartLegend, ChartTooltip
+│   └── workspace/                ResearchWorkspace + panels + fixture data source
+├── lib/
+│   ├── visualization/            types, useVisualizationData, module catalog
+│   ├── genome/                   types, region/viewport/geometry/tracks,
+│   │                             useGenomeBrowser, API adapters
+│   ├── protein/                  types, sequence/viewport/geometry, useProteinViewer, API
+│   ├── network/                  types, model/normalize/filter/layout/viewport, API
+│   ├── scientific/               chart types/scales/geometry, statistics, downsample,
+│   │                             heatmap/volcano/coverage/distribution, hooks, API adapters
+│   └── workspace/                researchContext, dataSources
 └── app/visualization/
-    ├── page.tsx                         Server component route (/visualization)
-    └── VisualizationDemo.tsx            Client demo proving the architecture
+    ├── page.tsx                  Route (/visualization) — demo catalog
+    ├── VisualizationDemo.tsx     Client demo proving the architecture
+    └── workspace/page.tsx        Research Workspace route (/visualization/workspace)
 ```
 
 ## Data Flow
@@ -103,13 +114,20 @@ aborted and stale responses are discarded. Loaders must throw an
 - The demo page uses a `grid-cols-1 lg:grid-cols-2` layout; the module list
   inside it uses `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`.
 
-Performance optimization for very large data sets is deferred to Phase 6.9.
+Performance optimization for very large data sets is delivered in Phase 6.10
+(deterministic downsampling/aggregation and per-render work reduction); see
+[Performance](./performance.md).
 
 ## Tests
 
 | File | Covers |
 |------|--------|
 | `components/visualization/VisualizationContainer.test.tsx` | normal/loading/empty/error/content rendering, accessibility semantics, retry |
-| `lib/visualization/useVisualizationData.test.tsx` | success, error, empty, loading, stale-response handling, abort on unmount, refetch |
+| `lib/visualization/useVisualizationData.test.tsx` | success, error, empty, loading, stale-response handling, abort on unmount, refetch, refetch lifecycle |
+| `lib/visualization/visualizationModules.test.ts` | module-catalog data contract (ids, titles, milestones), fresh-copy semantics, delay/failure/abort |
+
+Coverage for the 6.2–6.10 modules is documented per module (see the linked
+docs in [README.md](./README.md#documents)); the Phase 6.11 testing pass maps
+and extends that coverage (see [Testing](./testing.md)).
 
 Run with `pnpm --filter @genomeai/web test`.

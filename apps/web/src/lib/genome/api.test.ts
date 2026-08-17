@@ -5,6 +5,7 @@ import {
   GenomeApiError,
   fetchIntervalFeatures,
   fetchVariantFeatures,
+  requestCoordinateSearch,
   toGeneFeature,
   toTranscriptFeature,
   toVariantFeature,
@@ -141,6 +142,108 @@ describe('toVariantFeature', () => {
   it('returns position 0 when invalid', () => {
     const feature = toVariantFeature({ id: 'var-2', chromosome: 'chr7', position: -5 })
     expect(feature.position).toBe(0)
+  })
+
+  it('treats a string-typed position as invalid', () => {
+    const feature = toVariantFeature({ id: 'var-5', chromosome: 'chr7', position: '100' })
+    expect(feature.position).toBe(0)
+  })
+
+  it('leaves the strand undefined for unknown strands on genes', () => {
+    const feature = toGeneFeature({
+      id: 'gene-9',
+      chromosome: 'chr1',
+      start_position: 1,
+      end_position: 10,
+      strand: '?',
+    })
+    expect(feature.strand).toBeUndefined()
+  })
+})
+
+describe('requestCoordinateSearch', () => {
+  const interval = { chromosome: 'chr1', start: 1, end: 100 }
+
+  it('throws an AbortError when the signal is already aborted', async () => {
+    const controller = new AbortController()
+    controller.abort()
+    await expect(
+      requestCoordinateSearch('gene', interval, controller.signal, 100),
+    ).rejects.toMatchObject({ name: 'AbortError' })
+    expect(globalThis.fetch).toBe(rawFetch)
+  })
+
+  it('stops immediately on an empty items page', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ items: [], pagination: { total_count: 50 } }))
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+
+    const items = await requestCoordinateSearch('gene', interval, undefined, 100)
+    expect(items).toEqual([])
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('stops after the first page when pagination is missing', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        items: [{ id: 'a' }, { id: 'b' }],
+      }),
+    )
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+
+    const items = await requestCoordinateSearch('gene', interval, undefined, 100)
+    expect(items).toHaveLength(2)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('stops paging once the result cap is reached', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        items: Array.from({ length: 100 }, () => ({ id: 'x' })),
+        pagination: { page: 1, page_size: 100, total_count: 999_999 },
+      }),
+    )
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+
+    const items = await requestCoordinateSearch('gene', interval, undefined, 100)
+    expect(items).toHaveLength(10_000)
+    expect(fetchMock).toHaveBeenCalledTimes(100)
+  })
+
+  it('forwards the page size into every request body', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ items: [], pagination: { page: 1, page_size: 25, total_count: 0 } }),
+      )
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+
+    await requestCoordinateSearch('gene', interval, undefined, 25)
+    const body = JSON.parse(String((fetchMock.mock.calls[0] as [string, RequestInit])[1].body))
+    expect(body.pagination.page_size).toBe(25)
+  })
+
+  it('aborts between pages when the signal fires', async () => {
+    const controller = new AbortController()
+    const firstPage = Array.from({ length: 100 }, () => ({ id: 'x' }))
+    const fetchMock = vi.fn().mockImplementation(() => {
+      if (!controller.signal.aborted) {
+        controller.abort()
+      }
+      return Promise.resolve(
+        jsonResponse({
+          items: firstPage,
+          pagination: { page: 1, page_size: 100, total_count: 500 },
+        }),
+      )
+    })
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+
+    await expect(
+      requestCoordinateSearch('gene', interval, controller.signal, 100),
+    ).rejects.toMatchObject({ name: 'AbortError' })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })
 
