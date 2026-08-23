@@ -12,7 +12,9 @@ from genomeai_api.cache import create_redis, shutdown_redis, verify_redis
 from genomeai_api.database import create_engine, create_session_factory, dispose_engine
 from genomeai_api.exceptions import (
     DuplicateDatasetError,
+    DuplicateDataSourceError,
     DuplicateExperimentError,
+    DuplicateExternalIdentifierError,
     DuplicateGeneError,
     DuplicateGenomeAccessionError,
     DuplicateProjectError,
@@ -23,11 +25,19 @@ from genomeai_api.exceptions import (
     DuplicateVariantError,
     InvalidForeignKeyError,
 )
+from genomeai_api.integration.errors import (
+    ConnectorNotFoundError,
+    DataSourceNotFoundError,
+    IntegrationConfigurationError,
+    InvalidJobTransitionError,
+    UnsafeSourceUrlError,
+)
 from genomeai_api.routes.datasets import router as datasets_router
 from genomeai_api.routes.experiments import router as experiments_router
 from genomeai_api.routes.genes import router as genes_router
 from genomeai_api.routes.genomes import router as genomes_router
 from genomeai_api.routes.health import router as health_router
+from genomeai_api.routes.integrations import router as integrations_router
 from genomeai_api.routes.projects import router as projects_router
 from genomeai_api.routes.proteins import router as proteins_router
 from genomeai_api.routes.samples import router as samples_router
@@ -111,6 +121,8 @@ app.include_router(genes_router)
 app.include_router(variants_router)
 app.include_router(transcripts_router)
 app.include_router(proteins_router)
+if load_settings().integration.enable_integration_routes:
+    app.include_router(integrations_router)
 
 
 @app.exception_handler(DuplicateGenomeAccessionError)
@@ -227,6 +239,83 @@ async def invalid_foreign_key_handler(
 async def duplicate_protein_handler(
     request: Request,
     exc: DuplicateProteinError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(DuplicateDataSourceError)
+async def duplicate_data_source_handler(
+    request: Request,
+    exc: DuplicateDataSourceError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(DuplicateExternalIdentifierError)
+async def duplicate_external_identifier_handler(
+    request: Request,
+    exc: DuplicateExternalIdentifierError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(DataSourceNotFoundError)
+async def data_source_not_found_handler(
+    request: Request,
+    exc: DataSourceNotFoundError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(ConnectorNotFoundError)
+async def connector_not_found_handler(
+    request: Request,
+    exc: ConnectorNotFoundError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(UnsafeSourceUrlError)
+async def unsafe_source_url_handler(
+    request: Request,
+    exc: UnsafeSourceUrlError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(IntegrationConfigurationError)
+async def integration_configuration_handler(
+    request: Request,
+    exc: IntegrationConfigurationError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(InvalidJobTransitionError)
+async def invalid_job_transition_handler(
+    request: Request,
+    exc: InvalidJobTransitionError,
 ) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,

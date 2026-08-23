@@ -89,3 +89,22 @@ class InvalidForeignKeyError(ApplicationError):
             message="Invalid reference",
             detail="A referenced entity does not exist in the database",
         )
+
+
+class DuplicateDataSourceError(ApplicationError):
+    def __init__(self) -> None:
+        super().__init__(
+            message="Data source already exists",
+            detail="A data source with this source_id already exists",
+        )
+
+
+class DuplicateExternalIdentifierError(ApplicationError):
+    def __init__(self) -> None:
+        super().__init__(
+            message="External identifier already exists",
+            detail=(
+                "An identifier with this (source, external_id, entity_type, "
+                "namespace) combination already exists"
+            ),
+        )
