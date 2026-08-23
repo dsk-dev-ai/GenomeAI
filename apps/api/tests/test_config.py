@@ -9,6 +9,7 @@ from genomeai_config import (
     AppSettings,
     DatabaseSettings,
     Environment,
+    IntegrationSettings,
     LoggingSettings,
     LogLevel,
     RedisSettings,
@@ -119,3 +120,42 @@ def test_load_settings_returns_composite() -> None:
     assert isinstance(settings.database, DatabaseSettings)
     assert isinstance(settings.redis, RedisSettings)
     assert isinstance(settings.logging, LoggingSettings)
+
+
+def test_integration_defaults_fail_closed() -> None:
+    integration = IntegrationSettings()
+    # Empty allowlist refuses every outbound fetch until explicitly configured.
+    assert integration.allowed_source_urls == []
+    assert integration.request_timeout_seconds == 30.0
+    assert integration.default_max_retries == 0
+    assert integration.enable_integration_routes is True
+
+
+def test_integration_env_overrides() -> None:
+    env = {
+        "GENOMEAI_INTEGRATION_ALLOWED_SOURCE_URLS": (
+            '["https://api.example.com", "https://rest.ensembl.org"]'
+        ),
+        "GENOMEAI_INTEGRATION_REQUEST_TIMEOUT_SECONDS": "5.5",
+        "GENOMEAI_INTEGRATION_DEFAULT_MAX_RETRIES": "1",
+        "GENOMEAI_INTEGRATION_ENABLE_INTEGRATION_ROUTES": "false",
+    }
+    with mock.patch.dict(os.environ, env, clear=False):
+        integration = IntegrationSettings()
+    assert integration.allowed_source_urls == [
+        "https://api.example.com",
+        "https://rest.ensembl.org",
+    ]
+    assert integration.request_timeout_seconds == 5.5
+    assert integration.default_max_retries == 1
+    assert integration.enable_integration_routes is False
+
+
+def test_composite_settings_includes_integration() -> None:
+    settings = Settings(
+        app=AppSettings(),
+        database=DatabaseSettings(),
+        redis=RedisSettings(),
+        logging=LoggingSettings(),
+    )
+    assert isinstance(settings.integration, IntegrationSettings)

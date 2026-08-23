@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from functools import lru_cache
 from urllib.parse import quote
@@ -94,12 +94,40 @@ class LoggingSettings(BaseSettings):
     json_format: bool = False
 
 
+class IntegrationSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="GENOMEAI_INTEGRATION_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        frozen=True,
+        extra="ignore",
+    )
+
+    # HTTP(S) origin allowlist for external source endpoints. Fail-closed:
+    # when empty, the fetcher refuses to connect to anything. Each entry is a
+    # base URL prefix a source's api_base_url must start with. This is the
+    # primary SSRF control for the Data Integration Foundation.
+    allowed_source_urls: list[str] = []
+
+    # Default per-request timeout for external source fetches (seconds).
+    request_timeout_seconds: float = 30.0
+
+    # Default maximum automatic retry attempts per external fetch (0 disables
+    # automatic retries). Individual connectors may override this.
+    default_max_retries: int = 0
+
+    # Feature flag controlling whether the internal integration admin routes
+    # are mounted on the API.
+    enable_integration_routes: bool = True
+
+
 @dataclass(frozen=True)
 class Settings:
     app: AppSettings
     database: DatabaseSettings
     redis: RedisSettings
     logging: LoggingSettings
+    integration: IntegrationSettings = field(default_factory=IntegrationSettings)
 
     @property
     def service_name(self) -> str:
@@ -125,4 +153,5 @@ def load_settings() -> Settings:
         database=DatabaseSettings(),
         redis=RedisSettings(),
         logging=LoggingSettings(),
+        integration=IntegrationSettings(),
     )
