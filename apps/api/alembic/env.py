@@ -20,6 +20,7 @@ if config.config_file_name is not None:
 
 import genomeai_api.integration.models  # noqa: F401,E402
 import genomeai_api.models  # noqa: F401,E402
+import genomeai_api.workflows.models  # noqa: F401,E402
 from genomeai_api.database.base import Base  # noqa: E402
 
 target_metadata = Base.metadata
