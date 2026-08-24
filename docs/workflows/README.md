@@ -1,13 +1,13 @@
-# Workflow Foundation (Phase 7.1)
+# Workflow Foundation (Phase 7.1) & Execution (Phase 7.2)
 
 The Workflow Foundation establishes GenomeAI's workflow/DAG architecture:
 workflow definitions, ordered and connected steps, deterministic DAG
 validation, execution-state models, persistence, and a minimal admin API.
+Phase 7.2 adds deterministic, sequential, **in-process** execution on top.
 
-> **Phase 7.1 does NOT execute workflows.** Runs are created in the
-> `pending` state with pending step runs, and nothing ever advances them.
-> There is no scheduler, queue, worker, or parallel execution engine —
-> those belong to Phase 7.2+.
+> Execution is synchronous: one API call drives one run step by step to a
+> terminal state. There is still no scheduler, queue, worker, or parallel
+> execution engine — those belong to later milestones.
 
 ## Core concepts
 
@@ -34,11 +34,24 @@ only as state containers.
   topological order
 - Minimal REST API under `/workflows`
 
+## What exists in 7.2
+
+- `DAGExecutionEngine`: sequential in-process execution of one run,
+  dependency-aware ready-step scheduling in persisted position order
+- Pluggable `StepExecutor` abstraction with a deterministic passthrough
+  default (`fail_with_message` trigger for failure tests)
+- Failure propagation: failing step → dependents cancelled, run failed,
+  reason preserved on both step and run; no retries
+- Cancellation checks before and during execution; completed steps are
+  preserved
+- Per-step result capture (`output`) and error reasons (`error_message`)
+- `POST /workflows/runs/{run_id}/execute` (synchronous)
+
+See [execution.md](execution.md) for the full contract.
+
 ## What does NOT exist yet
 
 - No background execution, scheduler, or workers
 - No Redis/Celery/Arq queues, no parallel engine, no retries
-- No artifact storage, caching, or result capture
-- Step `configuration` payloads are stored but never interpreted
-
-See [architecture.md](architecture.md) for the planned execution design.
+- No artifact storage, caching beyond step outputs, or real executors —
+  step execution is still a deterministic passthrough placeholder

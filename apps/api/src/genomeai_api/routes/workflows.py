@@ -1,6 +1,7 @@
-"""Minimal REST API for the Workflow Foundation (Phase 7.1).
+"""Minimal REST API for workflows.
 
-Definitions and run initialization only — no execution endpoints exist.
+Phase 7.1: definitions, run initialization, inspection.
+Phase 7.2: synchronous in-process run execution (no scheduler/queue).
 """
 
 from __future__ import annotations
@@ -19,12 +20,26 @@ from genomeai_api.schemas.workflow import (
     WorkflowUpdate,
 )
 from genomeai_api.services.workflow import WorkflowService
+from genomeai_api.workflows.execution.engine import DAGExecutionEngine
+from genomeai_api.workflows.execution.executor import PassthroughStepExecutor
 
 router = APIRouter(prefix="/workflows", tags=["workflows"])
 
 
 async def _get_service(session: AsyncSession = Depends(get_db_session)) -> WorkflowService:
     return WorkflowService(WorkflowRepository(session))
+
+
+async def _get_engine(session: AsyncSession = Depends(get_db_session)) -> DAGExecutionEngine:
+    """Synchronous in-process engine (Phase 7.2).
+
+    The default executor is deterministic passthrough; real executors plug
+    in here once they exist.
+    """
+    return DAGExecutionEngine(
+        repository=WorkflowRepository(session),
+        executor=PassthroughStepExecutor(),
+    )
 
 
 @router.post("", response_model=WorkflowResponse, status_code=status.HTTP_201_CREATED)
@@ -82,3 +97,17 @@ async def get_workflow_run(
     service: WorkflowService = Depends(_get_service),
 ) -> WorkflowRunResponse:
     return await service.get_run(run_id)
+
+
+@router.post("/runs/{run_id}/execute", response_model=WorkflowRunResponse)
+async def execute_workflow_run(
+    run_id: uuid.UUID,
+    engine: DAGExecutionEngine = Depends(_get_engine),
+) -> WorkflowRunResponse:
+    """Executes one run synchronously, in-process.
+
+    Phase 7.2 executes steps sequentially in topological order before
+    responding; there is no background job or queue behind this endpoint.
+    """
+    run = await engine.execute_run(run_id)
+    return WorkflowRunResponse.model_validate(run)

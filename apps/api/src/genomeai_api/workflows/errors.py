@@ -38,6 +38,16 @@ class WorkflowRunNotFoundError(WorkflowError):
         )
 
 
+class WorkflowStateTransitionError(WorkflowError):
+    error_code = "workflow.invalid-transition"
+
+    def __init__(self, current: str, next_state: str) -> None:
+        super().__init__(
+            message=f"Cannot transition workflow state from '{current}' to '{next_state}'",
+            detail="The workflow run state machine does not allow this transition.",
+        )
+
+
 class WorkflowValidationError(WorkflowError):
     """The submitted workflow definition is not a valid DAG."""
 
@@ -56,5 +66,6 @@ __all__ = [
     "WorkflowError",
     "WorkflowNotFoundError",
     "WorkflowRunNotFoundError",
+    "WorkflowStateTransitionError",
     "WorkflowValidationError",
 ]

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import inspect
 from importlib import util
 from pathlib import Path
 
@@ -18,6 +19,20 @@ def migration() -> object:
             spec.loader.exec_module(mod)  # type: ignore[union-attr]
             return mod
     msg = "migration c5e1a7b9d3f2 not found"
+    raise AssertionError(msg)
+
+
+@pytest.fixture
+def execution_migration() -> object:
+    versions_dir = Path(__file__).resolve().parents[1] / "alembic" / "versions"
+    for path in versions_dir.iterdir():
+        if path.name.endswith(".py") and "e8b2c4d6f9a3" in path.name:
+            spec = util.spec_from_file_location("execution_migration", path)
+            assert spec is not None
+            mod = util.module_from_spec(spec)
+            spec.loader.exec_module(mod)  # type: ignore[union-attr]
+            return mod
+    msg = "migration e8b2c4d6f9a3 not found"
     raise AssertionError(msg)
 
 
@@ -178,3 +193,58 @@ def test_migration_fk_targets_exist_before_use(migration: object) -> None:
             assert not missing, f"FK references table(s) not yet created: {missing}"
     # Sanity: the migration actually creates the full foundation schema.
     assert created == known
+
+
+def test_execution_migration_chains_to_foundation_head(
+    execution_migration: object,
+) -> None:
+    rev: str = execution_migration.revision  # type: ignore[union-attr]
+    assert rev == "e8b2c4d6f9a3"
+    assert execution_migration.down_revision == "c5e1a7b9d3f2"  # type: ignore[union-attr]
+
+
+def _column_ops(migration: object, direction: str) -> list[tuple[str, str]]:
+    source = inspect.getsource(
+        migration.upgrade if direction == "upgrade" else migration.downgrade  # type: ignore[union-attr]
+    )
+    tree = ast.parse(source)
+    ops: list[tuple[str, str]] = []
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
+            continue
+        if node.func.attr not in ("add_column", "drop_column"):
+            continue
+        table = ast.literal_eval(node.args[0])
+        column_arg = node.args[1]
+        if isinstance(column_arg, ast.Constant):
+            column = column_arg.value
+        else:
+            assert isinstance(column_arg, ast.Call) and column_arg.args
+            column = ast.literal_eval(column_arg.args[0])
+        ops.append((direction, f"{table}.{column}"))
+    return ops
+
+
+def test_execution_migration_adds_result_columns(execution_migration: object) -> None:
+    upgrades = _column_ops(execution_migration, "upgrade")
+
+    assert ("upgrade", "workflow_step_runs.output") in upgrades
+    assert ("upgrade", "workflow_step_runs.error_message") in upgrades
+    assert len(upgrades) == 2
+
+
+def test_execution_migration_is_symmetric(execution_migration: object) -> None:
+    upgrades = {target for _, target in _column_ops(execution_migration, "upgrade")}
+    downgrades = {
+        target for _, target in _column_ops(execution_migration, "downgrade")
+    }
+
+    assert upgrades and downgrades == upgrades
+
+
+def test_execution_migration_upgrade_callable(execution_migration: object) -> None:
+    assert callable(execution_migration.upgrade)  # type: ignore[union-attr]
+
+
+def test_execution_migration_downgrade_callable(execution_migration: object) -> None:
+    assert callable(execution_migration.downgrade)  # type: ignore[union-attr]

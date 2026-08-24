@@ -8,7 +8,7 @@ import pytest
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
-from genomeai_api.routes.workflows import _get_service, router
+from genomeai_api.routes.workflows import _get_engine, _get_service, router
 from genomeai_api.schemas.workflow import (
     StepRunResponse,
     WorkflowDependencyResponse,
@@ -20,12 +20,15 @@ from genomeai_api.services.workflow import WorkflowService
 from genomeai_api.workflows.errors import (
     WorkflowNotFoundError,
     WorkflowRunNotFoundError,
+    WorkflowStateTransitionError,
     WorkflowValidationError,
 )
+from genomeai_api.workflows.execution.engine import DAGExecutionEngine
 
 ERROR_STATUS = {
     WorkflowNotFoundError: status.HTTP_404_NOT_FOUND,
     WorkflowRunNotFoundError: status.HTTP_404_NOT_FOUND,
+    WorkflowStateTransitionError: status.HTTP_409_CONFLICT,
 }
 
 
@@ -85,6 +88,8 @@ def _run_response(step_count: int = 2) -> WorkflowRunResponse:
                 position=i,
                 started_at=None,
                 finished_at=None,
+                output=None,
+                error_message=None,
             )
             for i in range(step_count)
         ],
@@ -97,7 +102,12 @@ def mock_service() -> AsyncMock:
 
 
 @pytest.fixture
-def client(mock_service: AsyncMock) -> TestClient:
+def mock_engine() -> AsyncMock:
+    return AsyncMock(spec=DAGExecutionEngine)
+
+
+@pytest.fixture
+def client(mock_service: AsyncMock, mock_engine: AsyncMock) -> TestClient:
     app = FastAPI()
     app.include_router(router)
 
@@ -122,6 +132,11 @@ def client(mock_service: AsyncMock) -> TestClient:
         return mock_service  # type: ignore[return-value]
 
     app.dependency_overrides[_get_service] = override
+
+    async def override_engine() -> DAGExecutionEngine:
+        return mock_engine  # type: ignore[return-value]
+
+    app.dependency_overrides[_get_engine] = override_engine
     return TestClient(app)
 
 
@@ -324,3 +339,71 @@ def test_get_missing_run_returns_404(
     response = client.get(f"/workflows/runs/{missing}")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+def _succeeded_run_response() -> WorkflowRunResponse:
+    now = datetime.now(UTC)
+    run_id = uuid.uuid4()
+    step_id = uuid.uuid4()
+    return WorkflowRunResponse(
+        id=run_id,
+        workflow_id=uuid.uuid4(),
+        state="succeeded",
+        started_at=now,
+        finished_at=now,
+        error_message=None,
+        created_at=now,
+        step_runs=[
+            StepRunResponse(
+                id=uuid.uuid4(),
+                run_id=run_id,
+                step_id=step_id,
+                state="succeeded",
+                position=0,
+                started_at=now,
+                finished_at=now,
+                output={"rows": 3},
+                error_message=None,
+            )
+        ],
+    )
+
+
+def test_execute_run_returns_terminal_run(
+    client: TestClient,
+    mock_engine: AsyncMock,
+) -> None:
+    mock_engine.execute_run.return_value = _succeeded_run_response()
+
+    response = client.post(f"/workflows/runs/{uuid.uuid4()}/execute")
+
+    assert response.status_code == status.HTTP_200_OK
+    body = response.json()
+    assert body["state"] == "succeeded"
+    assert body["step_runs"][0]["state"] == "succeeded"
+    assert body["step_runs"][0]["output"] == {"rows": 3}
+    mock_engine.execute_run.assert_awaited_once()
+
+
+def test_execute_missing_run_returns_404(
+    client: TestClient,
+    mock_engine: AsyncMock,
+) -> None:
+    missing = uuid.uuid4()
+    mock_engine.execute_run.side_effect = WorkflowRunNotFoundError(missing)
+
+    response = client.post(f"/workflows/runs/{missing}/execute")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_execute_non_pending_run_returns_409(
+    client: TestClient,
+    mock_engine: AsyncMock,
+) -> None:
+    run_id = uuid.uuid4()
+    mock_engine.execute_run.side_effect = WorkflowStateTransitionError("succeeded", "running")
+
+    response = client.post(f"/workflows/runs/{run_id}/execute")
+
+    assert response.status_code == status.HTTP_409_CONFLICT

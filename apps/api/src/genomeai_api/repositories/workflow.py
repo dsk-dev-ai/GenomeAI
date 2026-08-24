@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +16,7 @@ from genomeai_api.workflows.models.workflow import Workflow
 from genomeai_api.workflows.models.workflow_dependency import WorkflowDependency
 from genomeai_api.workflows.models.workflow_run import WorkflowRun
 from genomeai_api.workflows.models.workflow_step import WorkflowStep
+from genomeai_api.workflows.types import RunState
 
 
 class WorkflowRepository:
@@ -117,3 +120,54 @@ class WorkflowRepository:
         )
         result = await self._session.execute(stmt)
         return result.scalars().first()
+
+    async def transition_run(
+        self,
+        run_id: uuid.UUID,
+        to_state: RunState,
+        *,
+        error_message: str | None = None,
+    ) -> WorkflowRun | None:
+        """Persists a run-state change.
+
+        The engine owns transition legality; this only stamps timestamps
+        (started_at on RUNNING, finished_at on terminal states) and commits.
+        """
+        run = await self._session.get(WorkflowRun, run_id)
+        if run is None:
+            return None
+        now = datetime.now(UTC)
+        run.state = to_state.value
+        if to_state == RunState.RUNNING:
+            run.started_at = now
+        if to_state in (RunState.SUCCEEDED, RunState.FAILED, RunState.CANCELLED):
+            run.finished_at = now
+        if error_message is not None or to_state == RunState.SUCCEEDED:
+            run.error_message = error_message
+        await self._session.commit()
+        return run
+
+    async def transition_step_run(
+        self,
+        step_run_id: uuid.UUID,
+        to_state: RunState,
+        *,
+        output: dict[str, Any] | None = None,
+        error_message: str | None = None,
+    ) -> StepRun | None:
+        """Persists a step-run state change with its result payload."""
+        step_run = await self._session.get(StepRun, step_run_id)
+        if step_run is None:
+            return None
+        now = datetime.now(UTC)
+        step_run.state = to_state.value
+        if to_state == RunState.RUNNING:
+            step_run.started_at = now
+        if to_state in (RunState.SUCCEEDED, RunState.FAILED, RunState.CANCELLED):
+            step_run.finished_at = now
+        if output is not None:
+            step_run.output = output
+        if error_message is not None:
+            step_run.error_message = error_message
+        await self._session.commit()
+        return step_run

@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, UniqueConstraint, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from genomeai_api.database.base import Base
@@ -19,7 +19,8 @@ class StepRun(Base):
     """Execution state of one workflow step within one workflow run.
 
     Created deterministically when a run is requested (one per step, in
-    topological order); Phase 7.1 never advances these states.
+    topological order). The execution engine advances these states and
+    records each step's output or failure reason here.
     """
 
     __tablename__ = "workflow_step_runs"
@@ -53,6 +54,8 @@ class StepRun(Base):
     )
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    output: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     run: Mapped[WorkflowRun] = relationship("WorkflowRun", back_populates="step_runs")
     step: Mapped[WorkflowStep] = relationship(
