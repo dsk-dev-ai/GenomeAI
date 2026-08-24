@@ -161,7 +161,12 @@ class DAGExecutionEngine:
                     for upstream in target.upstream
                 },
             )
-            result = self._executor.execute(step_by_name[target.name], context)
+            try:
+                result = self._executor.execute(step_by_name[target.name], context)
+            except Exception as exc:
+                return await self._fail_step_and_run(
+                    run, target, states, str(exc) or type(exc).__name__
+                )
 
             if result.succeeded:
                 await self._repository.transition_step_run(
@@ -171,21 +176,9 @@ class DAGExecutionEngine:
                 outputs[target.name] = result.output or {}
                 continue
 
-            failure_reason = result.error_message or "unknown error"
-            await self._repository.transition_step_run(
-                target.step_run_id,
-                RunState.FAILED,
-                error_message=failure_reason,
+            return await self._fail_step_and_run(
+                run, target, states, result.error_message or "unknown error"
             )
-            states[target.step_run_id] = RunState.FAILED
-            await self._sweep_pending(run, states)
-            run = await self._require_transition_run(
-                run.id,
-                RunState.RUNNING,
-                RunState.FAILED,
-                error_message=f"Step '{target.name}' failed: {failure_reason}",
-            )
-            return run
 
         if all_succeeded(planned):
             run = await self._require_transition_run(
@@ -204,6 +197,33 @@ class DAGExecutionEngine:
                 )
         return await self._require_transition_run(
             run.id, current, RunState.CANCELLED
+        )
+
+    async def _fail_step_and_run(
+        self,
+        run: WorkflowRun,
+        target: PlannedStep,
+        states: dict[uuid.UUID, RunState],
+        reason: str,
+    ) -> WorkflowRun:
+        """Records a step failure, sweeps never-started steps, fails the run.
+
+        Used both for executor-reported failures and for exceptions raised
+        by the executor itself — either way the run must reach a terminal
+        state instead of being stranded in `running`.
+        """
+        await self._repository.transition_step_run(
+            target.step_run_id,
+            RunState.FAILED,
+            error_message=reason,
+        )
+        states[target.step_run_id] = RunState.FAILED
+        await self._sweep_pending(run, states)
+        return await self._require_transition_run(
+            run.id,
+            RunState.RUNNING,
+            RunState.FAILED,
+            error_message=f"Step '{target.name}' failed: {reason}",
         )
 
     async def _sweep_pending(

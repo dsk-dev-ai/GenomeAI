@@ -56,6 +56,9 @@ For a run in `pending` state:
      remaining `pending` step runs to `cancelled`, transition
      `running → failed`, and preserve the reason on both the `StepRun`
      and the `WorkflowRun`. **No retries.**
+   - An executor that **raises** instead of returning a result is treated
+     exactly like a reported failure: the exception message becomes the
+     failure reason, so a run can never be stranded in `running`.
 5. When nothing is ready and everything `succeeded`:
    `running → succeeded`.
 

@@ -111,6 +111,19 @@ class RecordingExecutor(StepExecutor):
         return StepExecutionResult.ok(merged)
 
 
+class ExplodingOnCallExecutor(RecordingExecutor):
+    """Raises instead of returning a failed result on the Nth call."""
+
+    def __init__(self, explode_on_call: int) -> None:
+        super().__init__()
+        self._explode_on_call = explode_on_call
+
+    def execute(self, step: WorkflowStep, context: StepExecutionContext) -> StepExecutionResult:
+        if len(self.calls) + 1 == self._explode_on_call:
+            raise RuntimeError("disk on fire")
+        return super().execute(step, context)
+
+
 def _workflow(
     steps: tuple[str, ...],
     edges: tuple[tuple[str, str], ...] = (),
@@ -353,3 +366,40 @@ async def test_broken_graph_rejected_before_any_transition() -> None:
     assert run.state == "pending"
     assert all(step_run.state == "pending" for step_run in run.step_runs)
     assert executor.calls == []
+
+
+@pytest.mark.asyncio
+async def test_executor_exception_on_first_step_fails_the_run() -> None:
+    workflow = _workflow(("a",))
+    run = _run(workflow)
+    store = FakeStore(workflow, run)
+    executor = ExplodingOnCallExecutor(explode_on_call=1)
+
+    result = await _engine(store, executor).execute_run(run.id)
+
+    assert result.state == RunState.FAILED.value
+    assert result.error_message == "Step 'a' failed: disk on fire"
+    assert result.finished_at is not None
+    step_run = result.step_runs[0]
+    assert step_run.state == "failed"
+    assert step_run.error_message == "disk on fire"
+
+
+@pytest.mark.asyncio
+async def test_executor_exception_mid_run_blocks_dependents() -> None:
+    workflow = _workflow(("a", "b", "c"), (("a", "b"), ("b", "c")))
+    run = _run(workflow)
+    store = FakeStore(workflow, run)
+    executor = ExplodingOnCallExecutor(explode_on_call=2)
+
+    result = await _engine(store, executor).execute_run(run.id)
+
+    assert [name for name, _ in executor.calls] == ["a"]
+    states = {sr.position: sr.state for sr in result.step_runs}
+    assert states == {0: "succeeded", 1: "failed", 2: "cancelled"}
+    failed_step = next(sr for sr in result.step_runs if sr.position == 1)
+    assert failed_step.error_message == "disk on fire"
+    assert result.error_message == "Step 'b' failed: disk on fire"
+
+    with pytest.raises(WorkflowStateTransitionError):
+        await _engine(store, RecordingExecutor()).execute_run(run.id)
