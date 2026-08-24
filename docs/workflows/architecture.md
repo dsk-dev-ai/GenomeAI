@@ -5,6 +5,9 @@ API (FastAPI, /workflows)
  ↓
 WorkflowService          ← DAG validation, run initialization (no execution)
  ↓
+DAGExecutionEngine       ← sequential in-process execution (Phase 7.2)
+ ├── planner / executor  ← pure scheduling math; one-step work abstraction
+ ↓
 WorkflowRepository       ← persistence only
  ↓
 SQLAlchemy models        ← workflows / workflow_steps / workflow_dependencies /
@@ -18,15 +21,21 @@ PostgreSQL
 - **Routes** (`routes/workflows.py`): thin HTTP surface. Pydantic schemas in,
   response schemas out. Typed domain errors are mapped centrally in
   `main.py` (`WorkflowValidationError` → 422 with an `issues` list;
-  not-found errors → 404).
+  not-found errors → 404; illegal state transitions → 409).
 - **Service** (`services/workflow.py`): owns definition validation and run
   initialization. It validates the submitted graph **before** persisting and
   computes a deterministic topological order when a run is requested.
-  The service never executes steps — Phase 7.1 has no execution engine.
+  The service never executes steps — execution lives in the engine layer.
+- **Engine** (`workflows/execution/engine.py`): drives one pending run to a
+  terminal state, sequentially, in persisted position order. It owns every
+  state transition, delegates ready-step selection to the pure planner,
+  delegates step work to an injected `StepExecutor`, and persists only via
+  the repository. See [execution.md](execution.md).
 - **Repository** (`repositories/workflow.py`): persistence only. Creates
   workflows with eagerly generated step ids so dependency edges can be
   resolved by name before the flush; creates runs plus one pending
-  `StepRun` per step.
+  `StepRun` per step; exposes intent-revealing transitions for runs and
+  step runs (timestamp and result handling included).
 - **Domain** (`workflows/dag.py`, `workflows/types.py`, `workflows/errors.py`):
   pure functions and typed vocabulary. No I/O, fully deterministic.
 
@@ -67,7 +76,9 @@ succeeded/failed/cancelled    (terminal)
 
 The transition table lives in `RUN_STATE_TRANSITIONS`; `can_transition()`
 and `is_terminal()` are pure predicates. Phase 7.1 writes only `pending`;
-the transition machinery exists so the model is complete and testable.
+Phase 7.2's engine advances runs and step runs through the full lifecycle,
+persisting `output` / `error_message` on step runs (added by migration
+`e8b2c4d6f9a3`).
 
 ## WorkflowRun vs StepRun
 
@@ -78,9 +89,15 @@ the transition machinery exists so the model is complete and testable.
 | Created | By `POST /workflows/{id}/runs` | Atomically with its run |
 | Initial state | `pending` | `pending` |
 
-## Future execution design (Phase 7.2+, NOT implemented)
+## Execution today (Phase 7.2) and later
 
-Later phases will add a scheduler/worker layer *beside* this stack — never
+Phase 7.2 executes runs **synchronously and sequentially, in-process**:
+one engine instance drives one run at a time through ready-step cycles
+until a terminal state. The full contract — algorithm, failure sweeps,
+cancellation semantics, results — is documented in
+[execution.md](execution.md).
+
+Later phases may add a scheduler/worker layer *beside* this stack — never
 inside the service:
 
 1. An enqueuer transitions a run `pending → running` and publishes work.

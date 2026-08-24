@@ -86,6 +86,8 @@ class StepRunResponse(BaseModel):
     position: int
     started_at: datetime | None
     finished_at: datetime | None
+    output: dict[str, Any] | None
+    error_message: str | None
 
 
 class WorkflowRunResponse(BaseModel):

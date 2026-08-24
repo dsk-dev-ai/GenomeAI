@@ -161,6 +161,20 @@ def test_step_run_table_constraints() -> None:
     assert position_col.nullable is False
 
 
+def test_step_run_execution_result_columns() -> None:
+    output_col = StepRun.__table__.columns["output"]
+    error_col = StepRun.__table__.columns["error_message"]
+
+    assert output_col.nullable is True
+    assert output_col.type.python_type is dict
+    assert error_col.nullable is True
+    assert error_col.type.python_type is str
+
+    run = StepRun(run_id=uuid.uuid4(), step_id=uuid.uuid4())
+    assert run.output is None
+    assert run.error_message is None
+
+
 def test_relationships_wire_parent_children_via_back_populates() -> None:
     wf = Workflow(name="pipeline")
     step_a = WorkflowStep(id=uuid.uuid4(), workflow_id=wf.id, name="A", step_type="t")
