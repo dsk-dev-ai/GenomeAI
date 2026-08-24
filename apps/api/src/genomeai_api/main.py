@@ -45,7 +45,13 @@ from genomeai_api.routes.search import router as search_router
 from genomeai_api.routes.studies import router as studies_router
 from genomeai_api.routes.transcripts import router as transcripts_router
 from genomeai_api.routes.variants import router as variants_router
+from genomeai_api.routes.workflows import router as workflows_router
 from genomeai_api.state import AppState
+from genomeai_api.workflows.errors import (
+    WorkflowNotFoundError,
+    WorkflowRunNotFoundError,
+    WorkflowValidationError,
+)
 
 
 async def init_db(state: AppState) -> None:
@@ -121,6 +127,7 @@ app.include_router(genes_router)
 app.include_router(variants_router)
 app.include_router(transcripts_router)
 app.include_router(proteins_router)
+app.include_router(workflows_router)
 if load_settings().integration.enable_integration_routes:
     app.include_router(integrations_router)
 
@@ -319,6 +326,39 @@ async def invalid_job_transition_handler(
 ) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(WorkflowValidationError)
+async def workflow_validation_handler(
+    request: Request,
+    exc: WorkflowValidationError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        content={"detail": str(exc), "issues": exc.issues},
+    )
+
+
+@app.exception_handler(WorkflowNotFoundError)
+async def workflow_not_found_handler(
+    request: Request,
+    exc: WorkflowNotFoundError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(WorkflowRunNotFoundError)
+async def workflow_run_not_found_handler(
+    request: Request,
+    exc: WorkflowRunNotFoundError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND,
         content={"detail": str(exc)},
     )
 
