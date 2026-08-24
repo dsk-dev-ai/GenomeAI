@@ -124,3 +124,19 @@ def test_topological_order_raises_on_duplicate_step() -> None:
 def test_topological_order_raises_on_self_dependency() -> None:
     with pytest.raises(ValueError, match="invalid workflow graph"):
         topological_order(["A"], [("A", "A")])
+
+
+def test_topological_order_raises_on_empty_graph() -> None:
+    with pytest.raises(ValueError, match="invalid workflow graph"):
+        topological_order([], [])
+
+
+def test_topological_order_raises_on_missing_endpoint() -> None:
+    with pytest.raises(ValueError, match="invalid workflow graph"):
+        topological_order(["B"], [("A", "B")])
+
+
+def test_topological_order_raises_on_duplicate_edge() -> None:
+    # Duplicate edges are rejected, not silently de-duplicated.
+    with pytest.raises(ValueError, match="invalid workflow graph"):
+        topological_order(["A", "B"], [("A", "B"), ("A", "B")])

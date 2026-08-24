@@ -101,8 +101,8 @@ class WorkflowRepository:
         the service; persistence preserves it via insertion order.
         """
         run = WorkflowRun(workflow_id=workflow_id)
-        for step_id in ordered_step_ids:
-            run.step_runs.append(StepRun(step_id=step_id))
+        for position, step_id in enumerate(ordered_step_ids):
+            run.step_runs.append(StepRun(step_id=step_id, position=position))
         self._session.add(run)
         await self._session.commit()
         created = await self.get_run(run.id)

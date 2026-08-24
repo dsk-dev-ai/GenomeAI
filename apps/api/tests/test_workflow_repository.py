@@ -15,6 +15,7 @@ from genomeai_api.schemas.workflow import (
 from genomeai_api.workflows.models.step_run import StepRun
 from genomeai_api.workflows.models.workflow import Workflow
 from genomeai_api.workflows.models.workflow_run import WorkflowRun
+from genomeai_api.workflows.types import WorkflowStatus
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -169,6 +170,24 @@ async def test_update_metadata_applies_only_provided_fields(
 
 
 @pytest.mark.asyncio
+async def test_update_metadata_accepts_typed_status(
+    repository: WorkflowRepository,
+    mock_session: AsyncMock,
+) -> None:
+    workflow = Workflow(id=uuid.uuid4(), name="w")
+    mock_session.get.return_value = workflow
+    mock_session.execute.return_value = _single_result(workflow)
+
+    result = await repository.update_metadata(
+        workflow.id, WorkflowUpdate(status=WorkflowStatus.ACTIVE)
+    )
+
+    assert result is workflow
+    assert workflow.status == WorkflowStatus.ACTIVE
+    mock_session.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_update_metadata_unknown_workflow_returns_none(
     repository: WorkflowRepository,
     mock_session: AsyncMock,
@@ -201,6 +220,7 @@ async def test_create_run_initializes_pending_step_runs_in_order(
     assert isinstance(run, WorkflowRun)
     assert run.workflow_id == workflow_id
     assert [step_run.step_id for step_run in run.step_runs] == order
+    assert [step_run.position for step_run in run.step_runs] == [0, 1, 2]
     assert all(isinstance(sr, StepRun) for sr in run.step_runs)
     # The pending state is applied by the column default at flush time.
     state_col = StepRun.__table__.columns["state"]

@@ -41,6 +41,9 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.PrimaryKeyConstraint("id"),
+        sa.CheckConstraint(
+            "status IN ('draft', 'active', 'archived')", name="ck_workflow_status"
+        ),
     )
     op.create_index(op.f("ix_workflows_name"), "workflows", ["name"], unique=False)
 
@@ -69,6 +72,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("workflow_id", "name", name="uq_workflow_step_name"),
+        sa.UniqueConstraint("workflow_id", "id", name="uq_workflow_step_scope"),
     )
     op.create_index(
         op.f("ix_workflow_steps_workflow_id"), "workflow_steps", ["workflow_id"]
@@ -94,11 +98,19 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["workflow_id"], ["workflows.id"], ondelete="CASCADE"
         ),
+        # Composite FKs scope BOTH endpoints to this row's own workflow, so a
+        # dependency can never connect steps from different workflows.
         sa.ForeignKeyConstraint(
-            ["from_step_id"], ["workflow_steps.id"], ondelete="CASCADE"
+            ["workflow_id", "from_step_id"],
+            ["workflow_steps.workflow_id", "workflow_steps.id"],
+            name="fk_workflow_dependency_from_step",
+            ondelete="CASCADE",
         ),
         sa.ForeignKeyConstraint(
-            ["to_step_id"], ["workflow_steps.id"], ondelete="CASCADE"
+            ["workflow_id", "to_step_id"],
+            ["workflow_steps.workflow_id", "workflow_steps.id"],
+            name="fk_workflow_dependency_to_step",
+            ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("id"),
         sa.CheckConstraint(
@@ -158,6 +170,7 @@ def upgrade() -> None:
         sa.Column("run_id", UUID(as_uuid=True), nullable=False),
         sa.Column("step_id", UUID(as_uuid=True), nullable=False),
         sa.Column("state", sa.String(length=50), nullable=False, server_default="pending"),
+        sa.Column("position", sa.Integer(), nullable=False, server_default=sa.text("0")),
         sa.Column("started_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("finished_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column(

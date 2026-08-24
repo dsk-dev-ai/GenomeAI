@@ -35,20 +35,23 @@ PostgreSQL
 - `workflows`: definition root. `name` is indexed but intentionally **not**
   unique — multiple versions of a workflow may share a name.
   `version` defaults to `0.1.0`; `status` defaults to `draft`
-  (`draft`/`active`/`archived`).
+  (`draft`/`active`/`archived`, enforced by a database CHECK).
 - `workflow_steps`: belongs to one workflow (`ON DELETE CASCADE`),
   unique `(workflow_id, name)`, ordered by `position`, carries
-  `step_type` and a JSONB `configuration`.
+  `step_type` and a JSONB `configuration`. A unique `(workflow_id, id)`
+  key exists solely as the target for workflow-scoped dependency FKs.
 - `workflow_dependencies`: normalized relational edges, not JSON blobs.
   Unique `(from_step_id, to_step_id)` and a database check constraint
-  forbidding self-dependencies. Both endpoints are FKs into
-  `workflow_steps`. Same-workflow integrity is enforced at the application
-  level: the service only ever creates edges between steps it just created
-  for that workflow.
+  forbidding self-dependencies. **Both endpoints are composite foreign
+  keys** — `(workflow_id, from_step_id)` and `(workflow_id, to_step_id)`
+  into `workflow_steps(workflow_id, id)` — so an edge can never connect
+  steps from two different workflows, even via raw SQL.
 - `workflow_runs`: one row per requested execution. `state` starts at
   `pending`; composite index on `(workflow_id, state)`.
 - `workflow_step_runs`: unique `(run_id, step_id)` — exactly one step-run
-  per step per run. Created in topological order at request time.
+  per step per run. Created in topological order at request time, with the
+  ordinal persisted in `position`; ordering never relies on timestamps
+  (same-transaction inserts share `created_at`).
 
 ## Execution states
 

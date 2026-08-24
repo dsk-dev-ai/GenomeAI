@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from genomeai_api.workflows.types import RunState
+from genomeai_api.workflows.types import RunState, WorkflowStatus
 
 
 class WorkflowStepSpec(BaseModel):
@@ -41,7 +41,7 @@ class WorkflowUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = None
     version: str | None = Field(default=None, min_length=1, max_length=50)
-    status: str | None = Field(default=None, max_length=50)
+    status: WorkflowStatus | None = None
 
 
 class WorkflowStepResponse(BaseModel):
@@ -83,6 +83,7 @@ class StepRunResponse(BaseModel):
     run_id: uuid.UUID
     step_id: uuid.UUID
     state: RunState
+    position: int
     started_at: datetime | None
     finished_at: datetime | None
 

@@ -22,6 +22,9 @@ class WorkflowStep(Base):
     __tablename__ = "workflow_steps"
     __table_args__ = (
         UniqueConstraint("workflow_id", "name", name="uq_workflow_step_name"),
+        # Composite-FK target: lets workflow_dependencies scope both endpoints
+        # to the SAME workflow via (workflow_id, from/to_step_id).
+        UniqueConstraint("workflow_id", "id", name="uq_workflow_step_scope"),
         Index("ix_workflow_steps_workflow_position", "workflow_id", "position"),
     )
 

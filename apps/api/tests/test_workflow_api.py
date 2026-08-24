@@ -82,10 +82,11 @@ def _run_response(step_count: int = 2) -> WorkflowRunResponse:
                 run_id=run_id,
                 step_id=uuid.uuid4(),
                 state="pending",
+                position=i,
                 started_at=None,
                 finished_at=None,
             )
-            for _ in range(step_count)
+            for i in range(step_count)
         ],
     )
 
@@ -239,6 +240,16 @@ def test_get_missing_workflow_returns_404(
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
+def test_update_workflow_rejects_unknown_status(
+    client: TestClient,
+    mock_service: AsyncMock,
+) -> None:
+    response = client.patch(f"/workflows/{uuid.uuid4()}", json={"status": "invalid"})
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    mock_service.update_workflow.assert_not_called()
+
+
 def test_update_workflow_metadata(
     client: TestClient,
     mock_service: AsyncMock,
@@ -275,6 +286,7 @@ def test_create_run_returns_pending_run(
     body = response.json()
     assert body["state"] == "pending"
     assert all(sr["state"] == "pending" for sr in body["step_runs"])
+    assert [sr["position"] for sr in body["step_runs"]] == [0, 1]
     assert len(body["step_runs"]) == 2
 
 

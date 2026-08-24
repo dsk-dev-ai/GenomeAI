@@ -4,7 +4,15 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, UniqueConstraint, func
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Index,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -16,12 +24,32 @@ if TYPE_CHECKING:
 
 
 class WorkflowDependency(Base):
-    """A directed edge between two steps of the SAME workflow: from → to."""
+    """A directed edge between two steps of the SAME workflow: from → to.
+
+    Both endpoints are enforced by composite foreign keys
+    ``(workflow_id, from_step_id)`` / ``(workflow_id, to_step_id)`` into
+    ``workflow_steps(workflow_id, id)``, so a dependency can never connect
+    steps that belong to different workflows — even via raw SQL.
+    """
 
     __tablename__ = "workflow_dependencies"
     __table_args__ = (
         UniqueConstraint("from_step_id", "to_step_id", name="uq_workflow_dependency_edge"),
         CheckConstraint("from_step_id <> to_step_id", name="ck_workflow_dependency_not_self"),
+        ForeignKeyConstraint(
+            ["workflow_id", "from_step_id"],
+            ["workflow_steps.workflow_id", "workflow_steps.id"],
+            name="fk_workflow_dependency_from_step",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["workflow_id", "to_step_id"],
+            ["workflow_steps.workflow_id", "workflow_steps.id"],
+            name="fk_workflow_dependency_to_step",
+            ondelete="CASCADE",
+        ),
+        Index("ix_workflow_dependencies_from_step_id", "from_step_id"),
+        Index("ix_workflow_dependencies_to_step_id", "to_step_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -35,18 +63,8 @@ class WorkflowDependency(Base):
         nullable=False,
         index=True,
     )
-    from_step_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("workflow_steps.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    to_step_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("workflow_steps.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
+    from_step_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    to_step_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
 
     workflow: Mapped[Workflow] = relationship("Workflow", back_populates="dependencies")
     from_step: Mapped[WorkflowStep] = relationship(

@@ -45,9 +45,12 @@ A → B        topological_order ⇒ [A, B, C]
 A → C
 ```
 
-The function raises `ValueError` for invalid graphs (cycles, duplicate or
-self-dependent steps) — callers must validate first. The service does so on
-every path that reaches it.
+The function raises `ValueError` for **any** invalid graph — cycles, empty
+inputs, duplicate steps, self-dependencies, missing endpoints, or duplicate
+edges — the exact same contract as `validate_graph` (duplicates are
+rejected, not silently de-duplicated). Callers can therefore rely on one
+definition of "valid" everywhere. The service does so on every path that
+reaches it.
 
 ## Examples
 

@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, UniqueConstraint, func
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -46,6 +46,11 @@ class StepRun(Base):
         index=True,
     )
     state: Mapped[str] = mapped_column(String(50), nullable=False, server_default="pending")
+    # Persisted topological ordinal within the run; created_at ties are common
+    # for same-transaction inserts, so ordering must not rely on timestamps.
+    position: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="0", default=0
+    )
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

@@ -4,7 +4,13 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, String, Text, func
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -23,6 +29,12 @@ class Workflow(Base):
     """
 
     __tablename__ = "workflows"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('draft', 'active', 'archived')",
+            name="ck_workflow_status",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

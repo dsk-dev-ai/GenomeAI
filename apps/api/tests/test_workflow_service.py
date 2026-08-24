@@ -218,13 +218,14 @@ async def test_create_run_initializes_one_pending_step_run_per_step(
             state="pending",
             created_at=datetime.now(UTC),
         )
-        for step_id in ordered_ids:
+        for position, step_id in enumerate(ordered_ids):
             run.step_runs.append(
                 StepRun(
                     id=uuid.uuid4(),
                     run_id=run.id,
                     step_id=step_id,
                     state="pending",
+                    position=position,
                 )
             )
         return run
@@ -237,6 +238,7 @@ async def test_create_run_initializes_one_pending_step_run_per_step(
     assert captured["ordered"] == [id_by_name["A"], id_by_name["B"], id_by_name["C"]]
     assert response.state == "pending"
     assert [sr.state for sr in response.step_runs] == ["pending", "pending", "pending"]
+    assert [sr.position for sr in response.step_runs] == [0, 1, 2]
     assert len(response.step_runs) == len(workflow.steps)
 
 

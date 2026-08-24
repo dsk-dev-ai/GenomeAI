@@ -10,6 +10,7 @@ from genomeai_api.workflows.models import (
     WorkflowRun,
     WorkflowStep,
 )
+from sqlalchemy import ForeignKeyConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 
@@ -37,6 +38,18 @@ def test_workflow_table_and_columns() -> None:
     assert status_col.server_default.arg == "draft"
 
 
+def test_workflow_status_constrained_to_vocabulary() -> None:
+    check = next(
+        c
+        for c in Workflow.__table__.constraints
+        if getattr(c, "name", None) == "ck_workflow_status"
+    )
+    sql = str(check.sqltext)
+    assert "'draft'" in sql
+    assert "'active'" in sql
+    assert "'archived'" in sql
+
+
 def test_workflow_column_defaults() -> None:
     id_col = Workflow.__table__.columns["id"]
     assert id_col.default is not None and id_col.default.is_callable
@@ -52,6 +65,7 @@ def test_workflow_column_defaults() -> None:
 def test_workflow_step_table_constraints() -> None:
     assert WorkflowStep.__tablename__ == "workflow_steps"
     assert "uq_workflow_step_name" in _constraint_names(WorkflowStep)
+    assert "uq_workflow_step_scope" in _constraint_names(WorkflowStep)
     indexes = {ix.name for ix in WorkflowStep.__table__.indexes}
     assert "ix_workflow_steps_workflow_position" in indexes
     config_col = WorkflowStep.__table__.columns["configuration"]
@@ -79,13 +93,32 @@ def test_workflow_dependency_table_constraints() -> None:
     names = _constraint_names(WorkflowDependency)
     assert "uq_workflow_dependency_edge" in names
     assert "ck_workflow_dependency_not_self" in names
-    fks = WorkflowDependency.__table__.foreign_keys
-    targets = {fk.target_fullname for fk in fks}
-    assert targets == {
-        "workflows.id",
-        "workflow_steps.id",
+    # Both endpoints are workflow-scoped via composite FKs into
+    # workflow_steps(workflow_id, id) — cross-workflow edges are impossible.
+    fk_constraints = {
+        c.name: c
+        for c in WorkflowDependency.__table__.constraints
+        if isinstance(c, ForeignKeyConstraint)
     }
-    for fk in fks:
+    assert set(fk_constraints) == {
+        "fk_workflow_dependency_from_step",
+        "fk_workflow_dependency_to_step",
+        None,  # unnamed single-column FK: workflow_id -> workflows.id
+    }
+    parent_fk = fk_constraints[None]
+    assert [fk.target_fullname for fk in parent_fk.elements] == ["workflows.id"]
+    expected_pairs = {
+        "fk_workflow_dependency_from_step": ["workflow_id", "from_step_id"],
+        "fk_workflow_dependency_to_step": ["workflow_id", "to_step_id"],
+    }
+    for name, fk in fk_constraints.items():
+        if name not in expected_pairs:
+            continue
+        assert [col.name for col in fk.columns] == expected_pairs[name]
+        assert [elem.target_fullname for elem in fk.elements] == [
+            "workflow_steps.workflow_id",
+            "workflow_steps.id",
+        ]
         assert fk.ondelete == "CASCADE"
 
 
@@ -118,8 +151,14 @@ def test_step_run_table_constraints() -> None:
         "workflow_runs.id",
         "workflow_steps.id",
     }
+    run = StepRun(run_id=uuid.uuid4(), step_id=uuid.uuid4())
     state_col = StepRun.__table__.columns["state"]
     assert state_col.server_default.arg == "pending"
+    assert run.started_at is None
+    assert run.finished_at is None
+    position_col = StepRun.__table__.columns["position"]
+    assert position_col.server_default.arg == "0"
+    assert position_col.nullable is False
 
 
 def test_relationships_wire_parent_children_via_back_populates() -> None:

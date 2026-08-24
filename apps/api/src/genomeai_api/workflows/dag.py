@@ -122,16 +122,21 @@ def _cycle_issues(nodes: set[str], edges: list[tuple[str, str]]) -> list[GraphIs
 def topological_order(step_names: list[str], edges: list[tuple[str, str]]) -> list[str]:
     """Deterministic topological order (Kahn's algorithm, lexicographic tie-break).
 
-    Raises :class:`ValueError` when the graph contains a cycle — callers must
-    validate first via :func:`validate_graph`.
+    Raises :class:`ValueError` when the graph is invalid for ANY reason —
+    cycles, empty inputs, duplicate steps, self-dependencies, missing
+    endpoints, or duplicate edges (the same contract as
+    :func:`validate_graph`). Duplicate edges are rejected, not silently
+    de-duplicated, so callers see the same definition of "valid" everywhere.
     """
     issues = validate_graph(step_names, edges)
-    if any(issue.code in {"cycle", "duplicate-step", "self-dependency"} for issue in issues):
-        raise ValueError("Cannot order an invalid workflow graph")
+    if issues:
+        raise ValueError(
+            f"Cannot order an invalid workflow graph ({len(issues)} issue(s))"
+        )
 
     indegree: dict[str, int] = {name: 0 for name in step_names}
     adjacency: dict[str, list[str]] = defaultdict(list)
-    for source, target in dict.fromkeys(edges):  # de-duplicated, order kept
+    for source, target in edges:
         adjacency[source].append(target)
         indegree[target] += 1
 

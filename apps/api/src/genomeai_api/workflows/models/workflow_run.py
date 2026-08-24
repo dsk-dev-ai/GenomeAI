@@ -48,7 +48,7 @@ class WorkflowRun(Base):
         "StepRun",
         back_populates="run",
         cascade="all, delete-orphan",
-        order_by="StepRun.created_at",
+        order_by="StepRun.position",
     )
 
     created_at: Mapped[datetime] = mapped_column(
