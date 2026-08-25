@@ -93,7 +93,33 @@ class ScheduleStateTransitionError(WorkflowError):
         )
 
 
+class QueueUnavailableError(WorkflowError):
+    """The workflow queue backend is not reachable or not configured."""
+
+    error_code = "workflow.queue-unavailable"
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(
+            message="Workflow queue is unavailable",
+            detail=reason,
+        )
+
+
+class JobDecodeError(WorkflowError):
+    """A queued job payload cannot be decoded deterministically."""
+
+    error_code = "workflow.job-decode-error"
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(
+            message="Queued job payload is malformed",
+            detail=reason,
+        )
+
+
 __all__ = [
+    "JobDecodeError",
+    "QueueUnavailableError",
     "ScheduleNotFoundError",
     "ScheduleStateTransitionError",
     "ScheduleValidationError",

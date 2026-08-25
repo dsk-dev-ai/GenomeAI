@@ -2,12 +2,16 @@
 
 Owns definition validation (deterministic DAG checks) and run
 initialization. The service must NOT execute workflow steps — runs are
-created in the PENDING state and never advanced here.
+created in the PENDING state and never advanced here. Phase 7.4 adds
+queueing: a pending run can be handed to the workflow queue without any
+execution happening in-request.
 """
 
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
+from datetime import datetime
 
 from genomeai_api.repositories.workflow import WorkflowRepository
 from genomeai_api.schemas.workflow import (
@@ -18,11 +22,15 @@ from genomeai_api.schemas.workflow import (
 )
 from genomeai_api.workflows.dag import topological_order, validate_graph
 from genomeai_api.workflows.errors import (
+    QueueUnavailableError,
     WorkflowNotFoundError,
     WorkflowRunNotFoundError,
+    WorkflowStateTransitionError,
     WorkflowValidationError,
 )
 from genomeai_api.workflows.models.workflow import Workflow
+from genomeai_api.workflows.queueing import JobQueue
+from genomeai_api.workflows.types import RunState
 
 
 def ordered_step_ids(workflow: Workflow) -> list[uuid.UUID]:
@@ -38,9 +46,23 @@ def ordered_step_ids(workflow: Workflow) -> list[uuid.UUID]:
     )]
 
 
+@dataclass(frozen=True)
+class QueueRunResult:
+    """A queued run plus its queue job identity."""
+
+    run: WorkflowRunResponse
+    job_id: uuid.UUID
+    queued_at: datetime
+
+
 class WorkflowService:
-    def __init__(self, repository: WorkflowRepository) -> None:
+    def __init__(
+        self,
+        repository: WorkflowRepository,
+        queue: JobQueue | None = None,
+    ) -> None:
         self._repository = repository
+        self._queue = queue
 
     async def create_workflow(self, data: WorkflowCreate) -> WorkflowResponse:
         issues = validate_graph(
@@ -97,3 +119,28 @@ class WorkflowService:
         if run is None:
             raise WorkflowRunNotFoundError(run_id)
         return WorkflowRunResponse.model_validate(run)
+
+    async def queue_run(self, run_id: uuid.UUID) -> QueueRunResult:
+        """Hands a PENDING run to the workflow queue without executing it.
+
+        The API request never blocks on DAG execution — the worker picks
+        the job up later and drives the existing engine. Enqueue is
+        idempotent: an already-queued run returns its existing job.
+        """
+        if self._queue is None:
+            raise QueueUnavailableError("no workflow queue is configured")
+
+        run = await self._repository.get_run(run_id)
+        if run is None:
+            raise WorkflowRunNotFoundError(run_id)
+
+        current = RunState(run.state)
+        if current is not RunState.PENDING:
+            raise WorkflowStateTransitionError(current.value, "queued")
+
+        job = await self._queue.enqueue(run_id)
+        return QueueRunResult(
+            run=WorkflowRunResponse.model_validate(run),
+            job_id=job.job_id,
+            queued_at=job.queued_at,
+        )

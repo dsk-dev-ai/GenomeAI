@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import pytest
 from genomeai_api.workflows.types import (
+    JOB_STATE_TRANSITIONS,
     RUN_STATE_TRANSITIONS,
+    JobState,
     RunState,
     WorkflowStatus,
     can_transition,
+    can_transition_job,
     is_terminal,
 )
 
@@ -60,6 +63,45 @@ def test_transition_table_covers_all_states_and_terminals_are_empty() -> None:
     assert set(RUN_STATE_TRANSITIONS) == set(RunState)
     for state, targets in RUN_STATE_TRANSITIONS.items():
         if is_terminal(state):
+            assert targets == frozenset()
+        else:
+            assert targets
+
+
+# --- Phase 7.4: job state vocabulary ------------------------------------
+
+
+def test_job_state_values() -> None:
+    assert {state.value for state in JobState} == {
+        "queued",
+        "running",
+        "completed",
+        "failed",
+    }
+
+
+def test_queued_job_can_only_start() -> None:
+    assert can_transition_job(JobState.QUEUED, JobState.RUNNING)
+    for terminal in (JobState.COMPLETED, JobState.FAILED):
+        assert not can_transition_job(JobState.QUEUED, terminal)
+
+
+def test_running_job_must_finish() -> None:
+    assert can_transition_job(JobState.RUNNING, JobState.COMPLETED)
+    assert can_transition_job(JobState.RUNNING, JobState.FAILED)
+    assert not can_transition_job(JobState.RUNNING, JobState.QUEUED)
+
+
+def test_finished_jobs_never_move_again() -> None:
+    for terminal in (JobState.COMPLETED, JobState.FAILED):
+        for next_state in JobState:
+            assert not can_transition_job(terminal, next_state)
+
+
+def test_job_transition_table_covers_all_states_and_terminals_are_empty() -> None:
+    assert set(JOB_STATE_TRANSITIONS) == set(JobState)
+    for state, targets in JOB_STATE_TRANSITIONS.items():
+        if state in (JobState.COMPLETED, JobState.FAILED):
             assert targets == frozenset()
         else:
             assert targets

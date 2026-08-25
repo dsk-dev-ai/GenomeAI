@@ -16,8 +16,9 @@ from genomeai_api.schemas.workflow import (
     WorkflowRunResponse,
     WorkflowStepResponse,
 )
-from genomeai_api.services.workflow import WorkflowService
+from genomeai_api.services.workflow import QueueRunResult, WorkflowService
 from genomeai_api.workflows.errors import (
+    QueueUnavailableError,
     WorkflowNotFoundError,
     WorkflowRunNotFoundError,
     WorkflowStateTransitionError,
@@ -407,3 +408,71 @@ def test_execute_non_pending_run_returns_409(
     response = client.post(f"/workflows/runs/{run_id}/execute")
 
     assert response.status_code == status.HTTP_409_CONFLICT
+
+
+# --- Phase 7.4: queue endpoint ------------------------------------------
+
+
+def _queue_result(run_response: WorkflowRunResponse) -> QueueRunResult:
+    now = datetime.now(UTC)
+    return QueueRunResult(
+        run=run_response,
+        job_id=uuid.uuid4(),
+        queued_at=now,
+    )
+
+
+def test_queue_run_returns_202_with_job_identity(
+    client: TestClient,
+    mock_service: AsyncMock,
+) -> None:
+    run = _run_response()
+    run_id = uuid.uuid4()
+    mock_service.queue_run.return_value = _queue_result(run)
+
+    response = client.post(f"/workflows/runs/{run_id}/queue")
+
+    assert response.status_code == status.HTTP_202_ACCEPTED
+    body = response.json()
+    assert body["job"]["workflow_run_id"] == str(run_id)
+    assert body["job"]["job_id"]
+    assert body["run"]["state"] == "pending"
+    mock_service.queue_run.assert_awaited_once()
+
+
+def test_queue_missing_run_returns_404(
+    client: TestClient,
+    mock_service: AsyncMock,
+) -> None:
+    missing = uuid.uuid4()
+    mock_service.queue_run.side_effect = WorkflowRunNotFoundError(missing)
+
+    response = client.post(f"/workflows/runs/{missing}/queue")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_queue_non_pending_run_returns_409(
+    client: TestClient,
+    mock_service: AsyncMock,
+) -> None:
+    mock_service.queue_run.side_effect = WorkflowStateTransitionError(
+        "cancelled", "queued"
+    )
+
+    response = client.post(f"/workflows/runs/{uuid.uuid4()}/queue")
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+
+
+def test_queue_without_backend_returns_503(
+    client: TestClient,
+    mock_service: AsyncMock,
+) -> None:
+    mock_service.queue_run.side_effect = QueueUnavailableError(
+        "no workflow queue is configured"
+    )
+
+    response = client.post(f"/workflows/runs/{uuid.uuid4()}/queue")
+
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE

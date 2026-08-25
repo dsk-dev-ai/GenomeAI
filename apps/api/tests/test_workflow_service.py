@@ -15,8 +15,10 @@ from genomeai_api.schemas.workflow import (
 )
 from genomeai_api.services.workflow import WorkflowService
 from genomeai_api.workflows.errors import (
+    QueueUnavailableError,
     WorkflowNotFoundError,
     WorkflowRunNotFoundError,
+    WorkflowStateTransitionError,
     WorkflowValidationError,
 )
 from genomeai_api.workflows.models.step_run import StepRun
@@ -24,6 +26,7 @@ from genomeai_api.workflows.models.workflow import Workflow
 from genomeai_api.workflows.models.workflow_dependency import WorkflowDependency
 from genomeai_api.workflows.models.workflow_run import WorkflowRun
 from genomeai_api.workflows.models.workflow_step import WorkflowStep
+from genomeai_api.workflows.queueing import InMemoryJobQueue
 
 
 @pytest.fixture
@@ -267,3 +270,91 @@ async def test_get_run_raises_typed_error_when_missing(
         await service.get_run(missing)
 
     mock_repository.get_run.assert_awaited_once_with(missing)
+
+
+def _run_row(state: str = "pending") -> WorkflowRun:
+    return WorkflowRun(
+        id=uuid.uuid4(),
+        workflow_id=uuid.uuid4(),
+        state=state,
+        created_at=datetime.now(UTC),
+    )
+
+
+@pytest.mark.asyncio
+async def test_queue_run_enqueues_pending_run_and_returns_job() -> None:
+    run = _run_row()
+    queue = InMemoryJobQueue()
+    mock_repository = AsyncMock(spec=WorkflowRepository)
+    mock_repository.get_run.return_value = run
+    service = WorkflowService(mock_repository, queue=queue)
+
+    result = await service.queue_run(run.id)
+
+    assert result.run.id == run.id
+    assert result.job_id is not None
+    assert await queue.depth() == 1
+    mock_repository.transition_run.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_queue_run_is_idempotent_for_repeated_requests() -> None:
+    run = _run_row()
+    queue = InMemoryJobQueue()
+    mock_repository = AsyncMock(spec=WorkflowRepository)
+    mock_repository.get_run.return_value = run
+    service = WorkflowService(mock_repository, queue=queue)
+
+    first = await service.queue_run(run.id)
+    second = await service.queue_run(run.id)
+
+    assert second.job_id == first.job_id
+    assert await queue.depth() == 1
+
+
+@pytest.mark.asyncio
+async def test_queue_run_missing_run_raises_not_found(
+    mock_repository: AsyncMock,
+) -> None:
+    mock_repository.get_run.return_value = None
+    service = WorkflowService(mock_repository, queue=InMemoryJobQueue())
+
+    with pytest.raises(WorkflowRunNotFoundError):
+        await service.queue_run(uuid.uuid4())
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("state", ["cancelled", "succeeded", "failed", "running"])
+async def test_queue_run_rejects_non_pending_runs_without_enqueueing(
+    state: str,
+) -> None:
+    run = _run_row(state)
+    queue = InMemoryJobQueue()
+    mock_repository = AsyncMock(spec=WorkflowRepository)
+    mock_repository.get_run.return_value = run
+    service = WorkflowService(mock_repository, queue=queue)
+
+    with pytest.raises(WorkflowStateTransitionError, match="queued"):
+        await service.queue_run(run.id)
+
+    assert await queue.depth() == 0
+
+
+@pytest.mark.asyncio
+async def test_queue_run_without_queue_configured_raises_unavailable(
+    mock_repository: AsyncMock,
+) -> None:
+    mock_repository.get_run.return_value = _run_row()
+    service = WorkflowService(mock_repository)
+
+    with pytest.raises(QueueUnavailableError):
+        await service.queue_run(uuid.uuid4())
+
+
+@pytest.mark.asyncio
+async def test_service_remains_constructible_without_queue(
+    mock_repository: AsyncMock,
+) -> None:
+    # Phase 7.2 direct execution must keep working untouched.
+    service = WorkflowService(mock_repository)
+    assert service is not None

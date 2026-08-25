@@ -1,17 +1,21 @@
-# Workflow Foundation (7.1) · Execution (7.2) · Scheduler (7.3)
+# Workflow Foundation (7.1) · Execution (7.2) · Scheduler (7.3) · Queue & Worker (7.4)
 
 The Workflow Foundation establishes GenomeAI's workflow/DAG architecture:
 workflow definitions, ordered and connected steps, deterministic DAG
 validation, execution-state models, persistence, and a minimal admin API.
 Phase 7.2 adds deterministic, sequential, **in-process** execution on top;
 Phase 7.3 adds application-level **scheduling** that decides WHEN runs
-start.
+start; Phase 7.4 adds a **queue and worker** so runs can execute in the
+background.
 
-> Execution is synchronous: one API call drives one run step by step to a
-> terminal state. Scheduling is application-level: due-run detection only
-> advances when `/workflows/schedules/evaluate` is called. There is still
-> no queue, worker, background daemon, or parallel execution engine —
-> those belong to later milestones.
+> Direct execution remains synchronous: one API call drives one run step
+> by step to a terminal state. Scheduling is application-level: due-run
+> detection advances when `/workflows/schedules/evaluate` is called.
+> Phase 7.4 adds optional background execution: pending runs can be
+> enqueued (`POST /workflows/runs/{id}/queue` or via the scheduler) and a
+> worker process claims them and drives the same DAG engine. Still absent:
+> retries, parallel step execution, autoscaling, Kubernetes/HPC — those
+> belong to later milestones. See [queue-worker.md](queue-worker.md).
 
 ## Core concepts
 
@@ -72,10 +76,33 @@ See [execution.md](execution.md) for the full contract.
 
 See [scheduler.md](scheduler.md) for the full contract.
 
+## What exists in 7.4
+
+- `JobQueue` protocol with two implementations: `InMemoryJobQueue`
+  (reference/tests) and `RedisJobQueue` (the only Redis-aware module)
+- Deterministic job codec (`WorkflowJob` ↔ sorted compact JSON, UTC
+  timestamps, schema version field); malformed payloads raise typed errors
+- Exclusive claims via atomic list moves, idempotent enqueue per run,
+  guarded release; connection failures surface as `QueueUnavailableError`
+- `WorkflowRunWorker`: claim → verify run is still pending → delegate to
+  the existing DAG engine → release. Cancelled/completed runs are never
+  re-executed; failures mark both run and job without losing messages
+- Graceful shutdown (`run_forever(stop_event)`), standalone
+  `genomeai-worker` console script (SIGINT/SIGTERM safe)
+- API: `POST /workflows/runs/{run_id}/queue` → 202 (404/409/503 mapped);
+  direct `/execute` retained for tests/internal use
+- Scheduler enqueues every run it creates when a queue is configured;
+  schedule bookkeeping always happens first
+
+See [queue-worker.md](queue-worker.md) for the full contract.
+
 ## What does NOT exist yet
 
-- No background execution, daemon, timer loop, or workers — evaluation
-  happens only when the evaluate endpoint (or a test) calls it
-- No Redis/Celery/Arq queues, no parallel engine, no retries
-- No artifact storage, caching beyond step outputs, or real executors —
-  step execution is still a deterministic passthrough placeholder
+- No retries/backoff, dead-letter queues, or crash-recovery scanning of
+  claimed jobs
+- No parallel step execution, priority queues, visibility timeouts, or
+  workflow caching
+- No multiple-worker orchestration, autoscaling, Kubernetes/HPC targets —
+  one worker process per deployment is the supported shape
+- No artifact storage or real executors — step execution is still a
+  deterministic passthrough placeholder

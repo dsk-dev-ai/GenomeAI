@@ -30,6 +30,7 @@ from genomeai_api.workflows.errors import (
     WorkflowNotFoundError,
 )
 from genomeai_api.workflows.models.workflow_schedule import WorkflowSchedule
+from genomeai_api.workflows.queueing import JobQueue
 from genomeai_api.workflows.scheduling import (
     Clock,
     CronOccurrenceCalculator,
@@ -71,11 +72,13 @@ class SchedulerService:
         workflows: WorkflowRepository,
         calculator: OccurrenceCalculator | None = None,
         clock: Clock | None = None,
+        queue: JobQueue | None = None,
     ) -> None:
         self._schedules = schedules
         self._workflows = workflows
         self._calculator = calculator or CronOccurrenceCalculator()
         self._clock = clock or SystemClock()
+        self._queue = queue
 
     async def create_schedule(
         self, workflow_id: uuid.UUID, data: ScheduleCreate
@@ -192,6 +195,14 @@ class SchedulerService:
                     next_run_at=self._calculator.next_occurrence(spec, after=at),
                     state=ScheduleState.ENABLED.value,
                 )
+
+            # Phase 7.4: hand the fresh run to the queue AFTER bookkeeping —
+            # a queue outage can then never strand schedule state. The run
+            # itself stays PENDING in the DB (never lost); the worker will
+            # execute it via DAGExecutionEngine. The scheduler still does
+            # NOT execute anything itself.
+            if self._queue is not None:
+                await self._queue.enqueue(run.id)
 
         return EvaluationResult(
             evaluated_at=at,
