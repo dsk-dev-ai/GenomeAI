@@ -27,6 +27,7 @@ from genomeai_api.workflows.models.workflow_dependency import WorkflowDependency
 from genomeai_api.workflows.models.workflow_run import WorkflowRun
 from genomeai_api.workflows.models.workflow_schedule import WorkflowSchedule
 from genomeai_api.workflows.models.workflow_step import WorkflowStep
+from genomeai_api.workflows.queueing import InMemoryJobQueue
 
 
 @dataclass
@@ -181,11 +182,12 @@ def _service(
     schedules: FakeScheduleRepository | None = None,
     workflows: FakeWorkflowRepository | None = None,
     clock: FakeClock | None = None,
+    queue: InMemoryJobQueue | None = None,
 ) -> tuple[SchedulerService, FakeScheduleRepository, FakeWorkflowRepository, FakeClock]:
     schedules = schedules or FakeScheduleRepository()
     workflows = workflows or FakeWorkflowRepository()
     clock = clock or FakeClock()
-    service = SchedulerService(schedules, workflows, clock=clock)  # type: ignore[arg-type]
+    service = SchedulerService(schedules, workflows, clock=clock, queue=queue)  # type: ignore[arg-type]
     return service, schedules, workflows, clock
 
 
@@ -580,3 +582,78 @@ async def test_delete_removes_schedule() -> None:
 
     assert await service.delete_schedule(schedule_id) is True
     assert schedules.rows == {}
+
+
+# --- scheduler → queue integration (Phase 7.4) --------------------------
+
+
+@pytest.mark.asyncio
+async def test_due_run_is_enqueued_after_creation() -> None:
+    queue = InMemoryJobQueue()
+    service, _schedules, workflows, clock = _service(queue=queue)
+    workflow = _workflow("a")
+    workflows.workflows[workflow.id] = workflow
+    past = datetime(2026, 8, 24, 6, 0, tzinfo=UTC)
+    schedule_id = await _create_schedule(
+        service, workflow, schedule_type="once", run_at=past
+    )
+
+    result = await service.evaluate_due(now=clock.moment)
+
+    assert len(result.created_run_ids) == 1
+    assert await queue.depth() == 1
+    job = await queue.claim("probe-worker")
+    assert job is not None
+    assert job.workflow_run_id == result.created_run_ids[0]
+    # Bookkeeping happened before enqueue: occurrence recorded, run pending.
+    run = workflows.created_runs[0]
+    assert run.state == "pending"
+    assert run.schedule_id == schedule_id
+
+
+@pytest.mark.asyncio
+async def test_skipped_duplicate_schedules_enqueue_nothing() -> None:
+    queue = InMemoryJobQueue()
+    service, schedules, workflows, clock = _service(queue=queue)
+    workflow = _workflow("a")
+    workflows.workflows[workflow.id] = workflow
+    clock.moment = datetime(2026, 8, 24, 11, 58, tzinfo=UTC)  # created before boundary
+    schedule_id = await _create_schedule(
+        service, workflow, schedule_type="recurring", expression="*/5 * * * *"
+    )
+    # Advance past the first cron boundary so the schedule actually fires.
+    clock.moment = datetime(2026, 8, 24, 12, 3, tzinfo=UTC)
+
+    first = await service.evaluate_due(now=clock.moment)
+    assert len(first.created_run_ids) == 1
+    assert await queue.depth() == 1
+
+    # A repeated notification for the SAME occurrence must not enqueue twice:
+    # simulate the DB unique constraint rejecting the next boundary on
+    # re-evaluation.
+    row = schedules.rows[schedule_id]
+    workflows.duplicate_occurrences.add((schedule_id, row.next_run_at))
+    clock.moment = datetime(2026, 8, 24, 12, 6, tzinfo=UTC)
+
+    second = await service.evaluate_due(now=clock.moment)
+
+    assert second.created_run_ids == []
+    assert second.skipped_duplicates == 1
+    assert await queue.depth() == 1  # unchanged
+
+
+@pytest.mark.asyncio
+async def test_scheduler_without_queue_still_creates_runs(
+    mock_queue_absent_guard: None = None,
+) -> None:
+    del mock_queue_absent_guard
+    service, _schedules, workflows, _clock = _service()
+    workflow = _workflow("a")
+    workflows.workflows[workflow.id] = workflow
+    await _create_schedule(
+        service, workflow, schedule_type="once", run_at=datetime(2026, 8, 24, 6, tzinfo=UTC)
+    )
+
+    result = await service.evaluate_due()
+
+    assert len(result.created_run_ids) == 1

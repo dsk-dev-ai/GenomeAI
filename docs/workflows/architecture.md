@@ -4,9 +4,14 @@
 API (FastAPI, /workflows)
  ↓
 WorkflowService          ← DAG validation, run initialization (no execution)
+ │                          queue_run(): enqueue a pending run (Phase 7.4)
  ↓
-SchedulerService         ← due detection, scheduled run creation (Phase 7.3)
+SchedulerService         ← due detection, scheduled run creation + enqueue (7.3/7.4)
  ├── planner / executor  ← pure occurrence math; one-step work abstraction
+ ↓
+JobQueue                 ← queue protocol; Redis backend isolated in one module (Phase 7.4)
+ ↓
+WorkflowRunWorker        ← claim → verify pending → delegate to engine (Phase 7.4)
  ↓
 DAGExecutionEngine       ← sequential in-process execution (Phase 7.2)
  ↓
@@ -34,6 +39,14 @@ PostgreSQL
   path as manual runs, and manages schedule lifecycle. It never executes
   steps and never reads the wall clock directly.
   See [scheduler.md](scheduler.md).
+- **Queue & Worker** (Phase 7.4): `workflows/queueing.py` defines the
+  `JobQueue` protocol and deterministic job codec;
+  `workflows/redis_queue.py` is the only Redis-aware module;
+  `services/worker.py` claims queued runs and delegates eligible ones to
+  the engine. The API can queue a run (`202 Accepted`) without executing
+  it; the scheduler enqueues what it creates. No retry, parallelism, or
+  orchestration logic exists anywhere in this layer.
+  See [queue-worker.md](queue-worker.md).
 - **Engine** (`workflows/execution/engine.py`): drives one pending run to a
   terminal state, sequentially, in persisted position order. It owns every
   state transition, delegates ready-step selection to the pure planner,

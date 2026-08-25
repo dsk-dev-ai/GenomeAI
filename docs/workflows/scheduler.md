@@ -8,6 +8,10 @@ foundation and Phase 7.2 execution engine.
 > Celery, Arq, daemon, queue, or distributed coordination anywhere here.
 > Scheduling advances only when something calls it — an API request or a
 > test. Nothing fires "by itself" in the background.
+>
+> *Phase 7.4 update:* the scheduler can now optionally ENQUEUE each run it
+> creates (still never executing anything itself). See
+> [queue-worker.md](queue-worker.md).
 
 ## Architecture
 

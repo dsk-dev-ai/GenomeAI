@@ -103,3 +103,18 @@ class WorkflowRunResponse(BaseModel):
     schedule_id: uuid.UUID | None = None
     scheduled_for: datetime | None = None
     step_runs: list[StepRunResponse]
+
+
+class JobResponse(BaseModel):
+    """Queue identity of one queued workflow run (Phase 7.4)."""
+
+    job_id: uuid.UUID
+    workflow_run_id: uuid.UUID
+    queued_at: datetime
+
+
+class WorkflowRunQueueResponse(BaseModel):
+    """Result of queueing a workflow run; execution happens later."""
+
+    job: JobResponse
+    run: WorkflowRunResponse

@@ -30,3 +30,4 @@ packages = ["src/genomeai_api"]
 
 [project.scripts]
 genomeai-api = "genomeai_api.main:run"
+genomeai-worker = "genomeai_api.worker:run"

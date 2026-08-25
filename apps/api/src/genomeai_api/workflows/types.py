@@ -84,14 +84,43 @@ def can_transition_schedule(current: ScheduleState, next_state: ScheduleState) -
     return next_state in SCHEDULE_STATE_TRANSITIONS.get(current, frozenset())
 
 
+class JobState(StrEnum):
+    """Lifecycle of one queued workflow-run job (Phase 7.4).
+
+    Job state describes QUEUE processing, not workflow execution — the
+    WorkflowRun row remains the sole source of truth for execution state.
+    """
+
+    QUEUED = "queued"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+JOB_STATE_TRANSITIONS: dict[JobState, frozenset[JobState]] = {
+    JobState.QUEUED: frozenset({JobState.RUNNING}),
+    JobState.RUNNING: frozenset({JobState.COMPLETED, JobState.FAILED}),
+    JobState.COMPLETED: frozenset(),
+    JobState.FAILED: frozenset(),
+}
+
+
+def can_transition_job(current: JobState, next_state: JobState) -> bool:
+    """Whether a queue job may move from `current` to `next_state`."""
+    return next_state in JOB_STATE_TRANSITIONS.get(current, frozenset())
+
+
 __all__ = [
+    "JOB_STATE_TRANSITIONS",
     "RUN_STATE_TRANSITIONS",
     "SCHEDULE_STATE_TRANSITIONS",
+    "JobState",
     "RunState",
     "ScheduleState",
     "ScheduleType",
     "WorkflowStatus",
     "can_transition",
+    "can_transition_job",
     "can_transition_schedule",
     "is_terminal",
 ]

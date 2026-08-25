@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from genomeai_api.dependencies import get_db_session
@@ -24,16 +24,30 @@ from genomeai_api.schemas.schedule import (
     ScheduleUpdate,
 )
 from genomeai_api.services.scheduler import SchedulerService
+from genomeai_api.workflows.queueing import JobQueue
 
 router = APIRouter(prefix="/workflows", tags=["workflows"])
 
 
+def _get_queue(request: Request) -> JobQueue | None:
+    """Workflow queue from app state (None when Redis is unavailable)."""
+    state = getattr(request.app.state, "app_state", None)
+    client = getattr(state, "redis", None) if state is not None else None
+    if client is None:
+        return None
+    from genomeai_api.workflows.redis_queue import RedisJobQueue
+
+    return RedisJobQueue(client)
+
+
 async def _get_scheduler(
     session: AsyncSession = Depends(get_db_session),
+    queue: JobQueue | None = Depends(_get_queue),
 ) -> SchedulerService:
     return SchedulerService(
         schedules=ScheduleRepository(session),
         workflows=WorkflowRepository(session),
+        queue=queue,
     )
 
 
