@@ -1,7 +1,8 @@
-"""Shared typed vocabulary for the Workflow Foundation.
+"""Shared typed vocabulary for the Workflow domain.
 
 Values are stored as their lowercase string values in PostgreSQL. Execution
 states are shared by `WorkflowRun` and `StepRun` (identical lifecycle).
+Schedule states govern the Phase 7.3 scheduler lifecycle.
 """
 
 from __future__ import annotations
@@ -51,10 +52,46 @@ def is_terminal(state: RunState) -> bool:
     return len(RUN_STATE_TRANSITIONS.get(state, frozenset())) == 0
 
 
+class ScheduleType(StrEnum):
+    """How a schedule produces occurrences."""
+
+    ONCE = "once"
+    RECURRING = "recurring"
+
+
+class ScheduleState(StrEnum):
+    """Lifecycle of one schedule.
+
+    One-time schedules complete themselves after their single occurrence;
+    recurring schedules stay enabled until disabled explicitly. Disabled
+    schedules never create runs; completed is terminal.
+    """
+
+    ENABLED = "enabled"
+    DISABLED = "disabled"
+    COMPLETED = "completed"
+
+
+SCHEDULE_STATE_TRANSITIONS: dict[ScheduleState, frozenset[ScheduleState]] = {
+    ScheduleState.ENABLED: frozenset({ScheduleState.DISABLED, ScheduleState.COMPLETED}),
+    ScheduleState.DISABLED: frozenset({ScheduleState.ENABLED}),
+    ScheduleState.COMPLETED: frozenset(),
+}
+
+
+def can_transition_schedule(current: ScheduleState, next_state: ScheduleState) -> bool:
+    """Whether a schedule may move from `current` to `next_state`."""
+    return next_state in SCHEDULE_STATE_TRANSITIONS.get(current, frozenset())
+
+
 __all__ = [
     "RUN_STATE_TRANSITIONS",
+    "SCHEDULE_STATE_TRANSITIONS",
     "RunState",
+    "ScheduleState",
+    "ScheduleType",
     "WorkflowStatus",
     "can_transition",
+    "can_transition_schedule",
     "is_terminal",
 ]

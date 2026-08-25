@@ -5,13 +5,15 @@ API (FastAPI, /workflows)
  ↓
 WorkflowService          ← DAG validation, run initialization (no execution)
  ↓
+SchedulerService         ← due detection, scheduled run creation (Phase 7.3)
+ ├── planner / executor  ← pure occurrence math; one-step work abstraction
+ ↓
 DAGExecutionEngine       ← sequential in-process execution (Phase 7.2)
- ├── planner / executor  ← pure scheduling math; one-step work abstraction
  ↓
 WorkflowRepository       ← persistence only
  ↓
 SQLAlchemy models        ← workflows / workflow_steps / workflow_dependencies /
-                            workflow_runs / workflow_step_runs
+                            workflow_runs / workflow_step_runs / workflow_schedules
  ↓
 PostgreSQL
 ```
@@ -26,6 +28,12 @@ PostgreSQL
   initialization. It validates the submitted graph **before** persisting and
   computes a deterministic topological order when a run is requested.
   The service never executes steps — execution lives in the engine layer.
+- **Scheduler** (`services/scheduler.py`): answers "which enabled schedules
+  are due to create WorkflowRuns?" via an injected `Clock` and pure
+  occurrence calculator, creates pending runs through the same repository
+  path as manual runs, and manages schedule lifecycle. It never executes
+  steps and never reads the wall clock directly.
+  See [scheduler.md](scheduler.md).
 - **Engine** (`workflows/execution/engine.py`): drives one pending run to a
   terminal state, sequentially, in persisted position order. It owns every
   state transition, delegates ready-step selection to the pure planner,
@@ -56,7 +64,20 @@ PostgreSQL
   into `workflow_steps(workflow_id, id)` — so an edge can never connect
   steps from two different workflows, even via raw SQL.
 - `workflow_runs`: one row per requested execution. `state` starts at
-  `pending`; composite index on `(workflow_id, state)`.
+  `pending`; composite index on `(workflow_id, state)`. Phase 7.3 adds
+  nullable `schedule_id` (FK → `workflow_schedules.id`,
+  `ON DELETE SET NULL` — runs outlive their schedule) and
+  `scheduled_for`; a **partial unique index**
+  `uq_workflow_runs_schedule_occurrence (schedule_id, scheduled_for)`
+  makes duplicate creation of one occurrence impossible at the database
+  level.
+- `workflow_schedules`: WHEN a run should start (Phase 7.3). One row per
+  schedule, bound to one workflow (`ON DELETE CASCADE`). `schedule_type`
+  is `once`/`recurring`, with a CHECK keeping shape consistent (`once`
+  requires `run_at` and forbids `expression`, recurring the reverse).
+  Cron expressions are evaluated in the schedule's own IANA
+  `timezone_name`. Lifecycle CHECK: `enabled`/`disabled`/`completed`;
+  composite index `(state, next_run_at)` backs due detection.
 - `workflow_step_runs`: unique `(run_id, step_id)` — exactly one step-run
   per step per run. Created in topological order at request time, with the
   ordinal persisted in `position`; ordering never relies on timestamps

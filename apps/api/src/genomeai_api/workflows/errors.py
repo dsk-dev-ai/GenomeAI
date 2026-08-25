@@ -62,7 +62,41 @@ class WorkflowValidationError(WorkflowError):
         )
 
 
+class ScheduleNotFoundError(WorkflowError):
+    error_code = "workflow.schedule-not-found"
+
+    def __init__(self, schedule_id: uuid.UUID) -> None:
+        super().__init__(
+            message=f"Workflow schedule '{schedule_id}' does not exist",
+            detail="No workflow schedule is registered under this identifier.",
+        )
+
+
+class ScheduleValidationError(WorkflowError):
+    """The submitted schedule configuration is invalid."""
+
+    error_code = "workflow.schedule-validation-error"
+
+    def __init__(self, summary: str, issues: list[str]) -> None:
+        self.issues = issues
+        detail = "; ".join(issues) if issues else None
+        super().__init__(message=summary, detail=detail)
+
+
+class ScheduleStateTransitionError(WorkflowError):
+    error_code = "workflow.schedule-invalid-transition"
+
+    def __init__(self, current: str, next_state: str) -> None:
+        super().__init__(
+            message=f"Cannot transition schedule state from '{current}' to '{next_state}'",
+            detail="The schedule lifecycle does not allow this transition.",
+        )
+
+
 __all__ = [
+    "ScheduleNotFoundError",
+    "ScheduleStateTransitionError",
+    "ScheduleValidationError",
     "WorkflowError",
     "WorkflowNotFoundError",
     "WorkflowRunNotFoundError",

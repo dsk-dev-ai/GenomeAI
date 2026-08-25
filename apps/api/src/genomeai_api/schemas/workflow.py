@@ -100,4 +100,6 @@ class WorkflowRunResponse(BaseModel):
     finished_at: datetime | None
     error_message: str | None
     created_at: datetime
+    schedule_id: uuid.UUID | None = None
+    scheduled_for: datetime | None = None
     step_runs: list[StepRunResponse]
