@@ -7,6 +7,7 @@ dependencies = [
     "genomeai-config",
     "genomeai-logging",
     "genomeai-shared",
+    "croniter>=2.0",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.34",
     "sqlalchemy[asyncio]>=2.0.51",

@@ -19,6 +19,7 @@ from genomeai_api.database.base import Base
 if TYPE_CHECKING:
     from genomeai_api.workflows.models.workflow_dependency import WorkflowDependency
     from genomeai_api.workflows.models.workflow_run import WorkflowRun
+    from genomeai_api.workflows.models.workflow_schedule import WorkflowSchedule
     from genomeai_api.workflows.models.workflow_step import WorkflowStep
 
 
@@ -63,6 +64,11 @@ class Workflow(Base):
     )
     runs: Mapped[list[WorkflowRun]] = relationship(
         "WorkflowRun",
+        back_populates="workflow",
+        cascade="all, delete-orphan",
+    )
+    schedules: Mapped[list[WorkflowSchedule]] = relationship(
+        "WorkflowSchedule",
         back_populates="workflow",
         cascade="all, delete-orphan",
     )

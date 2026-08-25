@@ -41,6 +41,7 @@ from genomeai_api.routes.integrations import router as integrations_router
 from genomeai_api.routes.projects import router as projects_router
 from genomeai_api.routes.proteins import router as proteins_router
 from genomeai_api.routes.samples import router as samples_router
+from genomeai_api.routes.schedules import router as schedules_router
 from genomeai_api.routes.search import router as search_router
 from genomeai_api.routes.studies import router as studies_router
 from genomeai_api.routes.transcripts import router as transcripts_router
@@ -48,6 +49,9 @@ from genomeai_api.routes.variants import router as variants_router
 from genomeai_api.routes.workflows import router as workflows_router
 from genomeai_api.state import AppState
 from genomeai_api.workflows.errors import (
+    ScheduleNotFoundError,
+    ScheduleStateTransitionError,
+    ScheduleValidationError,
     WorkflowNotFoundError,
     WorkflowRunNotFoundError,
     WorkflowStateTransitionError,
@@ -128,6 +132,9 @@ app.include_router(genes_router)
 app.include_router(variants_router)
 app.include_router(transcripts_router)
 app.include_router(proteins_router)
+# Schedules router first: its static /workflows/schedules* paths must win
+# over the workflows router's dynamic /{workflow_id} routes.
+app.include_router(schedules_router)
 app.include_router(workflows_router)
 if load_settings().integration.enable_integration_routes:
     app.include_router(integrations_router)
@@ -368,6 +375,39 @@ async def workflow_run_not_found_handler(
 async def workflow_state_transition_handler(
     request: Request,
     exc: WorkflowStateTransitionError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(ScheduleNotFoundError)
+async def schedule_not_found_handler(
+    request: Request,
+    exc: ScheduleNotFoundError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(ScheduleValidationError)
+async def schedule_validation_handler(
+    request: Request,
+    exc: ScheduleValidationError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        content={"detail": str(exc), "issues": exc.issues},
+    )
+
+
+@app.exception_handler(ScheduleStateTransitionError)
+async def schedule_state_transition_handler(
+    request: Request,
+    exc: ScheduleStateTransitionError,
 ) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,

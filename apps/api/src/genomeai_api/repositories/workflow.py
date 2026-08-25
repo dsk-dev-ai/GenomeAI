@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -111,6 +112,35 @@ class WorkflowRepository:
         created = await self.get_run(run.id)
         assert created is not None  # same session; just persisted
         return created
+
+    async def create_scheduled_run(
+        self,
+        workflow_id: uuid.UUID,
+        ordered_step_ids: list[uuid.UUID],
+        *,
+        schedule_id: uuid.UUID,
+        scheduled_for: datetime,
+    ) -> WorkflowRun | None:
+        """Creates the run a schedule is due for, or None on duplicate.
+
+        The partial unique index uq_workflow_runs_schedule_occurrence makes
+        creating two runs for the same (schedule, occurrence) impossible;
+        the caller treats None as "already created" and moves on.
+        """
+        run = WorkflowRun(
+            workflow_id=workflow_id,
+            schedule_id=schedule_id,
+            scheduled_for=scheduled_for,
+        )
+        for position, step_id in enumerate(ordered_step_ids):
+            run.step_runs.append(StepRun(step_id=step_id, position=position))
+        self._session.add(run)
+        try:
+            await self._session.commit()
+        except IntegrityError:
+            await self._session.rollback()
+            return None
+        return await self.get_run(run.id)
 
     async def get_run(self, run_id: uuid.UUID) -> WorkflowRun | None:
         stmt = (

@@ -204,3 +204,79 @@ def test_relationships_wire_parent_children_via_back_populates() -> None:
     assert step_a.as_source_dependencies == [dep]
     assert step_b.as_target_dependencies == [dep]
     assert len(wf.steps) == 2
+
+
+def _schedule_fk_targets() -> set[str]:
+    from genomeai_api.workflows.models.workflow_schedule import WorkflowSchedule
+
+    fks = WorkflowSchedule.__table__.foreign_keys
+    return {fk.target_fullname for fk in fks}
+
+
+def test_all_scheduler_models_inherit_base() -> None:
+    from genomeai_api.workflows.models import WorkflowSchedule
+
+    assert issubclass(WorkflowSchedule, Base)
+    assert Workflow.__tablename__ == "workflows"
+
+
+def test_workflow_schedule_table_and_columns() -> None:
+    from genomeai_api.workflows.models.workflow_schedule import WorkflowSchedule
+
+    assert WorkflowSchedule.__tablename__ == "workflow_schedules"
+    names = {column.name for column in WorkflowSchedule.__table__.columns}
+    assert names == {
+        "id",
+        "workflow_id",
+        "schedule_type",
+        "expression",
+        "run_at",
+        "timezone_name",
+        "state",
+        "next_run_at",
+        "last_run_at",
+        "created_at",
+        "updated_at",
+    }
+
+
+def test_workflow_schedule_constraints_and_defaults() -> None:
+    from genomeai_api.workflows.models.workflow_schedule import WorkflowSchedule
+
+    names = _constraint_names(WorkflowSchedule)
+    assert {"ck_schedule_type", "ck_schedule_state", "ck_schedule_shape_matches_type"} <= names
+    indexes = {ix.name for ix in WorkflowSchedule.__table__.indexes}
+    assert "ix_workflow_schedules_state_next_run" in indexes
+
+    assert _schedule_fk_targets() == {"workflows.id"}
+
+    row = WorkflowSchedule(workflow_id=uuid.uuid4(), schedule_type="once")
+    state_col = WorkflowSchedule.__table__.columns["state"]
+    tz_col = WorkflowSchedule.__table__.columns["timezone_name"]
+    assert state_col.server_default.arg == "enabled"
+    assert tz_col.server_default.arg == "UTC"
+    assert row.next_run_at is None
+    assert row.last_run_at is None
+    run_at_col = WorkflowSchedule.__table__.columns["run_at"]
+    next_col = WorkflowSchedule.__table__.columns["next_run_at"]
+    last_col = WorkflowSchedule.__table__.columns["last_run_at"]
+    for column in (run_at_col, next_col, last_col):
+        assert column.nullable is True
+
+
+def test_workflow_run_schedule_annotation_columns() -> None:
+    schedule_id_col = WorkflowRun.__table__.columns["schedule_id"]
+    scheduled_for_col = WorkflowRun.__table__.columns["scheduled_for"]
+
+    assert schedule_id_col.nullable is True
+    assert scheduled_for_col.nullable is True
+    fks = {fk.target_fullname for fk in WorkflowRun.__table__.foreign_keys}
+    assert "workflow_schedules.id" in fks
+
+    indexes = {ix.name: ix for ix in WorkflowRun.__table__.indexes}
+    occurrence_index = indexes["uq_workflow_runs_schedule_occurrence"]
+    assert occurrence_index.unique is True
+    assert [column.name for column in occurrence_index.columns] == [
+        "schedule_id",
+        "scheduled_for",
+    ]

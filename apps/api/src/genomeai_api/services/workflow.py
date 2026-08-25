@@ -22,6 +22,20 @@ from genomeai_api.workflows.errors import (
     WorkflowRunNotFoundError,
     WorkflowValidationError,
 )
+from genomeai_api.workflows.models.workflow import Workflow
+
+
+def ordered_step_ids(workflow: Workflow) -> list[uuid.UUID]:
+    """Deterministic topological step ids for one stored workflow."""
+    id_by_name = {step.name: step.id for step in workflow.steps}
+    name_by_id = {step.id: step.name for step in workflow.steps}
+    name_edges = [
+        (name_by_id[dep.from_step_id], name_by_id[dep.to_step_id])
+        for dep in workflow.dependencies
+    ]
+    return [id_by_name[name] for name in topological_order(
+        [step.name for step in workflow.steps], name_edges
+    )]
 
 
 class WorkflowService:
@@ -67,22 +81,15 @@ class WorkflowService:
         """Requests one execution of a workflow.
 
         Initializes the run and its StepRuns in deterministic topological
-        order, all PENDING. No execution happens in Phase 7.1.
+        order, all PENDING. Execution itself is the engine's job.
         """
         workflow = await self._repository.get_by_id(workflow_id)
         if workflow is None:
             raise WorkflowNotFoundError(workflow_id)
 
-        names = [step.name for step in workflow.steps]
-        id_by_name = {step.name: step.id for step in workflow.steps}
-        name_by_id = {step.id: step.name for step in workflow.steps}
-        name_edges = [
-            (name_by_id[dep.from_step_id], name_by_id[dep.to_step_id])
-            for dep in workflow.dependencies
-        ]
-        ordered_ids = [id_by_name[name] for name in topological_order(names, name_edges)]
-
-        run = await self._repository.create_run(workflow_id, ordered_ids)
+        run = await self._repository.create_run(
+            workflow_id, ordered_step_ids(workflow)
+        )
         return WorkflowRunResponse.model_validate(run)
 
     async def get_run(self, run_id: uuid.UUID) -> WorkflowRunResponse:
