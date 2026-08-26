@@ -15,6 +15,7 @@ dependencies = [
     "redis>=8.0.1",
     "alembic>=1.18.5",
     "httpx>=0.28",
+    "google-genai>=2.0",
 ]
 
 [project.optional-dependencies]

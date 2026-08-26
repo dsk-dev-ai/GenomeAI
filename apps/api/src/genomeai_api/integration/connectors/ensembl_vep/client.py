@@ -71,35 +71,46 @@ class EnsemblVEPClient:
             return None
 
     def _parse_result(self, data: dict[str, object]) -> VEPResult:
-        consequences = []
-        for tc in data.get("transcript_consequences", []):
-            if not isinstance(tc, dict):
-                continue
-            terms = [
-                str(c) for c in tc.get("consequence_terms", [])
-                if isinstance(c, str)
-            ]
+        consequences: list[VEPConsequence] = []
+        raw_tc = data.get("transcript_consequences", [])
+        tc_list: list[dict[str, object]] = (
+            raw_tc if isinstance(raw_tc, list) else []
+        )
+
+        for tc in tc_list:
+            raw_terms = tc.get("consequence_terms", [])
+            raw_terms_list: list[str] = (
+                [str(c) for c in raw_terms if isinstance(c, str)]
+                if isinstance(raw_terms, list)
+                else []
+            )
+
+            raw_sift = tc.get("sift_score")
             sift = (
-                float(tc["sift_score"])
-                if tc.get("sift_score") is not None
+                float(raw_sift)
+                if isinstance(raw_sift, (int, float))
                 else None
             )
+
+            raw_poly = tc.get("polyphen_score")
             polyphen = (
-                float(tc["polyphen_score"])
-                if tc.get("polyphen_score") is not None
+                float(raw_poly)
+                if isinstance(raw_poly, (int, float))
                 else None
             )
 
             def _int(key: str) -> int | None:
                 v = tc.get(key)
-                return int(v) if v is not None else None
+                if isinstance(v, (int, float)):
+                    return int(v)
+                return None
 
             consequences.append(VEPConsequence(
                 transcript_id=str(tc.get("transcript_id", "")),
                 gene_symbol=str(tc.get("gene_symbol", "")),
                 gene_id=str(tc.get("gene_id", "")),
                 biotype=str(tc.get("biotype", "")),
-                consequence_terms=terms,
+                consequence_terms=raw_terms_list,
                 impact=str(tc.get("impact", "")),
                 sift_score=sift,
                 sift_prediction=str(
@@ -121,14 +132,19 @@ class EnsemblVEPClient:
                 intron=str(tc.get("intron", "")),
             ))
 
-        colocated = data.get("colocated_variants", [])
+        raw_colocated = data.get("colocated_variants", [])
+        colocated: list[object] = (
+            raw_colocated
+            if isinstance(raw_colocated, list)
+            else []
+        )
         rs_id = ""
         if (
             colocated
-            and isinstance(colocated, list)
             and isinstance(colocated[0], dict)
         ):
-            rs_id = str(colocated[0].get("id", ""))
+            first: dict[str, object] = colocated[0]
+            rs_id = str(first.get("id", ""))
 
         allele_string = str(data.get("allele_string", ""))
         allele = (
@@ -136,20 +152,25 @@ class EnsemblVEPClient:
             if "/" in allele_string else ""
         )
 
+        raw_start = data.get("start")
+        raw_end = data.get("end")
+        raw_strand = data.get("strand", 0)
+        strand_val = int(raw_strand) if isinstance(raw_strand, (int, float)) else 0
+
         return VEPResult(
             input=str(data.get("id", "")),
             start=(
-                int(data["start"])
-                if data.get("start") is not None
+                int(raw_start)
+                if isinstance(raw_start, (int, float))
                 else None
             ),
             end=(
-                int(data["end"])
-                if data.get("end") is not None
+                int(raw_end)
+                if isinstance(raw_end, (int, float))
                 else None
             ),
             allele=allele,
-            strand=int(data.get("strand", 0)),
+            strand=strand_val,
             rs_id=rs_id,
             consequences=consequences,
         )

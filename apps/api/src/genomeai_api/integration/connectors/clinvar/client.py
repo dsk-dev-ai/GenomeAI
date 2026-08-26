@@ -35,7 +35,7 @@ class ClinVarClient:
         ClinVarClient._last_request = asyncio.get_running_loop().time()
 
     async def _get_with_retry(
-        self, url: str, params: dict[str, object]
+        self, url: str, params: dict[str, str | int]
     ) -> httpx.Response:
         for attempt in range(MAX_RETRIES):
             try:
@@ -55,7 +55,7 @@ class ClinVarClient:
         raise RuntimeError("Unreachable")
 
     async def _esearch(self, term: str, retmax: int = 20) -> list[str]:
-        params: dict[str, object] = {
+        params: dict[str, str | int] = {
             "db": "clinvar", "term": term,
             "retmode": "json", "retmax": retmax,
         }
@@ -66,7 +66,7 @@ class ClinVarClient:
         return data.get("esearchresult", {}).get("idlist", [])
 
     async def _efetch_docsum(self, ids: list[str]) -> str:
-        params: dict[str, object] = {
+        params: dict[str, str | int] = {
             "db": "clinvar", "id": ",".join(ids),
             "retmode": "xml", "rettype": "docsum",
         }

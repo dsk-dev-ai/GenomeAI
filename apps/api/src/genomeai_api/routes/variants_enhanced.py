@@ -6,7 +6,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException
 
-from genomeai_api.ai.ollama import OllamaProvider
+from genomeai_api.ai.gemini import GeminiProvider
 from genomeai_api.integration.connectors.clinvar.client import ClinVarClient
 from genomeai_api.integration.connectors.ensembl_vep.client import EnsemblVEPClient
 from genomeai_api.integration.connectors.gnomad.client import GnomADClient
@@ -29,7 +29,7 @@ router = APIRouter(prefix="/api/v1/variants", tags=["variant-interpretation"])
 
 def _get_engine() -> VariantInterpretationEngine:
     return VariantInterpretationEngine(
-        ai_provider=OllamaProvider(),
+        ai_provider=GeminiProvider(),
         clinvar_client=ClinVarClient(),
         gnomad_client=GnomADClient(),
         vep_client=EnsemblVEPClient(),

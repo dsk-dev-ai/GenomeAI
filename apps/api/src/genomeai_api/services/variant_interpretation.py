@@ -160,17 +160,23 @@ class VariantInterpretationEngine:
             parsed = self._basic_interpretation(record)
 
         variant_desc = f"{record.gene_symbol} {record.hgvs_c or ''}"
+        raw_criteria = parsed.get("acmg_criteria", [])
+        acmg: list[str] = (
+            list(raw_criteria)
+            if isinstance(raw_criteria, list)
+            else []
+        )
         return VariantInterpretation(
             variant_description=variant_desc.strip(),
             gene_symbol=record.gene_symbol,
             clinvar=record,
             gnomad=gnomad_variant,
             vep=vep_result,
-            pathogenicity=parsed.get("pathogenicity", record.clinical_significance),
-            acmg_criteria=parsed.get("acmg_criteria", []),
-            reasoning=parsed.get("reasoning", ""),
-            clinical_actionability=parsed.get("clinical_actionability", ""),
-            summary=parsed.get("summary", ""),
+            pathogenicity=str(parsed.get("pathogenicity", record.clinical_significance)),
+            acmg_criteria=acmg,
+            reasoning=str(parsed.get("reasoning", "")),
+            clinical_actionability=str(parsed.get("clinical_actionability", "")),
+            summary=str(parsed.get("summary", "")),
             ai_raw_response=json.dumps(parsed),
             data_sources=sources,
         )
@@ -220,25 +226,45 @@ class VariantInterpretationEngine:
         ])
         return "\n".join(parts)
 
-    def _parse_ai_response(self, response_text: str) -> dict[str, object]:
+    def _parse_ai_response(self, response_text: str) -> dict[str, str | list[str]]:
         try:
             data = json.loads(response_text)
             if isinstance(data, dict):
-                return data
+                raw_criteria = data.get("acmg_criteria", [])
+                acmg: list[str] = (
+                    [str(c) for c in raw_criteria if isinstance(c, str)]
+                    if isinstance(raw_criteria, list)
+                    else []
+                )
+                raw_path = data.get("pathogenicity", "")
+                raw_reason = data.get("reasoning", "")
+                raw_action = data.get("clinical_actionability", "")
+                raw_summary = data.get("summary", "")
+                return {
+                    "pathogenicity": str(raw_path) if isinstance(raw_path, str) else "",
+                    "acmg_criteria": acmg,
+                    "reasoning": str(raw_reason) if isinstance(raw_reason, str) else "",
+                    "clinical_actionability": (
+                        str(raw_action) if isinstance(raw_action, str) else ""
+                    ),
+                    "summary": str(raw_summary) if isinstance(raw_summary, str) else "",
+                }
         except json.JSONDecodeError:
             pass
         return {"summary": response_text}
 
     def _basic_interpretation(
         self, record: ClinVarRecord,
-    ) -> dict[str, object]:
+    ) -> dict[str, str | list[str]]:
         sig = record.clinical_significance
         summary = record.summary or (
             f"{record.gene_symbol} variant classified as {sig}"
         )
         return {
             "pathogenicity": sig,
+            "acmg_criteria": [],
             "reasoning": f"ClinVar classified as {sig}",
+            "clinical_actionability": "",
             "summary": summary,
         }
 

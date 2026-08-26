@@ -74,25 +74,55 @@ class GnomADClient:
             VARIANT_QUERY,
             {"variantId": variant_id, "dataset": dataset},
         )
-        variant = data.get("data", {}).get("variant")
-        if not variant:
+
+        data_obj = data.get("data")
+        if not isinstance(data_obj, dict):
             return None
 
-        exome = variant.get("exome") or {}
-        genome = variant.get("genome") or {}
+        variant = data_obj.get("variant")
+        if not isinstance(variant, dict):
+            return None
+
+        exome = variant.get("exome")
+        exome_dict: dict[str, object] = (
+            exome if isinstance(exome, dict) else {}
+        )
+        genome = variant.get("genome")
+        genome_dict: dict[str, object] = (
+            genome if isinstance(genome, dict) else {}
+        )
+
+        def _int(d: dict[str, object], k: str) -> int:
+            v = d.get(k, 0)
+            return int(v) if isinstance(v, (int, float)) else 0
+
+        def _float(d: dict[str, object], k: str) -> float:
+            v = d.get(k, 0.0)
+            return float(v) if isinstance(v, (int, float)) else 0.0
+
+        raw_vid = variant.get("variant_id", "")
+        vid = str(raw_vid) if isinstance(raw_vid, str) else variant_id
+        raw_chrom = variant.get("chrom", "")
+        chrom = str(raw_chrom) if isinstance(raw_chrom, str) else ""
+        raw_pos = variant.get("pos", 0)
+        pos = int(raw_pos) if isinstance(raw_pos, (int, float)) else 0
+        raw_ref = variant.get("ref", "")
+        ref = str(raw_ref) if isinstance(raw_ref, str) else ""
+        raw_alt = variant.get("alt", "")
+        alt = str(raw_alt) if isinstance(raw_alt, str) else ""
 
         return GnomADVariant(
-            variant_id=variant.get("variant_id", variant_id),
-            chromosome=str(variant.get("chrom", "")),
-            start=variant.get("pos"),
-            ref=variant.get("ref", ""),
-            alt=variant.get("alt", ""),
-            exome_ac=exome.get("ac", 0),
-            exome_an=exome.get("an", 0),
-            exome_af=exome.get("af", 0.0),
-            genome_ac=genome.get("ac", 0),
-            genome_an=genome.get("an", 0),
-            genome_af=genome.get("af", 0.0),
+            variant_id=vid or variant_id,
+            chromosome=chrom,
+            start=pos,
+            ref=ref,
+            alt=alt,
+            exome_ac=_int(exome_dict, "ac"),
+            exome_an=_int(exome_dict, "an"),
+            exome_af=_float(exome_dict, "af"),
+            genome_ac=_int(genome_dict, "ac"),
+            genome_an=_int(genome_dict, "an"),
+            genome_af=_float(genome_dict, "af"),
         )
 
     async def health_check(self) -> bool:
