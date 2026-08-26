@@ -122,6 +122,56 @@ class IntegrationSettings(BaseSettings):
     enable_integration_routes: bool = True
 
 
+class RateLimitSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="GENOMEAI_RATELIMIT_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        frozen=True,
+        extra="ignore",
+    )
+
+    enabled: bool = True
+
+    global_requests_per_minute: int = Field(default=60, ge=0)
+    global_requests_per_hour: int = Field(default=1000, ge=0)
+    global_requests_per_day: int = Field(default=10000, ge=0)
+
+    per_endpoint_requests_per_minute: int = Field(default=30, ge=0)
+    per_endpoint_requests_per_hour: int = Field(default=500, ge=0)
+
+    burst_size: int = Field(default=10, ge=0)
+    burst_window_seconds: int = Field(default=1, ge=1)
+
+    ai_tokens_per_minute: int = Field(default=100_000, ge=0)
+    ai_tokens_per_hour: int = Field(default=1_000_000, ge=0)
+    ai_tokens_per_day: int = Field(default=5_000_000, ge=0)
+
+    ai_requests_per_minute: int = Field(default=20, ge=0)
+    ai_requests_per_hour: int = Field(default=500, ge=0)
+    ai_requests_per_day: int = Field(default=3000, ge=0)
+
+    ollama_enabled: bool = True
+    ollama_requests_per_minute: int = Field(default=999_999, ge=0)
+    ollama_requests_per_day: int = Field(default=999_999, ge=0)
+
+    gemini_enabled: bool = True
+    gemini_requests_per_minute: int = Field(default=10, ge=0)
+    gemini_requests_per_day: int = Field(default=250, ge=0)
+
+    openrouter_enabled: bool = True
+    openrouter_requests_per_minute: int = Field(default=20, ge=0)
+    openrouter_requests_per_day: int = Field(default=50, ge=0)
+
+    groq_enabled: bool = True
+    groq_requests_per_minute: int = Field(default=30, ge=0)
+    groq_requests_per_day: int = Field(default=1000, ge=0)
+
+    mistral_enabled: bool = True
+    mistral_requests_per_minute: int = Field(default=20, ge=0)
+    mistral_requests_per_day: int = Field(default=33_000, ge=0)
+
+
 @dataclass(frozen=True)
 class Settings:
     app: AppSettings
@@ -129,6 +179,7 @@ class Settings:
     redis: RedisSettings
     logging: LoggingSettings
     integration: IntegrationSettings = field(default_factory=IntegrationSettings)
+    ratelimit: RateLimitSettings = field(default_factory=RateLimitSettings)
 
     @property
     def service_name(self) -> str:
@@ -155,4 +206,5 @@ def load_settings() -> Settings:
         redis=RedisSettings(),
         logging=LoggingSettings(),
         integration=IntegrationSettings(),
+        ratelimit=RateLimitSettings(),
     )

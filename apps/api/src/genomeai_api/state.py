@@ -15,3 +15,4 @@ class AppState:
     db_engine: AsyncEngine | None = field(default=None, compare=False)
     db_session_factory: async_sessionmaker[AsyncSession] | None = field(default=None, compare=False)
     redis: Redis | None = field(default=None, compare=False)
+    limit_controller: object | None = field(default=None, compare=False)

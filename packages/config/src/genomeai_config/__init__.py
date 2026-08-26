@@ -5,6 +5,7 @@ from genomeai_config.settings import (
     IntegrationSettings,
     LoggingSettings,
     LogLevel,
+    RateLimitSettings,
     RedisSettings,
     Settings,
     load_settings,
@@ -18,6 +19,7 @@ __all__ = [
     "load_settings",
     "LogLevel",
     "LoggingSettings",
+    "RateLimitSettings",
     "RedisSettings",
     "Settings",
 ]
