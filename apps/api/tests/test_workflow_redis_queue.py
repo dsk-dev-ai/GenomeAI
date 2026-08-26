@@ -49,6 +49,10 @@ def _client() -> AsyncMock:
     client.pipeline = MagicMock(return_value=pipeline)
     client.hsetnx.return_value = 1  # HSETNX wins by default
     client.lmove.return_value = None  # empty queue by default
+    client.zrangebyscore.return_value = []  # no delayed jobs due by default
+    client.zcard.return_value = 0
+    # Lua EVAL for promotion: default to no due jobs (returns nil).
+    client.eval = AsyncMock(return_value=None)
     return client
 
 
@@ -264,3 +268,95 @@ async def test_full_cycle_removes_exact_bytes_from_processing_list() -> None:
     lrem_args = client.pipeline.return_value.lrem.call_args.args
     removed_bytes = lrem_args[2]
     assert removed_bytes == pushed[f"{PREFIX}:queued"]
+
+
+# --- delayed enqueue (Phase 7.5) -----------------------------------------
+
+
+async def test_delayed_enqueue_goes_to_zset_with_ready_score() -> None:
+    moment = datetime(2026, 8, 25, 12, 0, tzinfo=UTC)
+    client = _client()
+    queue = RedisJobQueue(client, now=lambda: moment)
+
+    job = await queue.enqueue(uuid.uuid4(), delay=timedelta(seconds=30))
+
+    zadd_args = client.zadd.call_args
+    assert zadd_args.args[0] == f"{PREFIX}:scheduled"
+    member, score = next(iter(zadd_args.args[1].items()))
+    assert job_from_json(member) == job
+    assert score == (moment + timedelta(seconds=30)).timestamp()
+    client.rpush.assert_not_awaited()
+
+
+async def test_zero_delay_enqueues_immediately() -> None:
+    client = _client()
+
+    await RedisJobQueue(client).enqueue(uuid.uuid4(), delay=timedelta(0))
+
+    client.zadd.assert_not_awaited()
+    client.rpush.assert_awaited_once()
+
+
+async def test_claim_promotes_due_scheduled_job() -> None:
+    queued = _queued_job()
+    raw = job_to_json(queued)
+    client = _client()
+    # Lua script returns the promoted member on the first call, then nil.
+    client.eval = AsyncMock(side_effect=[b"ok", None])
+    client.lmove.return_value = raw
+    queue = RedisJobQueue(client)
+
+    claimed = await queue.claim("worker-1")
+
+    assert claimed is not None
+    assert claimed.job_id == queued.job_id
+    # eval is called with the Lua script and both keys.
+    client.eval.assert_awaited()
+    call_args = client.eval.call_args
+    assert call_args.args[0] == RedisJobQueue._PROMOTE_LUA
+
+
+async def test_claim_skips_member_lost_to_another_promoter() -> None:
+    client = _client()
+    # Lua script returns nil (member lost to ZREM gate or nothing due).
+    client.eval = AsyncMock(return_value=None)
+    client.lmove.return_value = None
+
+    result = await RedisJobQueue(client).claim("worker-1")
+
+    assert result is None
+
+
+async def test_delayed_counts_scheduled_jobs() -> None:
+    client = _client()
+    client.zcard.return_value = 4
+
+    assert await RedisJobQueue(client).delayed() == 4
+
+# --- reschedule (Phase 7.5) --------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_reschedule_atomically_releases_and_schedules_delayed_replacement() -> None:
+    client = _client()
+    # Reschedule issues 4 pipeline ops (LREM + HDEL + HSET active + ZADD);
+    # mock must return one result per operation.
+    client.pipeline.return_value.execute = AsyncMock(return_value=[1, 1, 1, 1])
+    queue = RedisJobQueue(client)
+    run_id = uuid.uuid4()
+    job = await queue.enqueue(run_id)
+    raw = job_to_json(job)
+    client.lmove.return_value = raw  # claim retrieves the enqueued bytes
+
+    claimed = await queue.claim("worker-1")
+    assert claimed is not None
+
+    replacement = await queue.reschedule(job=claimed, delay=timedelta(seconds=30))
+
+    assert replacement.job_id != claimed.job_id
+    assert replacement.workflow_run_id == run_id
+    # Pipeline wrote a ZADD for the delayed replacement (functional
+    # correctness of the scheduled heap is covered by InMemory tests).
+    pipeline = client.pipeline.return_value
+    pipeline.zadd.assert_called()
+    pipeline.execute.assert_awaited_once()

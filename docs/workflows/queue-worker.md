@@ -9,25 +9,28 @@ a WORKER, which drives the existing `DAGExecutionEngine`. Scheduling,
 queueing, and execution remain three separate responsibilities.
 
 > **Scope guard.** This phase introduces a single-process worker with an
-> in-app queue abstraction and a Redis backend. There is intentionally NO
-> retry policy, exponential backoff, dead-letter queue, priority
-> scheduling, parallel DAG execution, workflow caching, autoscaling,
-> Kubernetes/HPC deployment, or distributed coordination. Those belong to
-> later milestones.
+> in-app queue abstraction and a Redis backend. Phase 7.5 adds retry
+> and failure handling on top (see [retry-failure.md](retry-failure.md)).
+> Still absent: priority scheduling, parallel DAG execution, workflow
+> caching, autoscaling, Kubernetes/HPC deployment, and distributed
+> coordination.
 
 ## Architecture
 
 ```
 SchedulerService (7.3)                POST /workflows/runs/{id}/queue
-  evaluate_due()
-    → creates pending WorkflowRun     WorkflowService.queue_run(run_id)
+  evaluate_due()                       POST /workflows/runs/{id}/retry
+    → creates pending WorkflowRun     WorkflowService.queue_run / retry_run
     → queue.enqueue(run.id)             (idempotent, never executes)
          ↓
       JobQueue  ← workflows/queueing.py (protocol + in-memory reference)
                   workflows/redis_queue.py (Redis backend, isolated)
+      + reschedule(job, delay)  (Phase 7.5: atomic release + requeue)
+      + delayed()               (Phase 7.5: scheduled-jobs count)
          ↓
       WorkflowRunWorker   services/worker.py
-        claim → load run → verify PENDING → engine.execute_run()
+        claim → verify state → [re-open if retry due] → engine.execute_run()
+        failure → classify → RetryPolicy.decide → reschedule or final-fail
          ↓
       DAGExecutionEngine (unchanged 7.2)  → StepRuns advance as before
 ```
@@ -37,9 +40,10 @@ Responsibility boundaries:
 | Component | Owns | Never does |
 | --- | --- | --- |
 | `SchedulerService` | due detection, run creation, enqueue | executing steps |
-| `WorkflowService.queue_run` | queued-run lifecycle at the API boundary | planning, executing |
-| `JobQueue` implementations | durable job transport, claim exclusivity | interpreting runs |
-| `WorkflowRunWorker` | decide WHETHER a claimed run may execute | DAG planning, step states |
+| `WorkflowService.queue_run / retry_run` | queued-run lifecycle at the API boundary | planning, executing |
+| `JobQueue` implementations | durable job transport, claim exclusivity, atomic reschedule | interpreting runs |
+| `WorkflowRunWorker` | decide WHETHER a claimed run may execute (policy-injected), failure classification + requeue | DAG planning, retry policy decisions |
+| `RetryPolicy` (Phase 7.5) | budget, retryable classes, backoff delay | Worker logic, queue operations |
 | `DAGExecutionEngine` | driving a pending run to a terminal state | queueing, scheduling |
 
 ## Queue technology

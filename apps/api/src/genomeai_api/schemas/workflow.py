@@ -90,6 +90,17 @@ class StepRunResponse(BaseModel):
     error_message: str | None
 
 
+class FailureEntry(BaseModel):
+    """One preserved failure attempt inside `failure_history`."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    attempt: int
+    classification: str = Field(alias="class")
+    reason: str
+    failed_at: datetime
+
+
 class WorkflowRunResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -103,6 +114,11 @@ class WorkflowRunResponse(BaseModel):
     schedule_id: uuid.UUID | None = None
     scheduled_for: datetime | None = None
     step_runs: list[StepRunResponse]
+    # Phase 7.5 retry/failure metadata.
+    attempt_count: int = 0
+    failure_class: str | None = None
+    next_retry_at: datetime | None = None
+    failure_history: list[FailureEntry] | None = None
 
 
 class JobResponse(BaseModel):

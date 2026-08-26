@@ -4,8 +4,9 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+import sqlalchemy as sa
 from sqlalchemy import DateTime, ForeignKey, Index, String, Text, func, text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from genomeai_api.database.base import Base
@@ -61,6 +62,19 @@ class WorkflowRun(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Phase 7.5 retry tracking. attempt_count increments every time the
+    # engine starts this run (one execution attempt); failure metadata is
+    # appended by the repository's record_run_failure, never overwritten.
+    attempt_count: Mapped[int] = mapped_column(
+        sa.Integer, nullable=False, default=0, server_default=text("0")
+    )
+    failure_class: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    next_retry_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    failure_history: Mapped[list[dict[str, object]] | None] = mapped_column(
+        JSONB(), nullable=True
+    )
 
     workflow: Mapped[Workflow] = relationship("Workflow", back_populates="runs")
     schedule: Mapped[WorkflowSchedule | None] = relationship(

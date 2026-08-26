@@ -163,3 +163,37 @@ async def queue_workflow_run(
         ),
         run=result.run,
     )
+
+
+@router.post(
+    "/runs/{run_id}/retry",
+    response_model=WorkflowRunQueueResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def retry_workflow_run(
+    run_id: uuid.UUID,
+    service: WorkflowService = Depends(_get_service),
+) -> WorkflowRunQueueResponse:
+    """MANUAL retry of one FAILED run (Phase 7.5).
+
+    Reuses the queue/worker architecture: the run is reopened to PENDING
+    and re-enqueued immediately — the automatic retry policy is NOT
+    consulted, so this works even after the retry budget is exhausted.
+    Only FAILED runs qualify; anything else is a 409.
+    """
+    try:
+        result: QueueRunResult = await service.retry_run(run_id)
+    except QueueUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+        ) from exc
+    # WorkflowRunNotFoundError → 404 and WorkflowStateTransitionError →
+    # 409 via the global handlers registered in main.py.
+    return WorkflowRunQueueResponse(
+        job=JobResponse(
+            job_id=result.job_id,
+            workflow_run_id=run_id,
+            queued_at=result.queued_at,
+        ),
+        run=result.run,
+    )

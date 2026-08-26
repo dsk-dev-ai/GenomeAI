@@ -117,12 +117,42 @@ class JobDecodeError(WorkflowError):
         )
 
 
+class TransientExecutionError(WorkflowError):
+    """A step execution failed in a way that is expected to be temporary.
+
+    Executors raise this to opt a failure into automatic retry (the
+    classifier also maps timeouts/connection errors here). The retry
+    POLICY still decides whether any retries remain.
+    """
+
+    error_code = "workflow.transient-execution-error"
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(message="Transient workflow execution failure", detail=reason)
+
+
+class PermanentExecutionError(WorkflowError):
+    """A step execution failed in a way that will not change on retry.
+
+    Executors raise this for deterministic failures (bad input data,
+    unsupported step configuration). The classifier maps it to the
+    permanent class, which default policies never retry.
+    """
+
+    error_code = "workflow.permanent-execution-error"
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(message="Permanent workflow execution failure", detail=reason)
+
+
 __all__ = [
     "JobDecodeError",
+    "PermanentExecutionError",
     "QueueUnavailableError",
     "ScheduleNotFoundError",
     "ScheduleStateTransitionError",
     "ScheduleValidationError",
+    "TransientExecutionError",
     "WorkflowError",
     "WorkflowNotFoundError",
     "WorkflowRunNotFoundError",

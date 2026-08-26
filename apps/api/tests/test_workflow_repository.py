@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -15,7 +15,7 @@ from genomeai_api.schemas.workflow import (
 from genomeai_api.workflows.models.step_run import StepRun
 from genomeai_api.workflows.models.workflow import Workflow
 from genomeai_api.workflows.models.workflow_run import WorkflowRun
-from genomeai_api.workflows.types import WorkflowStatus
+from genomeai_api.workflows.types import RunState, WorkflowStatus
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -30,6 +30,13 @@ def repository(mock_session: AsyncMock) -> WorkflowRepository:
 
 
 def _single_result(value: object) -> MagicMock:
+    result = MagicMock()
+    result.scalars.return_value.first.return_value = value
+    return result
+
+
+def _cursor_result(value: object) -> MagicMock:
+    """Mock for session.execute returning CursorResult (used by UPDATE...RETURNING)."""
     result = MagicMock()
     result.scalars.return_value.first.return_value = value
     return result
@@ -246,3 +253,121 @@ async def test_get_run_returns_none_when_missing(
     mock_session.execute.return_value = _single_result(None)
 
     assert await repository.get_run(uuid.uuid4()) is None
+
+
+# --- Phase 7.5 retry / failure methods ------------------------------------------
+
+
+def _failed_run(attempt_count: int = 1) -> WorkflowRun:
+    run = WorkflowRun(workflow_id=uuid.uuid4())
+    run.state = "failed"
+    run.attempt_count = attempt_count
+    return run
+
+
+@pytest.mark.asyncio
+async def test_record_run_failure_appends_history_and_sets_class(
+    repository: WorkflowRepository,
+    mock_session: AsyncMock,
+) -> None:
+    run = _failed_run()
+    mock_session.get.return_value = run
+    failed_at = datetime.now(UTC)
+
+    result = await repository.record_run_failure(
+        run.id,
+        classification="transient",
+        reason="flaky",
+        failed_at=failed_at,
+    )
+
+    assert result is run
+    assert run.failure_class == "transient"
+    assert run.error_message == "flaky"
+    assert run.failure_history is not None
+    assert len(run.failure_history) == 1
+    assert run.failure_history[0]["class"] == "transient"
+    mock_session.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_record_run_failure_returns_none_for_missing_run(
+    repository: WorkflowRepository,
+    mock_session: AsyncMock,
+) -> None:
+    mock_session.get.return_value = None
+    result = await repository.record_run_failure(
+        uuid.uuid4(), classification="permanent", reason="gone", failed_at=datetime.now(UTC)
+    )
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_schedule_run_retry_sets_next_retry_at(
+    repository: WorkflowRepository,
+    mock_session: AsyncMock,
+) -> None:
+    run = _failed_run()
+    mock_session.get.return_value = run
+    target = datetime.now(UTC) + timedelta(seconds=30)
+
+    await repository.schedule_run_retry(run.id, next_retry_at=target)
+
+    assert run.next_retry_at == target
+    mock_session.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_reopen_run_for_retry_moves_to_pending_and_clears_retry_metadata(
+    repository: WorkflowRepository,
+    mock_session: AsyncMock,
+) -> None:
+    run = _failed_run()
+    run.next_retry_at = datetime.now(UTC)
+    run.started_at = datetime.now(UTC)
+    # UPDATE...RETURNING returns the UPDATED row from the DB.
+    updated_run = _failed_run()
+    updated_run.id = run.id
+    updated_run.state = "pending"
+    updated_run.next_retry_at = None
+    updated_run.started_at = None
+    mock_session.execute.return_value = _cursor_result(updated_run)
+
+    result = await repository.reopen_run_for_retry(run.id)
+
+    assert result is updated_run
+    assert result.state == "pending"
+    assert result.next_retry_at is None
+    assert result.started_at is None
+    mock_session.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("state", ["pending", "running", "succeeded", "cancelled"])
+async def test_reopen_run_for_retry_refuses_non_failed_states(
+    state: str,
+    repository: WorkflowRepository,
+    mock_session: AsyncMock,
+) -> None:
+    mock_session.execute.return_value = _cursor_result(None)
+
+    assert await repository.reopen_run_for_retry(uuid.uuid4()) is None
+    mock_session.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_transition_run_to_running_increments_attempt_count(
+    repository: WorkflowRepository,
+    mock_session: AsyncMock,
+) -> None:
+    run = _failed_run(attempt_count=1)
+    mock_session.get.return_value = run
+
+    await repository.transition_run(run.id, RunState.RUNNING)
+
+    assert run.attempt_count == 2
+    assert run.next_retry_at is None
+    mock_session.commit.assert_awaited_once()
+
+
+# Overwrite the last transition test to use proper RunState enum

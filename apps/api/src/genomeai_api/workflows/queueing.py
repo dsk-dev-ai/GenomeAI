@@ -20,11 +20,12 @@ the source of truth for execution state.
 
 from __future__ import annotations
 
+import heapq
 import json
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Protocol, runtime_checkable
 
 from genomeai_api.workflows.errors import JobDecodeError
@@ -137,12 +138,23 @@ def job_from_json(raw: str | bytes) -> WorkflowJob:
 class JobQueue(Protocol):
     """Boundary between the application and any queue backend."""
 
-    async def enqueue(self, workflow_run_id: uuid.UUID) -> WorkflowJob:
-        """Queues one workflow run; idempotent while it is already queued."""
+    async def enqueue(
+        self,
+        workflow_run_id: uuid.UUID,
+        *,
+        delay: timedelta | None = None,
+    ) -> WorkflowJob:
+        """Queues one workflow run; idempotent while it is already queued.
+
+        ``delay`` schedules the job to become claimable only after that
+        duration (Phase 7.5 automatic retries). Backends MUST still honour
+        the per-run idempotency contract across delayed and immediate
+        enqueues alike.
+        """
         ...
 
     async def claim(self, worker_id: str) -> WorkflowJob | None:
-        """Atomically claims the next queued job for one worker."""
+        """Atomically claims the next DUE queued job for one worker."""
         ...
 
     async def complete(self, job: WorkflowJob) -> None:
@@ -153,8 +165,29 @@ class JobQueue(Protocol):
         """Records why the job could not be processed and releases it."""
         ...
 
+    async def reschedule(
+        self,
+        job: WorkflowJob,
+        *,
+        delay: timedelta,
+    ) -> WorkflowJob:
+        """Atomically releases `job` and schedules its replacement.
+
+        Phase 7.5 automatic retries need release-and-requeue to be ONE
+        indivisible step: doing `fail()` then `enqueue()` separately opens
+        a crash window where the retry is silently lost (or duplicated).
+        Backends MUST keep the per-run uniqueness guard intact across the
+        hand-off so no other enqueuer can slip in. Returns the replacement
+        job that becomes claimable after ``delay``.
+        """
+        ...
+
     async def depth(self) -> int:
         """Number of jobs currently waiting to be claimed."""
+        ...
+
+    async def delayed(self) -> int:
+        """Number of jobs scheduled but not yet due (Phase 7.5)."""
         ...
 
     async def close(self) -> None:
@@ -166,17 +199,27 @@ class InMemoryJobQueue:
     """Reference `JobQueue` used by tests and standalone tooling.
 
     Implements exactly the same idempotency contract as the Redis
-    backend; not intended for multi-process deployments.
+    backend; not intended for multi-process deployments. Delayed jobs sit
+    on an internal heap ordered by ready-time; they become claimable in
+    enqueue order once the injected clock passes their ready time, so
+    tests stay deterministic without real sleeping.
     """
 
     def __init__(self, *, now: Callable[[], datetime] | None = None) -> None:
         self._queued: list[WorkflowJob] = []
+        self._scheduled: list[tuple[datetime, int, WorkflowJob]] = []
+        self._sequence = 0
         self._by_run: dict[uuid.UUID, WorkflowJob] = {}
         self._claims: dict[uuid.UUID, WorkflowJob] = {}
         self._now: Callable[[], datetime] = now or (lambda: datetime.now(UTC))
         self._closed = False
 
-    async def enqueue(self, workflow_run_id: uuid.UUID) -> WorkflowJob:
+    async def enqueue(
+        self,
+        workflow_run_id: uuid.UUID,
+        *,
+        delay: timedelta | None = None,
+    ) -> WorkflowJob:
         existing = self._by_run.get(workflow_run_id)
         if existing is not None:
             return existing
@@ -185,12 +228,19 @@ class InMemoryJobQueue:
             workflow_run_id=workflow_run_id,
             queued_at=self._now(),
         )
-        self._queued.append(job)
+        if delay is not None and delay > timedelta(0):
+            heapq.heappush(
+                self._scheduled, (job.queued_at + delay, self._sequence, job)
+            )
+            self._sequence += 1
+        else:
+            self._queued.append(job)
         self._by_run[workflow_run_id] = job
         return job
 
     async def claim(self, worker_id: str) -> WorkflowJob | None:
         del worker_id  # claims are exclusive regardless of caller identity
+        self._promote_due()
         if not self._queued:
             return None
         job = self._queued.pop(0)
@@ -206,6 +256,13 @@ class InMemoryJobQueue:
         self._by_run[job.workflow_run_id] = claimed
         self._claims[job.job_id] = claimed
         return claimed
+
+    def _promote_due(self) -> None:
+        """Moves due scheduled jobs into the FIFO queue in ready order."""
+        now = self._now()
+        while self._scheduled and self._scheduled[0][0] <= now:
+            _ready_at, _seq, job = heapq.heappop(self._scheduled)
+            self._queued.append(job)
 
     async def complete(self, job: WorkflowJob) -> None:
         finished = WorkflowJob(
@@ -232,8 +289,38 @@ class InMemoryJobQueue:
         )
         self._release(failed)
 
+    async def reschedule(
+        self,
+        job: WorkflowJob,
+        *,
+        delay: timedelta,
+    ) -> WorkflowJob:
+        """Releases `job` and queues its delayed replacement atomically."""
+        replacement = WorkflowJob(
+            job_id=uuid.uuid4(),
+            workflow_run_id=job.workflow_run_id,
+            queued_at=self._now(),
+        )
+        self._release(job)  # frees the per-run guard slot...
+        ready = replacement.queued_at + (
+            delay if delay > timedelta(0) else timedelta(0)
+        )
+        if ready > replacement.queued_at:
+            heapq.heappush(
+                self._scheduled,
+                (ready, self._sequence, replacement),
+            )
+            self._sequence += 1
+        else:
+            self._queued.append(replacement)
+        self._by_run[job.workflow_run_id] = replacement  # ...and re-takes it
+        return replacement
+
     async def depth(self) -> int:
         return len(self._queued)
+
+    async def delayed(self) -> int:
+        return len(self._scheduled)
 
     async def close(self) -> None:
         self._closed = True

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from genomeai_api.workflows.errors import JobDecodeError
@@ -189,3 +189,110 @@ async def test_close_is_idempotent() -> None:
 
     await queue.close()
     await queue.close()
+
+
+# --- delayed enqueue (Phase 7.5) -----------------------------------------
+
+
+class _ManualClock:
+    def __init__(self) -> None:
+        self.moment = datetime(2026, 8, 25, 12, 0, tzinfo=UTC)
+
+    def __call__(self) -> datetime:
+        return self.moment
+
+
+async def test_delayed_job_is_not_claimable_before_ready() -> None:
+    clock = _ManualClock()
+    queue = InMemoryJobQueue(now=clock)
+    await queue.enqueue(uuid.uuid4(), delay=timedelta(seconds=10))
+    assert await queue.depth() == 0
+
+    clock.moment = datetime(2026, 8, 25, 12, 0, 9, tzinfo=UTC)
+    assert await queue.claim("w") is None
+    assert await queue.delayed() == 1
+    assert await queue.depth() == 0
+
+
+async def test_delayed_job_becomes_claimable_at_ready_time() -> None:
+    clock = _ManualClock()
+    queue = InMemoryJobQueue(now=clock)
+    job = await queue.enqueue(uuid.uuid4(), delay=timedelta(seconds=10))
+
+    clock.moment = datetime(2026, 8, 25, 12, 0, 10, tzinfo=UTC)
+    claimed = await queue.claim("w")
+
+    assert claimed is not None and claimed.job_id == job.job_id
+    assert await queue.delayed() == 0
+
+
+async def test_due_delayed_jobs_are_promoted_in_enqueue_order() -> None:
+    clock = _ManualClock()
+    queue = InMemoryJobQueue(now=clock)
+    first = await queue.enqueue(uuid.uuid4(), delay=timedelta(seconds=5))
+    second = await queue.enqueue(uuid.uuid4(), delay=timedelta(seconds=9))
+
+    clock.moment = datetime(2026, 8, 25, 12, 0, 30, tzinfo=UTC)
+    got_first = await queue.claim("w")
+    got_second = await queue.claim("w")
+
+    assert [got_first.job_id, got_second.job_id] == [first.job_id, second.job_id]
+
+
+async def test_zero_or_negative_delay_enqueues_immediately() -> None:
+    queue = InMemoryJobQueue()
+
+    await queue.enqueue(uuid.uuid4(), delay=timedelta(0))
+    await queue.enqueue(uuid.uuid4(), delay=timedelta(seconds=-5))
+
+    assert await queue.delayed() == 0
+    assert await queue.depth() == 2
+
+
+async def test_duplicate_enqueue_is_idempotent_across_delayed_and_immediate() -> None:
+    clock = _ManualClock()
+    queue = InMemoryJobQueue(now=clock)
+    run_id = uuid.uuid4()
+    delayed = await queue.enqueue(run_id, delay=timedelta(seconds=5))
+
+    again = await queue.enqueue(run_id)
+
+    assert again.job_id == delayed.job_id
+    assert await queue.depth() == 0
+    assert await queue.delayed() == 1
+
+# --- reschedule (Phase 7.5) --------------------------------------------------
+
+
+async def test_reschedule_releases_original_and_creates_delayed_replacement() -> None:
+    queue = InMemoryJobQueue(now=lambda: datetime.now(UTC))
+    run_id = uuid.uuid4()
+    await queue.enqueue(run_id)
+    claimed = await queue.claim("worker-1")
+    assert claimed is not None
+
+    replacement = await queue.reschedule(claimed, delay=timedelta(seconds=60))
+
+    assert replacement.job_id != claimed.job_id
+    assert replacement.workflow_run_id == run_id
+    assert await queue.delayed() == 1
+    assert await queue.depth() == 0
+    # Original job is gone — can't be claimed again.
+    assert await queue.claim("worker-1") is None
+
+
+async def test_reschedule_with_zero_delay_puts_replacement_immediately() -> None:
+    queue = InMemoryJobQueue(now=lambda: datetime.now(UTC))
+    run_id = uuid.uuid4()
+    await queue.enqueue(run_id)
+    claimed = await queue.claim("worker-1")
+    assert claimed is not None
+
+    replacement = await queue.reschedule(claimed, delay=timedelta(0))
+
+    assert await queue.depth() == 1
+    assert await queue.delayed() == 0
+    # Replacement is claimable right away.
+    second_claim = await queue.claim("worker-2")
+    assert second_claim is not None
+    assert second_claim.job_id == replacement.job_id
