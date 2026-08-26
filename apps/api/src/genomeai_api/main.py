@@ -51,6 +51,7 @@ from genomeai_api.routes.search import router as search_router
 from genomeai_api.routes.studies import router as studies_router
 from genomeai_api.routes.transcripts import router as transcripts_router
 from genomeai_api.routes.variants import router as variants_router
+from genomeai_api.routes.variants_enhanced import router as variants_enhanced_router
 from genomeai_api.routes.workflows import router as workflows_router
 from genomeai_api.state import AppState
 from genomeai_api.workflows.errors import (
@@ -154,6 +155,7 @@ app.include_router(samples_router)
 app.include_router(genes_router)
 app.include_router(genes_enhanced_router)
 app.include_router(variants_router)
+app.include_router(variants_enhanced_router)
 app.include_router(transcripts_router)
 app.include_router(proteins_router)
 # Schedules router first: its static /workflows/schedules* paths must win
