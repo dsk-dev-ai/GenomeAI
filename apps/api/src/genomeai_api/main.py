@@ -39,6 +39,7 @@ from genomeai_api.routes.admin_limits import router as admin_limits_router
 from genomeai_api.routes.datasets import router as datasets_router
 from genomeai_api.routes.experiments import router as experiments_router
 from genomeai_api.routes.genes import router as genes_router
+from genomeai_api.routes.genes_enhanced import router as genes_enhanced_router
 from genomeai_api.routes.genomes import router as genomes_router
 from genomeai_api.routes.health import router as health_router
 from genomeai_api.routes.integrations import router as integrations_router
@@ -151,6 +152,7 @@ app.include_router(studies_router)
 app.include_router(genomes_router)
 app.include_router(samples_router)
 app.include_router(genes_router)
+app.include_router(genes_enhanced_router)
 app.include_router(variants_router)
 app.include_router(transcripts_router)
 app.include_router(proteins_router)
