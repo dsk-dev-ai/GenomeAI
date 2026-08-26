@@ -10,6 +10,10 @@ from genomeai_logging import configure_logging, get_logger
 
 from genomeai_api.cache import create_redis, shutdown_redis, verify_redis
 from genomeai_api.database import create_engine, create_session_factory, dispose_engine
+from genomeai_api.ratelimit import LimitController, RateLimitMiddleware
+from genomeai_api.ratelimit.config import RateLimitConfig
+from genomeai_api.ratelimit.limiter import RateLimiter
+from genomeai_api.routes.admin_limits import router as admin_limits_router
 from genomeai_api.exceptions import (
     DuplicateDatasetError,
     DuplicateDataSourceError,
@@ -108,7 +112,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         await init_cache(state)
     except Exception:
         state.logger.warning("redis not available")
+
+    rate_config = RateLimitConfig.from_env()
+    rate_limiter = RateLimiter(state.redis, key_prefix="genomeai:rl")
+    controller = LimitController(rate_limiter, rate_config)
+    state.limit_controller = controller
+    state.logger.info(
+        "rate limiter initialized (enabled=%s, rpm=%d, rph=%d)",
+        rate_config.enabled,
+        rate_config.global_requests_per_minute,
+        rate_config.global_requests_per_hour,
+    )
+
     yield
+
     await shutdown_cache(state)
     await shutdown_db(state)
     state.logger.info("stopping api")
@@ -119,6 +136,11 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+_rate_config = RateLimitConfig.from_env()
+if _rate_config.enabled:
+    _rate_limiter = RateLimiter(None, key_prefix="genomeai:rl")
+    app.add_middleware(RateLimitMiddleware, limiter=_rate_limiter, config=_rate_config)
 
 app.include_router(datasets_router)
 app.include_router(experiments_router)
@@ -138,6 +160,7 @@ app.include_router(schedules_router)
 app.include_router(workflows_router)
 if load_settings().integration.enable_integration_routes:
     app.include_router(integrations_router)
+app.include_router(admin_limits_router)
 
 
 @app.exception_handler(DuplicateGenomeAccessionError)
