@@ -1,6 +1,6 @@
 """Gene analysis API endpoints — search and analyze genes with real data.
 
-Uses NCBI E-utilities for real gene data + Ollama for AI analysis.
+Uses NCBI E-utilities for real gene data + Gemini for AI analysis.
 """
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException
 
-from genomeai_api.ai.ollama import OllamaProvider
+from genomeai_api.ai.gemini import GeminiProvider
 from genomeai_api.integration.connectors.ncbi.client import NCBIClient
 from genomeai_api.schemas.gene_analysis import (
     GeneAnalyzeRequest,
@@ -28,7 +28,7 @@ router = APIRouter(prefix="/api/v1/genes", tags=["gene-analysis"])
 def _get_engine() -> GeneAnalysisEngine:
     """Create gene analysis engine with default providers."""
     return GeneAnalysisEngine(
-        ai_provider=OllamaProvider(),
+        ai_provider=GeminiProvider(),
         ncbi_client=NCBIClient(),
     )
 
