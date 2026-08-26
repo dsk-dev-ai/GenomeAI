@@ -71,6 +71,9 @@ coverage.xml
 *.gvcf
 *.idx
 
+# ── Local Planning Docs ──────────────────────────────────
+FULL-ROADMAP-TO-COMPLETE.md
+
 # Large files
 *.npy
 *.npz
