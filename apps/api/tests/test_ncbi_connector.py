@@ -5,14 +5,13 @@ Rate limit: 3 req/s (enforced by client).
 """
 
 import pytest
-
+from genomeai_api.integration.connectors.base import DataSourceConfig
 from genomeai_api.integration.connectors.ncbi.client import NCBIClient
 from genomeai_api.integration.connectors.ncbi.gene import (
     NCBIGeneConnector,
     NCBIGeneFetchRequest,
     NCBIGeneSearchRequest,
 )
-from genomeai_api.integration.connectors.base import DataSourceConfig
 
 
 @pytest.fixture

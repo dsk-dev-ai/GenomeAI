@@ -5,9 +5,8 @@ If Ollama is not running, tests are skipped.
 """
 
 import pytest
-
-from genomeai_api.ai.ollama import OllamaProvider
 from genomeai_api.ai.base import AIRequest
+from genomeai_api.ai.ollama import OllamaProvider
 
 
 @pytest.fixture
