@@ -1,4 +1,4 @@
-# Workflow Foundation (7.1) · Execution (7.2) · Scheduler (7.3) · Queue & Worker (7.4)
+# Workflow Foundation (7.1) · Execution (7.2) · Scheduler (7.3) · Queue & Worker (7.4) · Retry & Failure (7.5)
 
 The Workflow Foundation establishes GenomeAI's workflow/DAG architecture:
 workflow definitions, ordered and connected steps, deterministic DAG
@@ -6,16 +6,19 @@ validation, execution-state models, persistence, and a minimal admin API.
 Phase 7.2 adds deterministic, sequential, **in-process** execution on top;
 Phase 7.3 adds application-level **scheduling** that decides WHEN runs
 start; Phase 7.4 adds a **queue and worker** so runs can execute in the
-background.
+background; Phase 7.5 adds a **retry and failure-handling** layer.
 
 > Direct execution remains synchronous: one API call drives one run step
 > by step to a terminal state. Scheduling is application-level: due-run
 > detection advances when `/workflows/schedules/evaluate` is called.
 > Phase 7.4 adds optional background execution: pending runs can be
 > enqueued (`POST /workflows/runs/{id}/queue` or via the scheduler) and a
-> worker process claims them and drives the same DAG engine. Still absent:
-> retries, parallel step execution, autoscaling, Kubernetes/HPC — those
-> belong to later milestones. See [queue-worker.md](queue-worker.md).
+> worker process claims them and drives the same DAG engine. Phase 7.5
+> adds automatic retry with configurable failure classification, backoff,
+> and attempt tracking — plus a manual retry endpoint. Still absent:
+> parallel step execution, autoscaling, Kubernetes/HPC — those
+> belong to later milestones. See [queue-worker.md](queue-worker.md)
+> and [retry-failure.md](retry-failure.md).
 
 ## Core concepts
 
@@ -96,10 +99,27 @@ See [scheduler.md](scheduler.md) for the full contract.
 
 See [queue-worker.md](queue-worker.md) for the full contract.
 
+## What exists in 7.5
+
+- `RetryPolicy` frozen dataclass with `max_attempts`, `retryable` set,
+  and pluggable `Backoff` — the Worker asks this, never decides on its own
+- Five-class deterministic failure classification (`transient`, `permanent`,
+  `cancellation`, `invalid_workflow`, `infrastructure`) via `classify_failure`
+- `FixedBackoff` and `ExponentialBackoff` (deterministic, capped, no jitter)
+- Attempt tracking columns on `workflow_runs`: `attempt_count`,
+  `failure_class`, `next_retry_at`, `failure_history` (append-only JSONB)
+- Atomic `JobQueue.reschedule(job, delay)` — crash-safe release + requeue
+  in one step; delayed jobs promoted via ZSET/h heapq
+- Worker pre-flight: FAILED+due → reopen + re-execute; premature delivery
+  → reschedule without executing
+- `POST /workflows/runs/{run_id}/retry` manual retry (202/404/409/503)
+- Final failure: run stays FAILED with full history; no physical dead-letter
+
+See [retry-failure.md](retry-failure.md) for the full contract.
+
 ## What does NOT exist yet
 
-- No retries/backoff, dead-letter queues, or crash-recovery scanning of
-  claimed jobs
+- No per-step retry (workflow-level only in this phase)
 - No parallel step execution, priority queues, visibility timeouts, or
   workflow caching
 - No multiple-worker orchestration, autoscaling, Kubernetes/HPC targets —

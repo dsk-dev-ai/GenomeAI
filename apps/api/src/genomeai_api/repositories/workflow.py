@@ -6,7 +6,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -162,6 +162,8 @@ class WorkflowRepository:
 
         The engine owns transition legality; this only stamps timestamps
         (started_at on RUNNING, finished_at on terminal states) and commits.
+        Starting an attempt (RUNNING) increments attempt_count and clears
+        any pending retry marker — Phase 7.5 attempt tracking.
         """
         run = await self._session.get(WorkflowRun, run_id)
         if run is None:
@@ -170,10 +172,92 @@ class WorkflowRepository:
         run.state = to_state.value
         if to_state == RunState.RUNNING:
             run.started_at = now
+            run.attempt_count += 1
+            run.next_retry_at = None
         if to_state in (RunState.SUCCEEDED, RunState.FAILED, RunState.CANCELLED):
             run.finished_at = now
         if error_message is not None or to_state == RunState.SUCCEEDED:
             run.error_message = error_message
+        await self._session.commit()
+        return run
+
+    async def record_run_failure(
+        self,
+        run_id: uuid.UUID,
+        *,
+        classification: str,
+        reason: str,
+        failed_at: datetime,
+    ) -> WorkflowRun | None:
+        """Persists ONE failed execution attempt without losing history.
+
+        Appends {attempt, class, reason, failed_at} to failure_history and
+        updates the current-failure columns (error_message / failure_class).
+        The run must already be FAILED (the engine transitioned it); this
+        only enriches the failure with classification metadata.
+        """
+        run = await self._session.get(WorkflowRun, run_id)
+        if run is None:
+            return None
+        entry: dict[str, str | int] = {
+            "attempt": run.attempt_count,
+            "class": classification,
+            "reason": reason,
+            "failed_at": failed_at.isoformat(),
+        }
+        history: list[dict[str, object]] = (
+            list(run.failure_history) if run.failure_history else []
+        )
+        history.append(dict(entry))
+        run.failure_history = history
+        run.error_message = reason
+        run.failure_class = classification
+        await self._session.commit()
+        return run
+
+    async def schedule_run_retry(
+        self,
+        run_id: uuid.UUID,
+        *,
+        next_retry_at: datetime,
+    ) -> WorkflowRun | None:
+        """Marks a FAILED run as awaiting an automatic retry."""
+        run = await self._session.get(WorkflowRun, run_id)
+        if run is None:
+            return None
+        run.next_retry_at = next_retry_at
+        await self._session.commit()
+        return run
+
+    async def reopen_run_for_retry(self, run_id: uuid.UUID) -> WorkflowRun | None:
+        """Atomically re-opens a FAILED run for another execution attempt.
+
+        Uses a conditional UPDATE (WHERE state = 'failed') so two
+        concurrent reopens can never both succeed — exactly one wins.
+        This is THE deliberate retry path (automatic when a delayed job
+        fires, manual via the retry endpoint). Returns None for missing
+        runs or runs in any other state, so cancelled / completed /
+        in-flight runs can never be re-opened by a stale or duplicate
+        message.
+        """
+        stmt = (
+            update(WorkflowRun)
+            .where(
+                WorkflowRun.id == run_id,
+                WorkflowRun.state == RunState.FAILED.value,
+            )
+            .values(
+                state=RunState.PENDING.value,
+                next_retry_at=None,
+                started_at=None,
+                finished_at=None,
+            )
+            .returning(WorkflowRun)
+        )
+        result = await self._session.execute(stmt)
+        run = result.scalars().first()
+        if run is None:
+            return None
         await self._session.commit()
         return run
 

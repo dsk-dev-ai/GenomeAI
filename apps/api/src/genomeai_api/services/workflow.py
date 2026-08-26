@@ -144,3 +144,35 @@ class WorkflowService:
             job_id=job.job_id,
             queued_at=job.queued_at,
         )
+
+    async def retry_run(self, run_id: uuid.UUID) -> QueueRunResult:
+        """MANUAL retry of a FAILED run (Phase 7.5).
+
+        Deliberately different from the automatic path:
+
+        - only FAILED runs qualify — cancelled/completed/pending/running
+          runs are refused with 409 semantics;
+        - the retry policy is NOT consulted: a human decided to try again,
+          even after the automatic budget is exhausted;
+        - it reuses the same queue and worker architecture (`reopen` +
+          immediate enqueue) — no worker logic lives in routes.
+        """
+        if self._queue is None:
+            raise QueueUnavailableError("no workflow queue is configured")
+
+        run = await self._repository.get_run(run_id)
+        if run is None:
+            raise WorkflowRunNotFoundError(run_id)
+        if RunState(run.state) is not RunState.FAILED:
+            raise WorkflowStateTransitionError(run.state, "pending")
+
+        reopened = await self._repository.reopen_run_for_retry(run_id)
+        if reopened is None:  # raced into another state; DB truth wins
+            raise WorkflowStateTransitionError(run.state, "pending")
+
+        job = await self._queue.enqueue(run_id)
+        return QueueRunResult(
+            run=WorkflowRunResponse.model_validate(reopened),
+            job_id=job.job_id,
+            queued_at=job.queued_at,
+        )

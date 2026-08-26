@@ -17,6 +17,7 @@ import asyncio
 import signal
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from datetime import timedelta
 
 from genomeai_api.cache import create_redis, shutdown_redis
 from genomeai_api.database import create_engine, create_session_factory, dispose_engine
@@ -25,6 +26,19 @@ from genomeai_api.services.worker import WorkflowRunWorker
 from genomeai_api.workflows.execution.engine import DAGExecutionEngine
 from genomeai_api.workflows.execution.executor import PassthroughStepExecutor
 from genomeai_api.workflows.redis_queue import DEFAULT_PREFIX, RedisJobQueue
+from genomeai_api.workflows.retry import ExponentialBackoff, RetryPolicy
+
+# Composition-root defaults for the standalone worker process: three
+# attempts total with 1s → 2s → capped exponential backoff. Override by
+# running workers in-process with an explicit RetryPolicy.
+DEFAULT_RETRY_POLICY = RetryPolicy(
+    max_attempts=3,
+    backoff=ExponentialBackoff(
+        initial=timedelta(seconds=1),
+        multiplier=2.0,
+        max_delay=timedelta(seconds=30),
+    ),
+)
 
 
 async def main() -> int:
@@ -54,6 +68,7 @@ async def main() -> int:
         worker_id="worker-1",
         logger=logger,
         engine_factory=lambda store: DAGExecutionEngine(store, PassthroughStepExecutor()),
+        retry_policy=DEFAULT_RETRY_POLICY,
     )
 
     stop = asyncio.Event()

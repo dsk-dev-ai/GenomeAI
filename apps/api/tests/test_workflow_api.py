@@ -476,3 +476,62 @@ def test_queue_without_backend_returns_503(
     response = client.post(f"/workflows/runs/{uuid.uuid4()}/queue")
 
     assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+
+
+# --- POST /runs/{run_id}/retry (Phase 7.5) ------------------------------------
+
+
+def test_retry_run_returns_202_with_job_identity(
+    client: TestClient,
+    mock_service: AsyncMock,
+) -> None:
+    run_id = uuid.uuid4()
+    run = _run_response()
+    run.state = "pending"  # reopen returns to pending
+    mock_service.retry_run.return_value = _queue_result(run)
+
+    response = client.post(f"/workflows/runs/{run_id}/retry")
+
+    assert response.status_code == status.HTTP_202_ACCEPTED
+    body = response.json()
+    assert body["job"]["workflow_run_id"] == str(run_id)
+    assert body["run"]["state"] == "pending"
+    mock_service.retry_run.assert_awaited_once()
+
+
+def test_retry_missing_run_returns_404(
+    client: TestClient,
+    mock_service: AsyncMock,
+) -> None:
+    missing = uuid.uuid4()
+    mock_service.retry_run.side_effect = WorkflowRunNotFoundError(missing)
+
+    response = client.post(f"/workflows/runs/{missing}/retry")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_retry_non_failed_run_returns_409(
+    client: TestClient,
+    mock_service: AsyncMock,
+) -> None:
+    mock_service.retry_run.side_effect = WorkflowStateTransitionError(
+        "succeeded", "pending"
+    )
+
+    response = client.post(f"/workflows/runs/{uuid.uuid4()}/retry")
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+
+
+def test_retry_without_backend_returns_503(
+    client: TestClient,
+    mock_service: AsyncMock,
+) -> None:
+    mock_service.retry_run.side_effect = QueueUnavailableError(
+        "no workflow queue is configured"
+    )
+
+    response = client.post(f"/workflows/runs/{uuid.uuid4()}/retry")
+
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE

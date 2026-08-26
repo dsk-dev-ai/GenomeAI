@@ -1,4 +1,4 @@
-"""Redis-backed `JobQueue` (Phase 7.4).
+"""Redis-backed `JobQueue` (Phase 7.4, delayed jobs in Phase 7.5).
 
 The ONLY application module allowed to know Redis is the queue backend;
 everything else depends on the `JobQueue` protocol from
@@ -10,6 +10,11 @@ Layout (all keys under a configurable prefix):
 - ``{prefix}:processing`` LIST of claimed payloads awaiting release
 - ``{prefix}:active``     HASH workflow_run_id -> queued payload (guards
                           duplicate enqueues and powers idempotent returns)
+- ``{prefix}:claims``     HASH job_id -> claimed payload bytes (release
+                          removes exactly those bytes from processing)
+- ``{prefix}:scheduled``  ZSET score=ready-epoch for DELAYED jobs
+                          (Phase 7.5 automatic retries); due members are
+                          promoted into the queued list at claim time
 
 Idempotency contract (same semantics as `InMemoryJobQueue`):
 
@@ -17,9 +22,11 @@ Idempotency contract (same semantics as `InMemoryJobQueue`):
   enqueuer wins per run; losers receive the existing job, so duplicate
   messages cannot exist at the source. Re-enqueue is possible again
   once a job is released.
-- claim:   atomic ``LMOVE queued -> processing``, so two workers can
-  never receive the same payload. The claimed (running-state) payload is
-  recorded in the claims hash so release removes exactly those bytes.
+- claim:   promote due scheduled jobs first (each promotion is gated by
+          an atomic ZREM, so concurrent workers never double-promote),
+          then atomic ``LMOVE queued -> processing``, so two workers can
+          never receive the same payload. The claimed payload's EXACT
+          bytes are recorded in the claims hash so release removes them.
 - complete/fail: one transactional pipeline removes the payload from the
   processing list and clears both hashes.
 
@@ -33,7 +40,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any, TypeVar
 
 from genomeai_api.workflows.errors import JobDecodeError, QueueUnavailableError
@@ -52,9 +59,16 @@ T = TypeVar("T")
 class RedisJobQueue:
     """JobQueue over redis.asyncio."""
 
-    def __init__(self, client: Any, *, prefix: str = DEFAULT_PREFIX) -> None:
+    def __init__(
+        self,
+        client: Any,
+        *,
+        prefix: str = DEFAULT_PREFIX,
+        now: Callable[[], datetime] | None = None,
+    ) -> None:
         self._client = client
         self._prefix = prefix
+        self._now: Callable[[], datetime] = now or (lambda: datetime.now(UTC))
 
     @property
     def _queued_key(self) -> str:
@@ -72,12 +86,21 @@ class RedisJobQueue:
     def _claims_key(self) -> str:
         return f"{self._prefix}:claims"
 
-    async def enqueue(self, workflow_run_id: uuid.UUID) -> WorkflowJob:
+    @property
+    def _scheduled_key(self) -> str:
+        return f"{self._prefix}:scheduled"
+
+    async def enqueue(
+        self,
+        workflow_run_id: uuid.UUID,
+        *,
+        delay: timedelta | None = None,
+    ) -> WorkflowJob:
         """Queues a run; idempotent while a job for it is still active."""
         candidate = WorkflowJob(
             job_id=uuid.uuid4(),
             workflow_run_id=workflow_run_id,
-            queued_at=datetime.now(UTC),
+            queued_at=self._now(),
         )
         raw = job_to_json(candidate)
 
@@ -96,15 +119,25 @@ class RedisJobQueue:
                 return self._decode(stored)
             # Guard entry vanished between HSETNX and HGET (released by a
             # worker in that window); retrying re-runs the whole guard.
-            return await self.enqueue(workflow_run_id)
+            return await self.enqueue(workflow_run_id, delay=delay)
 
-        await self._guard(
-            lambda: self._client.rpush(self._queued_key, raw), "enqueue push"
-        )
+        if delay is not None and delay > timedelta(0):
+            ready = candidate.queued_at + delay
+            await self._guard(
+                lambda: self._client.zadd(
+                    self._scheduled_key, {raw: ready.timestamp()}
+                ),
+                "enqueue schedule",
+            )
+        else:
+            await self._guard(
+                lambda: self._client.rpush(self._queued_key, raw), "enqueue push"
+            )
         return candidate
 
     async def claim(self, worker_id: str) -> WorkflowJob | None:
         del worker_id  # claims are exclusive regardless of caller identity
+        await self._promote_due_scheduled()
         raw = await self._guard(
             lambda: self._client.lmove(
                 self._queued_key, self._processing_key, "RIGHT", "LEFT"
@@ -120,7 +153,7 @@ class RedisJobQueue:
             queued_at=queued_job.queued_at,
             attempt=queued_job.attempt,
             state=JobState.RUNNING,
-            claimed_at=datetime.now(UTC),
+            claimed_at=self._now(),
         )
         # The claims hash must remember the EXACT bytes sitting on the
         # processing list (the queued-form payload), otherwise the release
@@ -131,6 +164,47 @@ class RedisJobQueue:
             "claim record",
         )
         return claimed
+
+    # Lua script: atomically scan for one due ZSET member, ZREM it as an
+    # ownership gate, and RPUSH it onto the queued list.  Runs as a single
+    # EVAL — no window between ZREM and RPUSH where the member could be
+    # lost.  Returns the promoted member string, or nil if nothing was due
+    # or the member was lost to a concurrent promoter.
+    _PROMOTE_LUA = """\
+local members = redis.call('ZRANGEBYSCORE', KEYS[1], '-inf', ARGV[1], 'LIMIT', 0, 1)
+if #members == 0 then
+    return nil
+end
+local member = members[1]
+local removed = redis.call('ZREM', KEYS[1], member)
+if removed == 1 then
+    redis.call('RPUSH', KEYS[2], member)
+    return member
+end
+return nil
+"""
+
+    async def _promote_due_scheduled(self) -> None:
+        """Moves due ZSET members into the queued list, atomically.
+
+        Uses a Lua script so ZREM and RPUSH happen as one Redis command —
+        a crash between the two is impossible and concurrent promoters
+        cannot lose a member.
+        """
+        now_epoch = self._now().timestamp()
+        while True:
+            result = await self._guard(
+                lambda: self._client.eval(
+                    self._PROMOTE_LUA,
+                    2,  # number of KEYS
+                    self._scheduled_key,
+                    self._queued_key,
+                    now_epoch,
+                ),
+                "promotion",
+            )
+            if result is None:
+                return
 
     async def complete(self, job: WorkflowJob) -> None:
         finished = WorkflowJob(
@@ -157,9 +231,59 @@ class RedisJobQueue:
         )
         await self._release(failed)
 
+    async def reschedule(
+        self,
+        job: WorkflowJob,
+        *,
+        delay: timedelta,
+    ) -> WorkflowJob:
+        """Atomically releases `job` and schedules its delayed replacement.
+
+        One transactional pipeline: remove the claimed bytes from
+        processing, drop the claim record, and hand the per-run active
+        guard DIRECTLY to the replacement payload (scheduled ZSET entry or
+        queued list). There is no instant where the run has no guard, so a
+        concurrent enqueuer can never slip a duplicate message in, and a
+        crash can never leave the retry half-done.
+        """
+        recorded = await self._guard(
+            lambda: self._client.hget(self._claims_key, str(job.job_id)),
+            "reschedule lookup",
+        )
+        claimed_raw = (
+            self._as_text(recorded) if recorded is not None else job_to_json(job)
+        )
+        replacement = WorkflowJob(
+            job_id=uuid.uuid4(),
+            workflow_run_id=job.workflow_run_id,
+            queued_at=self._now(),
+        )
+        replacement_raw = job_to_json(replacement)
+        effective_delay = delay if delay > timedelta(0) else timedelta(0)
+
+        async def _atomic() -> None:
+            pipeline = self._client.pipeline(transaction=True)
+            pipeline.lrem(self._processing_key, 0, claimed_raw)
+            pipeline.hdel(self._claims_key, str(job.job_id))
+            pipeline.hset(self._active_key, str(job.workflow_run_id), replacement_raw)
+            if effective_delay > timedelta(0):
+                ready = replacement.queued_at + effective_delay
+                pipeline.zadd(self._scheduled_key, {replacement_raw: ready.timestamp()})
+            else:
+                pipeline.rpush(self._queued_key, replacement_raw)
+            await pipeline.execute()
+
+        await self._guard(_atomic, "reschedule")
+        return replacement
+
     async def depth(self) -> int:
         return int(
             await self._guard(lambda: self._client.llen(self._queued_key), "depth")
+        )
+
+    async def delayed(self) -> int:
+        return int(
+            await self._guard(lambda: self._client.zcard(self._scheduled_key), "delayed")
         )
 
     async def close(self) -> None:

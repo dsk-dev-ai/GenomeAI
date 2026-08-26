@@ -220,6 +220,7 @@ async def test_create_run_initializes_one_pending_step_run_per_step(
             workflow_id=workflow_id,
             state="pending",
             created_at=datetime.now(UTC),
+            attempt_count=0,
         )
         for position, step_id in enumerate(ordered_ids):
             run.step_runs.append(
@@ -278,6 +279,7 @@ def _run_row(state: str = "pending") -> WorkflowRun:
         workflow_id=uuid.uuid4(),
         state=state,
         created_at=datetime.now(UTC),
+        attempt_count=0,
     )
 
 
