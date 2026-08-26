@@ -71,8 +71,12 @@ A single entry point handling cross-cutting concerns:
 
 The brain of the platform, responsible for executing genomic workflows as directed acyclic graphs (DAGs):
 
-- **Workflow DAG Engine** — Defines analysis steps and their dependencies. Supports checkpointing, retry, and partial re-execution. _(Planned)_
-- **Job Scheduler** — Distributes work across available compute resources. Pluggable backends (local, HPC, Kubernetes). _(Planned)_
+- **Workflow DAG Engine** — Defines analysis steps and their dependencies. Supports checkpointing, retry, and partial re-execution. ✅ Built (Phases 7.1–7.6).
+- **Cron Scheduler** — Application-level due-run detection with timezone support. ✅ Built (Phase 7.3).
+- **Redis Queue Worker** — Background execution with claim/release, graceful shutdown. ✅ Built (Phase 7.4).
+- **Parallel Execution** — Concurrent execution of independent steps via structured concurrency. ✅ Built (Phase 7.6).
+- **Retry & Failure** — Failure classification, configurable retry policies, backoff. ✅ Built (Phase 7.5).
+- **Job Scheduler** — Distributes work across available compute resources. Pluggable backends (HPC, Kubernetes). _(Planned)_
 - **Resource Manager** — Tracks and allocates CPU, GPU, memory, and storage across concurrent analyses. _(Future)_
 
 Workflows are expressed in a YAML specification. See [docs/architecture/](docs/architecture/) for the design document.
@@ -153,22 +157,28 @@ See [docs/plugins/](docs/plugins/) for plugin development guides.
 
 | Decision | Rationale |
 |----------|-----------|
-| Workflows as DAGs | Enables checkpointing, partial re-execution, and parallelization. |
-| Object store as source of truth | Decouples compute from storage; enables spot instance usage. |
+| Workflows as DAGs | Enables checkpointing, partial re-execution, and parallelization. ✅ Implemented. |
+| PostgreSQL as source of truth | Reliable, well-understood, excellent ecosystem. ✅ Implemented. |
 | Pluggable aligners/callers | No single tool dominates; researchers need choice. |
 | ABAC over RBAC | Genomic data has complex access patterns (by study, by consent, by institution). |
 | Plugin sandboxing | Prevents malicious or buggy plugins from compromising the platform. |
+| Free APIs first | NCBI, Ensembl, UniProt, PubChem — all free, no keys required. |
+| Local AI (Ollama) | Zero cost, privacy-preserving for sensitive genomic data. |
+| Structured concurrency | TaskGroup + Semaphore for safe parallel execution (Phase 7.6). |
 
 ## Key Technologies
 
-| Layer | Technology (Proposed) | Rationale |
-|-------|---------------------|-----------|
-| Core services | Rust | Performance, memory safety, and zero-cost abstractions for hot paths. |
-| Data science layer | Python | Dominant language in bioinformatics and ML. |
-| Orchestration | Custom DAG engine | Specialized for genomic workflows (checkpointing, resume). |
-| Storage | PostgreSQL + Object Store | Reliable, well-understood, excellent ecosystem. |
-| Vector search | pgvector | Simplicity of a single database; fallback to Milvus at scale. |
-| Container runtime | OCI-compatible (Docker, Podman) | Universal, well-sandboxed. |
+| Layer | Technology | Rationale |
+|-------|-----------|-----------|
+| Core services | Python 3.12, FastAPI | FastAPI ecosystem, async support, type safety |
+| Data models | SQLAlchemy, Pydantic | ORM + schema validation, migration support |
+| Database | PostgreSQL 16+, Redis 7+ | ACID, full-text search, queue, caching |
+| Orchestration | Custom DAG engine | Parallel execution, retry, scheduling (Phases 7.1–7.6) |
+| Frontend | Next.js, React, TypeScript | SSR, component ecosystem, type safety |
+| Visualization | D3.js, Three.js, Cytoscape.js, Mol* | Genome browser, 3D structures, network graphs |
+| AI/LLM | Ollama (local), Groq, Together AI | Local-first, zero-cost, multi-provider |
+| Vector search | pgvector | Simplicity of a single database |
+| DevOps | Docker, GitHub Actions, Turbo | Containerization, CI/CD, monorepo builds |
 
 ## Related Documents
 
