@@ -162,7 +162,10 @@ class PubChemClient:
         formula_raw = data.get("MolecularFormula", "")
         formula = str(formula_raw) if isinstance(formula_raw, str) else ""
         mw_raw = data.get("MolecularWeight", 0)
-        mw = float(mw_raw) if isinstance(mw_raw, (int, float)) else 0.0
+        if isinstance(mw_raw, str):
+            mw = float(mw_raw) if mw_raw else 0.0
+        else:
+            mw = float(mw_raw) if isinstance(mw_raw, (int, float)) else 0.0
         iupac_raw = data.get("IUPACName", "")
         iupac = str(iupac_raw) if isinstance(iupac_raw, str) else ""
         smiles_raw = data.get("CanonicalSMILES", "")
@@ -170,7 +173,10 @@ class PubChemClient:
         inchi_raw = data.get("InChI", "")
         inchi = str(inchi_raw) if isinstance(inchi_raw, str) else ""
         xlogp_raw = data.get("XLogP", 0)
-        xlogp = float(xlogp_raw) if isinstance(xlogp_raw, (int, float)) else 0.0
+        if isinstance(xlogp_raw, str):
+            xlogp = float(xlogp_raw) if xlogp_raw else 0.0
+        else:
+            xlogp = float(xlogp_raw) if isinstance(xlogp_raw, (int, float)) else 0.0
         hbd_raw = data.get("HBondDonorCount", 0)
         hbd = int(hbd_raw) if isinstance(hbd_raw, (int, float)) else 0
         hba_raw = data.get("HBondAcceptorCount", 0)
