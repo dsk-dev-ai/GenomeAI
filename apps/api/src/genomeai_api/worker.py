@@ -67,7 +67,11 @@ async def main() -> int:
         PassthroughStepExecutor(),
         worker_id="worker-1",
         logger=logger,
-        engine_factory=lambda store: DAGExecutionEngine(store, PassthroughStepExecutor()),
+        engine_factory=lambda store: DAGExecutionEngine(
+            store,
+            PassthroughStepExecutor(),
+            max_concurrency=settings.app.workflow_max_concurrency,
+        ),
         retry_policy=DEFAULT_RETRY_POLICY,
     )
 

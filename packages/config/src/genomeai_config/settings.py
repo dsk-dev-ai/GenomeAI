@@ -36,6 +36,7 @@ class AppSettings(BaseSettings):
     version: str = "0.1.0"
     debug: bool = True
     environment: Environment = Environment.DEVELOPMENT
+    workflow_max_concurrency: int = Field(default=1, ge=1)
 
 
 class DatabaseSettings(BaseSettings):

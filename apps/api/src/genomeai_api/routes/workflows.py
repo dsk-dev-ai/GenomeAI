@@ -10,9 +10,10 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from genomeai_config import Settings
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from genomeai_api.dependencies import get_db_session
+from genomeai_api.dependencies import get_db_session, get_settings
 from genomeai_api.repositories.workflow import WorkflowRepository
 from genomeai_api.schemas.workflow import (
     JobResponse,
@@ -49,15 +50,20 @@ async def _get_service(
     return WorkflowService(WorkflowRepository(session), queue=queue)
 
 
-async def _get_engine(session: AsyncSession = Depends(get_db_session)) -> DAGExecutionEngine:
+async def _get_engine(
+    session: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_settings),
+) -> DAGExecutionEngine:
     """Synchronous in-process engine (Phase 7.2).
 
     The default executor is deterministic passthrough; real executors plug
-    in here once they exist.
+    in here once they exist.  ``max_concurrency`` is read from application
+    settings (env var ``GENOMEAI_APP_WORKFLOW_MAX_CONCURRENCY``).
     """
     return DAGExecutionEngine(
         repository=WorkflowRepository(session),
         executor=PassthroughStepExecutor(),
+        max_concurrency=settings.app.workflow_max_concurrency,
     )
 
 

@@ -1,21 +1,28 @@
-"""In-process DAG execution engine (Phase 7.2).
+"""In-process DAG execution engine (Phases 7.2 + 7.6).
 
-Executes one validated WorkflowRun deterministically, one step at a time,
-in persisted topological-position order. Responsibilities:
+Executes one validated WorkflowRun as a deterministic DAG. Responsibilities:
 
 - legality of every run/step state transition (via Phase 7.1 types)
 - ready-step scheduling (via the planner)
-- invoking the injected `StepExecutor`
+- invoking the injected `StepExecutor` (sync executors run via asyncio.to_thread)
 - recording outputs / failure reasons on StepRuns
 - propagating failures and honouring cancellation checks
+- parallel concurrent execution of independent steps (Phase 7.6)
 
-The engine does NOT distribute, parallelize, retry, or schedule work —
-no queues, no workers, no background execution. Persistence goes through
-the same `WorkflowRepository` used by the service layer.
+When ``max_concurrency`` > 1, independent steps that are all ready
+(satisfied dependencies) execute concurrently using structured
+concurrency (``asyncio.TaskGroup``). The concurrency limit is enforced
+by an ``asyncio.Semaphore``. When ``max_concurrency`` == 1 (the default)
+behaviour is identical to the sequential Phase 7.2 model.
+
+The engine does NOT distribute, retry, or schedule work beyond DAG
+concurrency — no queues, no workers, no background execution. Persistence
+goes through the same ``WorkflowRepository`` used by the service layer.
 """
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from collections import defaultdict
 from collections.abc import Callable
@@ -71,17 +78,31 @@ class ExecutionRunStore(Protocol):
 
 
 class DAGExecutionEngine:
-    """Deterministic sequential executor for one workflow run."""
+    """Deterministic executor for one workflow run.
+
+    When ``max_concurrency`` is 1 (the default), steps execute one at a
+    time in topological-position order — identical to the Phase 7.2
+    sequential model.  When ``max_concurrency`` > 1, independent ready
+    steps execute concurrently using structured concurrency with an
+    ``asyncio.Semaphore`` enforcing the limit.
+    """
 
     def __init__(
         self,
         repository: ExecutionRunStore,
         executor: StepExecutor,
         should_cancel: Callable[[], bool] | None = None,
+        *,
+        max_concurrency: int = 1,
     ) -> None:
+        if max_concurrency < 1:
+            raise ValueError("max_concurrency must be >= 1")
         self._repository = repository
         self._executor = executor
         self._should_cancel = should_cancel or (lambda: False)
+        self._max_concurrency = max_concurrency
+
+    # -- public entry ---------------------------------------------------
 
     async def execute_run(self, run_id: uuid.UUID) -> WorkflowRun:
         """Executes a PENDING run to a terminal state and returns it."""
@@ -123,6 +144,11 @@ class DAGExecutionEngine:
         }
         planned: list[PlannedStep] = []
 
+        semaphore = asyncio.Semaphore(self._max_concurrency)
+        cancel_event = asyncio.Event()
+        failure_step_name: str | None = None
+        failure_reason: str | None = None
+
         while True:
             planned = [
                 PlannedStep(
@@ -135,49 +161,91 @@ class DAGExecutionEngine:
                 for step_run in sorted(run.step_runs, key=lambda sr: sr.position)
             ]
 
-            if self._should_cancel():
-                await self._sweep_pending(run, states)
-                run = await self._require_transition_run(
-                    run.id, RunState.RUNNING, RunState.CANCELLED
-                )
-                return run
+            if self._should_cancel() or cancel_event.is_set():
+                if failure_reason is None:
+                    await self._sweep_pending(run, states)
+                    run = await self._require_transition_run(
+                        run.id, RunState.RUNNING, RunState.CANCELLED
+                    )
+                    return run
+                break
 
             ready = ready_steps(planned)
             if not ready:
                 break
 
-            target = ready[0]
-            await self._repository.transition_step_run(
-                target.step_run_id, RunState.RUNNING
-            )
-            states[target.step_run_id] = RunState.RUNNING
+            async def _run_step(
+                target: PlannedStep,
+            ) -> None:
+                nonlocal failure_step_name, failure_reason
+                async with semaphore:
+                    if cancel_event.is_set() or self._should_cancel():
+                        return
+                    await self._repository.transition_step_run(
+                        target.step_run_id, RunState.RUNNING
+                    )
+                    states[target.step_run_id] = RunState.RUNNING
 
-            context = StepExecutionContext(
-                run_id=run.id,
-                workflow_id=workflow.id,
-                workflow_name=workflow.name,
-                upstream_outputs={
-                    upstream: outputs.get(upstream, {})
-                    for upstream in target.upstream
-                },
-            )
-            try:
-                result = self._executor.execute(step_by_name[target.name], context)
-            except Exception as exc:
-                return await self._fail_step_and_run(
-                    run, target, states, str(exc) or type(exc).__name__
-                )
+                    context = StepExecutionContext(
+                        run_id=run.id,  # type: ignore[union-attr]
+                        workflow_id=workflow.id,
+                        workflow_name=workflow.name,
+                        upstream_outputs={
+                            upstream: outputs.get(upstream, {})
+                            for upstream in target.upstream
+                        },
+                    )
+                    try:
+                        result = await asyncio.to_thread(
+                            self._executor.execute,
+                            step_by_name[target.name],
+                            context,
+                        )
+                    except Exception as exc:
+                        error_msg = str(exc) or type(exc).__name__
+                        await self._repository.transition_step_run(
+                            target.step_run_id,
+                            RunState.FAILED,
+                            error_message=error_msg,
+                        )
+                        states[target.step_run_id] = RunState.FAILED
+                        if not cancel_event.is_set():
+                            failure_step_name = target.name
+                            failure_reason = error_msg
+                            cancel_event.set()
+                        return
 
-            if result.succeeded:
-                await self._repository.transition_step_run(
-                    target.step_run_id, RunState.SUCCEEDED, output=result.output
-                )
-                states[target.step_run_id] = RunState.SUCCEEDED
-                outputs[target.name] = result.output or {}
-                continue
+                    if result.succeeded:
+                        await self._repository.transition_step_run(
+                            target.step_run_id,
+                            RunState.SUCCEEDED,
+                            output=result.output,
+                        )
+                        states[target.step_run_id] = RunState.SUCCEEDED
+                        outputs[target.name] = result.output or {}
+                    else:
+                        await self._repository.transition_step_run(
+                            target.step_run_id,
+                            RunState.FAILED,
+                            error_message=result.error_message,
+                        )
+                        states[target.step_run_id] = RunState.FAILED
+                        if not cancel_event.is_set():
+                            failure_step_name = target.name
+                            failure_reason = result.error_message or "unknown error"
+                            cancel_event.set()
 
-            return await self._fail_step_and_run(
-                run, target, states, result.error_message or "unknown error"
+            async with asyncio.TaskGroup() as tg:
+                for target in ready:
+                    tg.create_task(_run_step(target))
+
+        if failure_reason is not None and failure_step_name is not None:
+            await self._sweep_pending(run, states)
+            return await self._require_transition_run(
+                run.id,
+                RunState.RUNNING,
+                RunState.FAILED,
+                error_message=f"Step '{failure_step_name}' failed: {failure_reason}",
             )
 
         if all_succeeded(planned):
@@ -197,33 +265,6 @@ class DAGExecutionEngine:
                 )
         return await self._require_transition_run(
             run.id, current, RunState.CANCELLED
-        )
-
-    async def _fail_step_and_run(
-        self,
-        run: WorkflowRun,
-        target: PlannedStep,
-        states: dict[uuid.UUID, RunState],
-        reason: str,
-    ) -> WorkflowRun:
-        """Records a step failure, sweeps never-started steps, fails the run.
-
-        Used both for executor-reported failures and for exceptions raised
-        by the executor itself — either way the run must reach a terminal
-        state instead of being stranded in `running`.
-        """
-        await self._repository.transition_step_run(
-            target.step_run_id,
-            RunState.FAILED,
-            error_message=reason,
-        )
-        states[target.step_run_id] = RunState.FAILED
-        await self._sweep_pending(run, states)
-        return await self._require_transition_run(
-            run.id,
-            RunState.RUNNING,
-            RunState.FAILED,
-            error_message=f"Step '{target.name}' failed: {reason}",
         )
 
     async def _sweep_pending(
