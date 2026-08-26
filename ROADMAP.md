@@ -225,3 +225,17 @@ See [docs/external-data/MASTER_PLAN.md](docs/external-data/MASTER_PLAN.md) for t
 - [GitHub Issues](https://github.com/dsk-dev-ai/GenomeAI/issues)
 - [Milestones](https://github.com/dsk-dev-ai/GenomeAI/milestones)
 - [Discussions](https://github.com/dsk-dev-ai/GenomeAI/discussions)
+
+---
+
+## V1 Plan
+
+Detailed V1 plan with 12 phases, 80+ sub-phases, and branch-based workflow:
+
+| Document | Purpose |
+|----------|---------|
+| [V1 Plan Overview](docs/v1-plan/README.md) | Master plan, principles, scope |
+| [V1 Phases](docs/v1-plan/PHASES.md) | All phases with sub-phases and branch naming |
+| [Free APIs Reference](docs/v1-plan/FREE_APIS.md) | 70+ free databases and APIs |
+| [Free AI Strategy](docs/v1-plan/FREE_AI_STRATEGY.md) | Multi-provider fallback chain |
+| [Branch Strategy](docs/v1-plan/BRANCH_STRATEGY.md) | Branch naming and workflow |
