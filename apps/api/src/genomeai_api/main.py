@@ -45,6 +45,7 @@ from genomeai_api.routes.health import router as health_router
 from genomeai_api.routes.integrations import router as integrations_router
 from genomeai_api.routes.projects import router as projects_router
 from genomeai_api.routes.proteins import router as proteins_router
+from genomeai_api.routes.proteins_enhanced import router as proteins_enhanced_router
 from genomeai_api.routes.samples import router as samples_router
 from genomeai_api.routes.schedules import router as schedules_router
 from genomeai_api.routes.search import router as search_router
@@ -156,6 +157,7 @@ app.include_router(genes_router)
 app.include_router(genes_enhanced_router)
 app.include_router(variants_router)
 app.include_router(variants_enhanced_router)
+app.include_router(proteins_enhanced_router)
 app.include_router(transcripts_router)
 app.include_router(proteins_router)
 # Schedules router first: its static /workflows/schedules* paths must win
