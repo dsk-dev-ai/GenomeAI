@@ -121,6 +121,7 @@ class WorkflowRunWorker:
         logger: logging.Logger | None = None,
         engine_factory: EngineFactory | None = None,
         retry_policy: RetryPolicy | None = None,
+        max_concurrency: int = 1,
     ) -> None:
         self._queue = queue
         self._store_factory = store_factory
@@ -133,7 +134,7 @@ class WorkflowRunWorker:
             self._engine_factory = engine_factory
         else:
             self._engine_factory: EngineFactory = lambda store: DAGExecutionEngine(
-                store, executor
+                store, executor, max_concurrency=max_concurrency
             )
 
     async def process_next(self) -> ProcessOutcome:

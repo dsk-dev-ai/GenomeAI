@@ -202,9 +202,16 @@ class DAGExecutionEngine:
                             context,
                         )
                     except Exception as exc:
+                        error_msg = str(exc) or type(exc).__name__
+                        await self._repository.transition_step_run(
+                            target.step_run_id,
+                            RunState.FAILED,
+                            error_message=error_msg,
+                        )
+                        states[target.step_run_id] = RunState.FAILED
                         if not cancel_event.is_set():
                             failure_step_name = target.name
-                            failure_reason = str(exc) or type(exc).__name__
+                            failure_reason = error_msg
                             cancel_event.set()
                         return
 
@@ -217,6 +224,12 @@ class DAGExecutionEngine:
                         states[target.step_run_id] = RunState.SUCCEEDED
                         outputs[target.name] = result.output or {}
                     else:
+                        await self._repository.transition_step_run(
+                            target.step_run_id,
+                            RunState.FAILED,
+                            error_message=result.error_message,
+                        )
+                        states[target.step_run_id] = RunState.FAILED
                         if not cancel_event.is_set():
                             failure_step_name = target.name
                             failure_reason = result.error_message or "unknown error"
@@ -227,15 +240,6 @@ class DAGExecutionEngine:
                     tg.create_task(_run_step(target))
 
         if failure_reason is not None and failure_step_name is not None:
-            await self._repository.transition_step_run(
-                next(
-                    sr.id
-                    for sr in run.step_runs
-                    if name_of_step_run[sr.id] == failure_step_name
-                ),
-                RunState.FAILED,
-                error_message=failure_reason,
-            )
             await self._sweep_pending(run, states)
             return await self._require_transition_run(
                 run.id,

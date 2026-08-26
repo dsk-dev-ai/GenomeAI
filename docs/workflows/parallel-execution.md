@@ -133,8 +133,9 @@ identical to the sequential model.
 - The `StepExecutor` protocol is unchanged.
 - No database migration is required — parallelism is an execution-time
   concern only.
-- Worker and API entry points pass `max_concurrency` through the
-  engine constructor; existing callers default to 1.
+- Worker and API entry points read `max_concurrency` from
+  `GENOMEAI_APP_WORKFLOW_MAX_CONCURRENCY` (default: 1).
+  Existing callers without the env var behave identically to Phase 7.2.
 
 ---
 
