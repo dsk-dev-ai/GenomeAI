@@ -1,12 +1,14 @@
-# Workflow Execution (Phase 7.2)
+# Workflow Execution (Phase 7.2 + 7.6)
 
 Phase 7.2 adds a **deterministic, sequential, in-process** DAG execution
-engine on top of the Phase 7.1 foundation.
+engine on top of the Phase 7.1 foundation. Phase 7.6 extends this with
+**parallel concurrent execution** of independent steps when
+`max_concurrency > 1`.
 
 > **This is NOT a distributed engine.** There is no Redis/Celery/Arq
-> queue, no scheduler, no background workers, no parallelism, no retries,
-> no caching, and no artifact storage. One HTTP call executes one run,
-> step by step, before responding.
+> queue, no scheduler, no background workers, no retries, no caching,
+> and no artifact storage. One HTTP call executes one run, step by step
+> (or concurrently when configured), before responding.
 
 ## Architecture
 
@@ -18,6 +20,11 @@ DAGExecutionEngine      workflows/execution/engine.py   ← orchestration
   ├── StepExecutor      workflows/execution/executor.py ← one step's work
   └── WorkflowRepository                                ← persistence only
 ```
+
+When `max_concurrency > 1` (Phase 7.6), the engine wraps each
+`StepExecutor.execute()` call with `asyncio.to_thread()` and launches
+independent steps concurrently via `asyncio.TaskGroup` + `Semaphore`.
+The planner, repository protocol, and executor interface are unchanged.
 
 Separation of concerns (unchanged responsibilities from 7.1):
 
@@ -49,8 +56,14 @@ For a run in `pending` state:
      `running → cancelled`. Return.
    - Ask the planner for ready steps: `pending` steps whose direct
      upstream all `succeeded`, in persisted `position` order.
-   - Execute the first ready step via the injected `StepExecutor`,
-     passing its direct predecessors' outputs.
+   - **Sequential mode** (`max_concurrency=1`): execute the first ready
+     step via the injected `StepExecutor`, passing its direct
+     predecessors' outputs.
+   - **Parallel mode** (`max_concurrency>1`): launch ALL ready steps as
+     concurrent tasks via `asyncio.TaskGroup`, gated by
+     `asyncio.Semaphore(max_concurrency)`. Each task transitions its
+     step to RUNNING, invokes the executor (via `asyncio.to_thread`),
+     and records the outcome.
    - On success: record `output` on the `StepRun`, continue.
    - On failure: record `error_message` on the `StepRun`, sweep all
      remaining `pending` step runs to `cancelled`, transition
@@ -102,11 +115,13 @@ reached a terminal state (`succeeded`, `failed`, or `cancelled`).
 ## What Phase 7.2 intentionally does NOT do
 
 - No queues/schedulers/workers (Redis, Celery, Arq, …)
-- No distributed or parallel execution — strictly one step at a time
+- No distributed execution — one engine instance per run
 - No retries, timeouts, heartbeats, or caching
 - No artifact/blob storage
 - No new background infrastructure of any kind
 
-These belong to later milestones; the engine's seams (planner purity,
-executor abstraction, repository-only persistence) exist so they can be
-introduced without reworking this layer.
+Phase 7.6 adds parallel concurrent execution (configurable via
+`max_concurrency`), but the engine remains single-process and
+single-run. These belong to later milestones; the engine's seams
+(planner purity, executor abstraction, repository-only persistence)
+exist so they can be introduced without reworking this layer.

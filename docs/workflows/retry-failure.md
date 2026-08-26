@@ -171,5 +171,4 @@ run regardless of the retry budget:
 - No per-step retry (workflow-level only in this phase)
 - No jitter — all backoff is deterministic
 - No distributed multi-region retry coordination
-- No parallel execution of retry attempts
 - No dead-letter platform — final failure is a database record only

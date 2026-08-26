@@ -11,9 +11,10 @@ queueing, and execution remain three separate responsibilities.
 > **Scope guard.** This phase introduces a single-process worker with an
 > in-app queue abstraction and a Redis backend. Phase 7.5 adds retry
 > and failure handling on top (see [retry-failure.md](retry-failure.md)).
-> Still absent: priority scheduling, parallel DAG execution, workflow
-> caching, autoscaling, Kubernetes/HPC deployment, and distributed
-> coordination.
+> Phase 7.6 adds parallel concurrent execution via `max_concurrency`
+> (see [parallel-execution.md](parallel-execution.md)).
+> Still absent: priority scheduling, workflow caching, autoscaling,
+> Kubernetes/HPC deployment, and distributed coordination.
 
 ## Architecture
 
@@ -32,7 +33,8 @@ SchedulerService (7.3)                POST /workflows/runs/{id}/queue
         claim → verify state → [re-open if retry due] → engine.execute_run()
         failure → classify → RetryPolicy.decide → reschedule or final-fail
          ↓
-      DAGExecutionEngine (unchanged 7.2)  → StepRuns advance as before
+      DAGExecutionEngine (Phase 7.2 + 7.6)  → StepRuns advance as before
+                                                parallel when max_concurrency > 1
 ```
 
 Responsibility boundaries:
@@ -143,8 +145,11 @@ The Redis layout under prefix `genomeai:workflow-runs`:
 3. Pre-flight: missing run → `fail(job)` (never silently lost);
    non-pending → `complete(job)` + skip.
 4. Build the engine via `engine_factory(store)` and call `execute_run()`
-   once. A `WorkflowStateTransitionError` means another executor won the
-   race — the message is retired without duplicate execution.
+   once. The engine receives `max_concurrency` from application settings
+   (`GENOMEAI_APP_WORKFLOW_MAX_CONCURRENCY`), enabling parallel execution
+   of independent steps. A `WorkflowStateTransitionError` means another
+   executor won the race — the message is retired without duplicate
+   execution.
 5. Success → `complete(job)`; unexpected exception → best-effort
    `transition_run(FAILED, "worker execution error: …")` then
    `fail(job, reason)`.
@@ -202,10 +207,11 @@ queue configured the scheduler behaves exactly as in Phase 7.3.
 Exists now: queue protocol + two backends, deterministic job codec,
 exclusive claims, idempotent enqueue, guarded release, single worker loop
 with graceful shutdown, scheduler/API integration, `genomeai-worker`
-process, full test coverage.
+process, full test coverage. Phase 7.5 adds retry/failure classification.
+Phase 7.6 adds parallel concurrent execution via `max_concurrency`.
 
-Deferred to Phase 7.5+ (by design): retries/backoff, dead-letter queues,
-crash-recovery scanning of the processing list, multiple workers /
-competing consumers beyond LMOVE exclusivity, parallel step execution,
-priority queues, visibility timeouts, workflow caching, autoscaling,
-Kubernetes/HPC orchestration, distributed multi-region execution.
+Deferred to later phases (by design): crash-recovery scanning of the
+processing list, multiple workers / competing consumers beyond LMOVE
+exclusivity, priority queues, visibility timeouts, workflow caching,
+autoscaling, Kubernetes/HPC orchestration, distributed multi-region
+execution.

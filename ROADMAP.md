@@ -16,11 +16,11 @@ This document describes the planned development roadmap. Milestones and prioriti
 
 | Milestone | Status |
 |-----------|--------|
-| Repository foundation, documentation, governance | 📋 |
-| CI/CD pipeline and contribution tooling | 📋 |
-| Development environment setup guide | 📋 |
+| Repository foundation, documentation, governance | ✅ |
+| CI/CD pipeline and contribution tooling | ✅ |
+| Development environment setup guide | ✅ |
 | Plugin SDK specification (design doc) | 📋 |
-| Workflow DAG engine design | 📋 |
+| Workflow DAG engine design | ✅ |
 
 ## Phase 1: Core Pipelines (v0.2–v0.5)
 
@@ -29,12 +29,12 @@ This document describes the planned development roadmap. Milestones and prioriti
 | Milestone | Target Version | Status |
 |-----------|---------------|--------|
 | FASTQ/BAM ingestion pipeline with quality control | v0.2 | 📋 |
-| Workflow DAG engine — single-node execution | v0.2 | 📋 |
+| Workflow DAG engine — single-node execution | v0.2 | ✅ |
 | PostgreSQL schema for samples and analyses | v0.2 | 📋 |
 | CLI tool with basic commands | v0.3 | 📋 |
 | Variant calling pipeline (germline WGS/WES) | v0.3 | 📋 |
 | Containerized deployment with Docker Compose | v0.3 | 📋 |
-| REST API v1 (samples, analyses, workflows) | v0.4 | 📋 |
+| REST API v1 (samples, analyses, workflows) | v0.4 | ✅ |
 | Knowledge graph v1 (ClinVar, dbSNP, Ensembl) | v0.4 | 📋 |
 | RNA-seq quantification and differential expression | v0.5 | 📋 |
 | Multi-node workflow execution (Kubernetes) | v0.5 | 📋 |
@@ -82,6 +82,21 @@ This document describes the planned development roadmap. Milestones and prioriti
 | Real-time population surveillance pipelines | 📋 |
 | Public data exchange with consent management | 📋 |
 | Global genomic intelligence network | 📋 |
+
+---
+
+## Delivered Work
+
+| Phase | Description | PRs |
+|-------|-------------|-----|
+| 7.1 | Workflow Foundation: definitions, steps, dependencies, DAG validation, run/step state models, persistence, admin API | #42 |
+| 7.2 | DAG Execution Engine: deterministic sequential in-process execution | #43 |
+| 7.3 | Workflow Scheduler: application-level due-run detection, cron schedules, timezone handling | #44 |
+| 7.4 | Queue & Worker: background execution via Redis queue, claim/release, graceful shutdown | #45 |
+| 7.5 | Retry & Failure: failure classification, retry policies, backoff, attempt tracking, manual retry | #46 |
+| 7.6 | Parallel DAG Execution: concurrent independent steps, configurable max_concurrency, structured concurrency | #47 |
+| Visualization | Genome browser, gene/transcript, variant track, protein viewer, network viewer, scientific charts, molecular structure, research workspace | #28–#40 |
+| Data Integration | Foundation: sources, fetchers, connectors, provenance, admin API | #41 |
 
 ---
 
