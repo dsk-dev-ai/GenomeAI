@@ -10,10 +10,6 @@ from genomeai_logging import configure_logging, get_logger
 
 from genomeai_api.cache import create_redis, shutdown_redis, verify_redis
 from genomeai_api.database import create_engine, create_session_factory, dispose_engine
-from genomeai_api.ratelimit import LimitController, RateLimitMiddleware
-from genomeai_api.ratelimit.config import RateLimitConfig
-from genomeai_api.ratelimit.limiter import RateLimiter
-from genomeai_api.routes.admin_limits import router as admin_limits_router
 from genomeai_api.exceptions import (
     DuplicateDatasetError,
     DuplicateDataSourceError,
@@ -36,6 +32,10 @@ from genomeai_api.integration.errors import (
     InvalidJobTransitionError,
     UnsafeSourceUrlError,
 )
+from genomeai_api.ratelimit import LimitController, RateLimitMiddleware
+from genomeai_api.ratelimit.config import RateLimitConfig
+from genomeai_api.ratelimit.limiter import RateLimiter
+from genomeai_api.routes.admin_limits import router as admin_limits_router
 from genomeai_api.routes.datasets import router as datasets_router
 from genomeai_api.routes.experiments import router as experiments_router
 from genomeai_api.routes.genes import router as genes_router
