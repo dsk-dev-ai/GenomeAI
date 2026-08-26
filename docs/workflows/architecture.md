@@ -13,7 +13,7 @@ JobQueue                 ← queue protocol; Redis backend isolated in one modul
  ↓
 WorkflowRunWorker        ← claim → verify pending → delegate to engine (Phase 7.4)
  ↓
-DAGExecutionEngine       ← sequential in-process execution (Phase 7.2)
+DAGExecutionEngine       ← in-process execution, parallel when max_concurrency > 1 (Phase 7.2 + 7.6)
  ↓
 WorkflowRepository       ← persistence only
  ↓
@@ -39,19 +39,25 @@ PostgreSQL
   path as manual runs, and manages schedule lifecycle. It never executes
   steps and never reads the wall clock directly.
   See [scheduler.md](scheduler.md).
-- **Queue & Worker** (Phase 7.4): `workflows/queueing.py` defines the
+- **Queue & Worker** (Phase 7.4 + 7.5): `workflows/queueing.py` defines the
   `JobQueue` protocol and deterministic job codec;
   `workflows/redis_queue.py` is the only Redis-aware module;
   `services/worker.py` claims queued runs and delegates eligible ones to
-  the engine. The API can queue a run (`202 Accepted`) without executing
-  it; the scheduler enqueues what it creates. No retry, parallelism, or
-  orchestration logic exists anywhere in this layer.
-  See [queue-worker.md](queue-worker.md).
+  the engine. Phase 7.5 adds retry/failure classification. The API can
+  queue a run (`202 Accepted`) without executing it; the scheduler
+  enqueues what it creates. The worker passes `max_concurrency` from
+  settings to the engine, enabling parallel execution in production.
+  See [queue-worker.md](queue-worker.md) and
+  [retry-failure.md](retry-failure.md).
 - **Engine** (`workflows/execution/engine.py`): drives one pending run to a
-  terminal state, sequentially, in persisted position order. It owns every
-  state transition, delegates ready-step selection to the pure planner,
-  delegates step work to an injected `StepExecutor`, and persists only via
-  the repository. See [execution.md](execution.md).
+  terminal state, in persisted position order. When `max_concurrency=1`
+  (default), steps execute sequentially. When `max_concurrency>1`,
+  independent ready steps execute concurrently via structured concurrency
+  (`asyncio.TaskGroup` + `Semaphore`). It owns every state transition,
+  delegates ready-step selection to the pure planner, delegates step work
+  to an injected `StepExecutor`, and persists only via the repository.
+  See [execution.md](execution.md) and
+  [parallel-execution.md](parallel-execution.md).
 - **Repository** (`repositories/workflow.py`): persistence only. Creates
   workflows with eagerly generated step ids so dependency edges can be
   resolved by name before the flush; creates runs plus one pending
@@ -123,13 +129,15 @@ persisting `output` / `error_message` on step runs (added by migration
 | Created | By `POST /workflows/{id}/runs` | Atomically with its run |
 | Initial state | `pending` | `pending` |
 
-## Execution today (Phase 7.2) and later
+## Execution today (Phases 7.2 + 7.6) and later
 
 Phase 7.2 executes runs **synchronously and sequentially, in-process**:
 one engine instance drives one run at a time through ready-step cycles
-until a terminal state. The full contract — algorithm, failure sweeps,
-cancellation semantics, results — is documented in
-[execution.md](execution.md).
+until a terminal state. Phase 7.6 extends this with **parallel concurrent
+execution**: when `max_concurrency>1`, independent ready steps run
+simultaneously via structured concurrency. The full contract — algorithm,
+failure sweeps, cancellation semantics, results — is documented in
+[execution.md](execution.md) and [parallel-execution.md](parallel-execution.md).
 
 Later phases may add a scheduler/worker layer *beside* this stack — never
 inside the service:

@@ -15,12 +15,20 @@ All contributors must adhere to the [Code of Conduct](CODE_OF_CONDUCT.md). Be re
 
 ## Development Setup
 
-See [docs/development/](docs/development/) for environment setup guides (coming soon).
-
 ```bash
+# Clone and install
 git clone https://github.com/dsk-dev-ai/GenomeAI.git
 cd GenomeAI
+make setup
+
+# Run the full validation suite
+make test
+make lint
+make typecheck
+pnpm turbo build
 ```
+
+**Requirements:** Python 3.12+, Node.js 20+, PostgreSQL 16+, Redis 7+
 
 ## Contribution Workflow
 

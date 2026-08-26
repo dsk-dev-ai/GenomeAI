@@ -1,4 +1,4 @@
-# Workflow Foundation (7.1) · Execution (7.2) · Scheduler (7.3) · Queue & Worker (7.4) · Retry & Failure (7.5)
+# Workflow Foundation (7.1) · Execution (7.2) · Scheduler (7.3) · Queue & Worker (7.4) · Retry & Failure (7.5) · Parallel Execution (7.6)
 
 The Workflow Foundation establishes GenomeAI's workflow/DAG architecture:
 workflow definitions, ordered and connected steps, deterministic DAG
@@ -6,7 +6,8 @@ validation, execution-state models, persistence, and a minimal admin API.
 Phase 7.2 adds deterministic, sequential, **in-process** execution on top;
 Phase 7.3 adds application-level **scheduling** that decides WHEN runs
 start; Phase 7.4 adds a **queue and worker** so runs can execute in the
-background; Phase 7.5 adds a **retry and failure-handling** layer.
+background; Phase 7.5 adds a **retry and failure-handling** layer;
+Phase 7.6 adds **parallel concurrent execution** of independent steps.
 
 > Direct execution remains synchronous: one API call drives one run step
 > by step to a terminal state. Scheduling is application-level: due-run
@@ -15,10 +16,13 @@ background; Phase 7.5 adds a **retry and failure-handling** layer.
 > enqueued (`POST /workflows/runs/{id}/queue` or via the scheduler) and a
 > worker process claims them and drives the same DAG engine. Phase 7.5
 > adds automatic retry with configurable failure classification, backoff,
-> and attempt tracking — plus a manual retry endpoint. Still absent:
-> parallel step execution, autoscaling, Kubernetes/HPC — those
-> belong to later milestones. See [queue-worker.md](queue-worker.md)
-> and [retry-failure.md](retry-failure.md).
+> and attempt tracking — plus a manual retry endpoint. Phase 7.6 adds
+> configurable parallel execution: independent steps run concurrently via
+> structured concurrency (`asyncio.TaskGroup` + `Semaphore`). Still absent:
+> per-step retry, autoscaling, Kubernetes/HPC — those
+> belong to later milestones. See [queue-worker.md](queue-worker.md),
+> [retry-failure.md](retry-failure.md), and
+> [parallel-execution.md](parallel-execution.md).
 
 ## Core concepts
 
@@ -117,11 +121,33 @@ See [queue-worker.md](queue-worker.md) for the full contract.
 
 See [retry-failure.md](retry-failure.md) for the full contract.
 
+## What exists in 7.6
+
+- `DAGExecutionEngine(max_concurrency=N)`: configurable concurrent
+  execution of independent steps when N > 1
+- Wave-based execution: all ready steps in a wave launch concurrently
+  via `asyncio.TaskGroup`, gated by `asyncio.Semaphore(max_concurrency)`
+- Sync `StepExecutor` wrapped via `asyncio.to_thread` for non-blocking
+  concurrency
+- Structured concurrency: all tasks are children of one TaskGroup; no
+  detached fire-and-forget tasks
+- Every failing step persists FAILED (not just the first); cancel_event
+  prevents new steps from starting
+- `GENOMEAI_APP_WORKFLOW_MAX_CONCURRENCY` env var configures production
+  entry points (worker and API routes)
+- Backward compatible: `max_concurrency=1` (default) produces identical
+  behaviour to Phase 7.2
+- 18 parallel-specific tests covering concurrency limits, DAG shapes,
+  failure, cancellation, and regression
+
+See [parallel-execution.md](parallel-execution.md) for the full contract.
+
 ## What does NOT exist yet
 
 - No per-step retry (workflow-level only in this phase)
-- No parallel step execution, priority queues, visibility timeouts, or
-  workflow caching
+- No per-step concurrency override (global limit only)
+- No dynamic concurrency adjustment during execution
+- No priority queues, visibility timeouts, or workflow caching
 - No multiple-worker orchestration, autoscaling, Kubernetes/HPC targets —
   one worker process per deployment is the supported shape
 - No artifact storage or real executors — step execution is still a
