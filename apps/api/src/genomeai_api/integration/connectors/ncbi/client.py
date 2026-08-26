@@ -33,6 +33,8 @@ NCBI_RATE_LIMIT_DELAY = 0.35  # ~3 req/s without API key
 class NCBIClient:
     """Async NCBI E-utilities client with rate limiting."""
 
+    _last_request_time: float = 0.0
+
     def __init__(
         self,
         api_key: str | None = None,
@@ -41,15 +43,14 @@ class NCBIClient:
         self._api_key = api_key
         self._timeout = timeout_seconds
         self._client = httpx.AsyncClient(timeout=httpx.Timeout(timeout_seconds))
-        self._last_request_time: float = 0.0
 
     async def _rate_limit(self) -> None:
-        """Enforce NCBI rate limit (3 req/s without key)."""
+        """Enforce NCBI rate limit (3 req/s without key, shared across instances)."""
         now = asyncio.get_running_loop().time()
-        elapsed = now - self._last_request_time
+        elapsed = now - NCBIClient._last_request_time
         if elapsed < NCBI_RATE_LIMIT_DELAY:
             await asyncio.sleep(NCBI_RATE_LIMIT_DELAY - elapsed)
-        self._last_request_time = asyncio.get_running_loop().time()
+        NCBIClient._last_request_time = asyncio.get_running_loop().time()
 
     async def _request(
         self,

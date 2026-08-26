@@ -22,16 +22,17 @@ RETRY_DELAY = 1.0
 class ClinVarClient:
     """Async ClinVar client via NCBI E-utilities."""
 
+    _last_request: float = 0.0
+
     def __init__(self, timeout_seconds: float = 30.0) -> None:
         self._client = httpx.AsyncClient(timeout=httpx.Timeout(timeout_seconds))
-        self._last_request: float = 0.0
 
     async def _rate_limit(self) -> None:
         now = asyncio.get_running_loop().time()
-        elapsed = now - self._last_request
+        elapsed = now - ClinVarClient._last_request
         if elapsed < NCBI_RATE_LIMIT_DELAY:
             await asyncio.sleep(NCBI_RATE_LIMIT_DELAY - elapsed)
-        self._last_request = asyncio.get_running_loop().time()
+        ClinVarClient._last_request = asyncio.get_running_loop().time()
 
     async def _get_with_retry(
         self, url: str, params: dict[str, object]
