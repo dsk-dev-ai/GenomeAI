@@ -1,8 +1,10 @@
-"""DAG Execution Engine (Phase 7.2).
+"""DAG Execution Engine (Phases 7.2 + 7.6).
 
-Deterministic, sequential, in-process execution of one WorkflowRun at a
-time. NOT a distributed engine: no queues, workers, schedulers, retries,
-or parallelism — those are deferred to later Phase 7 milestones.
+Deterministic, in-process execution of one WorkflowRun at a time. Supports
+sequential (max_concurrency=1, default) and parallel (max_concurrency>1)
+execution of independent DAG steps. NOT a distributed engine: no queues,
+workers, schedulers, retries, or cross-run parallelism — those are deferred
+to later Phase 7 milestones.
 """
 
 from genomeai_api.workflows.execution.engine import DAGExecutionEngine
