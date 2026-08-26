@@ -5,7 +5,6 @@ If Ollama is not running, AI analysis tests are skipped but basic analysis still
 """
 
 import pytest
-
 from genomeai_api.ai.ollama import OllamaProvider
 from genomeai_api.integration.connectors.ncbi.client import NCBIClient
 from genomeai_api.services.gene_analysis import GeneAnalysisEngine

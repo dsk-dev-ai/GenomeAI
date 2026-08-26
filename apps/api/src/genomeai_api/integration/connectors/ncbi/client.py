@@ -55,15 +55,40 @@ class NCBIClient:
         self,
         endpoint: str,
         params: dict[str, str | int],
+        max_retries: int = 3,
     ) -> httpx.Response:
-        """Make rate-limited request to NCBI."""
-        await self._rate_limit()
+        """Make rate-limited request to NCBI with 429 retry + exponential backoff."""
         if self._api_key:
             params["api_key"] = self._api_key
         url = f"{NCBI_BASE_URL}/{endpoint}"
-        response = await self._client.get(url, params=params)
-        response.raise_for_status()
-        return response
+
+        last_exc: Exception | None = None
+        for attempt in range(max_retries):
+            await self._rate_limit()
+            try:
+                response = await self._client.get(url, params=params)
+                if response.status_code == 429:
+                    wait = 1.0 * (2 ** attempt)
+                    logger.warning(
+                        "NCBI 429 rate limited on %s (attempt %d/%d), retrying in %.1fs",
+                        endpoint, attempt + 1, max_retries, wait,
+                    )
+                    await asyncio.sleep(wait)
+                    continue
+                response.raise_for_status()
+                return response
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code == 429:
+                    wait = 1.0 * (2 ** attempt)
+                    logger.warning(
+                        "NCBI 429 rate limited on %s (attempt %d/%d), retrying in %.1fs",
+                        endpoint, attempt + 1, max_retries, wait,
+                    )
+                    await asyncio.sleep(wait)
+                    last_exc = exc
+                    continue
+                raise
+        raise last_exc or RuntimeError(f"NCBI request failed after {max_retries} retries")
 
     async def esearch(
         self,
