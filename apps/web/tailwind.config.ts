@@ -36,12 +36,12 @@ const config: Config = {
         'fade-in-down': 'fadeInDown 0.6s ease-out both',
         'scale-in': 'scaleIn 0.4s ease-out both',
         'slide-in-right': 'slideInRight 0.4s ease-out both',
-        'shimmer': 'shimmer 1.8s linear infinite',
-        'float': 'float 6s ease-in-out infinite',
+        shimmer: 'shimmer 1.8s linear infinite',
+        float: 'float 6s ease-in-out infinite',
         'pulse-ring': 'pulseRing 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'gradient-x': 'gradientX 8s ease infinite',
         'spin-slow': 'spin 3s linear infinite',
-        'blob': 'blob 18s ease-in-out infinite',
+        blob: 'blob 18s ease-in-out infinite',
       },
       keyframes: {
         fadeIn: {
