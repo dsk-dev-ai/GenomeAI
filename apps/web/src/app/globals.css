@@ -1,3 +1,72 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+  }
+
+  ::selection {
+    @apply bg-genome-500/20 text-genome-900;
+  }
+}
+
+@layer components {
+  .shimmer-bg {
+    background: linear-gradient(
+      90deg,
+      rgba(226, 232, 240, 0.4) 25%,
+      rgba(203, 213, 225, 0.6) 37%,
+      rgba(226, 232, 240, 0.4) 63%
+    );
+    background-size: 600px 100%;
+    @apply animate-shimmer;
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-genome-600 via-genome-500 to-indigo-400 bg-clip-text text-transparent;
+    background-size: 200% auto;
+    @apply animate-gradient-x;
+  }
+
+  .glass {
+    @apply border border-white/40 bg-white/70 backdrop-blur-md;
+  }
+
+  .grid-pattern {
+    background-image: linear-gradient(rgba(34, 70, 208, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(34, 70, 208, 0.05) 1px, transparent 1px);
+    background-size: 42px 42px;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-slate-100;
+}
+::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-slate-300;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-genome-400;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
