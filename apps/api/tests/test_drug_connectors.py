@@ -13,7 +13,7 @@ from genomeai_api.integration.connectors.pubchem.client import PubChemClient
 
 
 def _retry_transient(retries: int = 3, delay: float = 3.0) -> Callable[..., Any]:
-    """Decorator: retry an async function on transient network errors."""
+    """Decorator: retry an async function on transient network/server errors."""
 
     def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(fn)
@@ -24,7 +24,11 @@ def _retry_transient(retries: int = 3, delay: float = 3.0) -> Callable[..., Any]
                     return await fn(*args, **kwargs)
                 except Exception as exc:
                     msg = str(exc).lower()
-                    if any(kw in msg for kw in ("timeout", "connection", "remote", "incomplete")):
+                    transient = any(
+                        kw in msg
+                        for kw in ("timeout", "connection", "remote", "incomplete", "server error")
+                    )
+                    if transient:
                         last_exc = exc
                         if attempt < retries - 1:
                             await asyncio.sleep(delay * (attempt + 1))
@@ -62,6 +66,7 @@ class TestChEMBL:
         finally:
             await client.close()
 
+    @_retry_transient()
     async def test_health(self) -> None:
         client = ChEMBLClient()
         try:

@@ -62,46 +62,32 @@ class ChEMBLClient:
             "limit": max_results,
             "format": "json",
         }
-        try:
-            response = await self._get_with_retry("/molecule/search.json", params=params)
-            response.raise_for_status()
-            data: dict[str, object] = response.json()
-            molecules_raw = data.get("molecules", [])
-            molecules_list: list[object] = (
-                molecules_raw if isinstance(molecules_raw, list) else []
-            )
-            drugs: list[ChEMBLDrug] = []
-            for m in molecules_list:
-                m_dict: dict[str, object] = m if isinstance(m, dict) else {}
-                if m_dict:
-                    drugs.append(self._parse_molecule(m_dict))
-            return drugs
-        except httpx.HTTPStatusError as exc:
-            logger.warning("ChEMBL search error: %s", exc.response.status_code)
-            return []
-        except Exception as exc:
-            logger.warning("ChEMBL search failed: %s", exc)
-            return []
+        response = await self._get_with_retry("/molecule/search.json", params=params)
+        response.raise_for_status()
+        data: dict[str, object] = response.json()
+        molecules_raw = data.get("molecules", [])
+        molecules_list: list[object] = (
+            molecules_raw if isinstance(molecules_raw, list) else []
+        )
+        drugs: list[ChEMBLDrug] = []
+        for m in molecules_list:
+            m_dict: dict[str, object] = m if isinstance(m, dict) else {}
+            if m_dict:
+                drugs.append(self._parse_molecule(m_dict))
+        return drugs
 
     async def get_drug(self, chembl_id: str) -> ChEMBLDrug | None:
         """Fetch a single drug by ChEMBL molecule ID."""
-        try:
-            response = await self._get_with_retry(f"/molecule/{chembl_id}.json")
-            response.raise_for_status()
-            data: dict[str, object] = response.json()
-            molecule_raw = data.get("molecule", data)
-            molecule: dict[str, object] = (
-                molecule_raw if isinstance(molecule_raw, dict) else data
-            )
-            return self._parse_molecule(molecule)
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 404:
-                return None
-            logger.warning("ChEMBL fetch error: %s", exc.response.status_code)
+        response = await self._get_with_retry(f"/molecule/{chembl_id}.json")
+        if response.status_code == 404:
             return None
-        except Exception as exc:
-            logger.warning("ChEMBL fetch failed: %s", exc)
-            return None
+        response.raise_for_status()
+        data: dict[str, object] = response.json()
+        molecule_raw = data.get("molecule", data)
+        molecule: dict[str, object] = (
+            molecule_raw if isinstance(molecule_raw, dict) else data
+        )
+        return self._parse_molecule(molecule)
 
     async def get_drug_activities(
         self, chembl_id: str, max_results: int = 10,
@@ -112,26 +98,19 @@ class ChEMBLClient:
             "limit": max_results,
             "format": "json",
         }
-        try:
-            response = await self._get_with_retry("/activity.json", params=params)
-            response.raise_for_status()
-            data: dict[str, object] = response.json()
-            activities_raw = data.get("activities", [])
-            activities_list: list[object] = (
-                activities_raw if isinstance(activities_raw, list) else []
-            )
-            results: list[ChEMBLBioactivity] = []
-            for a in activities_list:
-                a_dict: dict[str, object] = a if isinstance(a, dict) else {}
-                if a_dict:
-                    results.append(self._parse_activity(a_dict))
-            return results
-        except httpx.HTTPStatusError as exc:
-            logger.warning("ChEMBL activities error: %s", exc.response.status_code)
-            return []
-        except Exception as exc:
-            logger.warning("ChEMBL activities failed: %s", exc)
-            return []
+        response = await self._get_with_retry("/activity.json", params=params)
+        response.raise_for_status()
+        data: dict[str, object] = response.json()
+        activities_raw = data.get("activities", [])
+        activities_list: list[object] = (
+            activities_raw if isinstance(activities_raw, list) else []
+        )
+        results: list[ChEMBLBioactivity] = []
+        for a in activities_list:
+            a_dict: dict[str, object] = a if isinstance(a, dict) else {}
+            if a_dict:
+                results.append(self._parse_activity(a_dict))
+        return results
 
     def _parse_molecule(self, data: dict[str, object]) -> ChEMBLDrug:
         mol_id_raw = data.get("molecule_chembl_id", "")
@@ -188,9 +167,10 @@ class ChEMBLClient:
         )
 
     async def health_check(self) -> bool:
+        """Check if ChEMBL is reachable. Any HTTP response means the server is up."""
         try:
-            response = await self._get_with_retry("/molecule/CHEMBL25.json")
-            return response.status_code == 200
+            response = await self._client.get("/molecule/CHEMBL25.json")
+            return response.status_code < 500
         except Exception:
             return False
 
