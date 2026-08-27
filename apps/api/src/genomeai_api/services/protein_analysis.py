@@ -77,10 +77,19 @@ class ProteinAnalysisEngine:
         self, gene: str,
     ) -> ProteinAnalysis:
         """Analyze a protein by gene name."""
-        proteins = await self._uniprot.search(gene, max_results=1)
+        proteins = await self._uniprot.search(gene, max_results=5)
         if not proteins:
             raise ValueError(f"Protein for gene '{gene}' not found in UniProt")
-        return await self._analyze_protein(proteins[0])
+        best = proteins[0]
+        gene_upper = gene.upper()
+        for p in proteins:
+            if any(g.upper() == gene_upper for g in p.gene_names):
+                best = p
+                break
+            if gene_upper in p.protein_name.upper():
+                best = p
+                break
+        return await self._analyze_protein(best)
 
     async def analyze_by_accession(
         self, accession: str,

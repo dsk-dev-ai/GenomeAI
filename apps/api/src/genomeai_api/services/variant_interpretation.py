@@ -142,13 +142,27 @@ class VariantInterpretationEngine:
                 if vep_result:
                     sources.append("Ensembl VEP")
             except Exception as exc:
-                logger.warning("VEP lookup failed: %s", exc)
+                logger.warning("VEP HGVS lookup failed: %s", exc)
+
+        # Fallback: try VEP by rsID if we have one
+        if not vep_result and record.clinvar_id:
+            rs_id = (
+                f"rs{record.clinvar_id}"
+                if not record.clinvar_id.startswith("rs")
+                else record.clinvar_id
+            )
+            try:
+                vep_result = await self._vep.predict_id(rs_id)
+                if vep_result:
+                    sources.append("Ensembl VEP")
+            except Exception as exc:
+                logger.warning("VEP ID lookup failed: %s", exc)
 
         prompt = self._build_prompt(record, gnomad_variant, vep_result)
         ai_request = AIRequest(
             prompt=prompt,
             system_prompt=VARIANT_SYSTEM_PROMPT,
-            max_tokens=1024,
+            max_tokens=4096,
             temperature=0.3,
         )
 
