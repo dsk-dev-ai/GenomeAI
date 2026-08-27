@@ -38,7 +38,7 @@ class ChEMBLClient:
         for attempt in range(retries):
             try:
                 response = await self._client.get(url, params=params)
-                if response.status_code >= 500:
+                if response.status_code >= 500 or response.status_code == 429:
                     last_exc = httpx.HTTPStatusError(
                         f"Server error {response.status_code}",
                         request=response.request,

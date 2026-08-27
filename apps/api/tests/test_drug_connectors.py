@@ -7,13 +7,32 @@ import functools
 from collections.abc import Callable
 from typing import Any
 
+import httpx
 import pytest
 from genomeai_api.integration.connectors.chembl.client import ChEMBLClient
 from genomeai_api.integration.connectors.pubchem.client import PubChemClient
 
 
-def _retry_transient(retries: int = 3, delay: float = 3.0) -> Callable[..., Any]:
-    """Decorator: retry an async function on transient network/server errors."""
+def _is_transient(exc: Exception) -> bool:
+    """Return True if the exception is a transient network/server error."""
+    if isinstance(exc, httpx.HTTPStatusError):
+        status = exc.response.status_code
+        return status >= 500 or status == 429
+    msg = str(exc).lower()
+    return any(
+        kw in msg
+        for kw in ("timeout", "connection", "remote", "incomplete", "server error")
+    )
+
+
+def _retry_transient(retries: int = 1, delay: float = 3.0) -> Callable[..., Any]:
+    """Decorator: retry an async function on transient network/server errors.
+
+    The client itself already retries transient errors internally, so the test
+    decorator only needs to skip once a purely-transient/service-unavailable
+    failure propagates, rather than fail CI on a third-party outage.
+    """
+    retries = max(1, retries)
 
     def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(fn)
@@ -23,18 +42,12 @@ def _retry_transient(retries: int = 3, delay: float = 3.0) -> Callable[..., Any]
                 try:
                     return await fn(*args, **kwargs)
                 except Exception as exc:
-                    msg = str(exc).lower()
-                    transient = any(
-                        kw in msg
-                        for kw in ("timeout", "connection", "remote", "incomplete", "server error")
-                    )
-                    if transient:
-                        last_exc = exc
-                        if attempt < retries - 1:
-                            await asyncio.sleep(delay * (attempt + 1))
-                        continue
-                    raise
-            raise last_exc  # type: ignore[misc]
+                    if not _is_transient(exc):
+                        raise
+                    last_exc = exc
+                    if attempt < retries - 1:
+                        await asyncio.sleep(delay * (attempt + 1))
+            pytest.skip(f"External API unavailable after {retries} retries: {last_exc}")
 
         return wrapper
 
