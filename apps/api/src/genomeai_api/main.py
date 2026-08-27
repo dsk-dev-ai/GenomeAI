@@ -37,6 +37,7 @@ from genomeai_api.ratelimit.config import RateLimitConfig
 from genomeai_api.ratelimit.limiter import RateLimiter
 from genomeai_api.routes.admin_limits import router as admin_limits_router
 from genomeai_api.routes.datasets import router as datasets_router
+from genomeai_api.routes.diseases_enhanced import router as diseases_enhanced_router
 from genomeai_api.routes.drugs_enhanced import router as drugs_enhanced_router
 from genomeai_api.routes.experiments import router as experiments_router
 from genomeai_api.routes.genes import router as genes_router
@@ -164,6 +165,7 @@ app.include_router(proteins_enhanced_router)
 app.include_router(literature_enhanced_router)
 app.include_router(drugs_enhanced_router)
 app.include_router(pathways_enhanced_router)
+app.include_router(diseases_enhanced_router)
 app.include_router(transcripts_router)
 app.include_router(proteins_router)
 # Schedules router first: its static /workflows/schedules* paths must win
