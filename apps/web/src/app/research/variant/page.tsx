@@ -1,11 +1,15 @@
 'use client'
 
+import { AnalysisForm } from '@/components/research/AnalysisForm'
 import { AnalysisLayout } from '@/components/research/AnalysisLayout'
-import { AnalyzeButton } from '@/components/research/AnalyzeButton'
 import { Card } from '@/components/research/Card'
+import { Chip } from '@/components/research/Chip'
 import { ErrorNotice } from '@/components/research/ErrorNotice'
-import { Input } from '@/components/research/Input'
+import { KeyValue, KeyValueGrid } from '@/components/research/KeyValue'
+import { ListBlock } from '@/components/research/ListBlock'
 import { ResearchNav } from '@/components/research/ResearchNav'
+import { Reveal } from '@/components/research/Reveal'
+import { ResultSkeleton } from '@/components/research/Skeleton'
 import { type VariantInterpretation, interpretVariant } from '@/lib/research/variantApi'
 import { useState } from 'react'
 
@@ -17,8 +21,10 @@ export default function VariantPage() {
   const [error, setError] = useState<string | null>(null)
 
   async function run() {
+    if (!gene) return
     setLoading(true)
     setError(null)
+    setData(null)
     try {
       setData(await interpretVariant(gene, variant))
     } catch (err) {
@@ -28,102 +34,187 @@ export default function VariantPage() {
     }
   }
 
+  function pathogenicityTone(p: string) {
+    const low = p.toLowerCase()
+    if (low.includes('pathogenic')) return 'red'
+    if (low.includes('likely path')) return 'amber'
+    if (low.includes('benign')) return 'green'
+    if (low.includes('uncertain')) return 'amber'
+    return 'default'
+  }
+
   return (
     <>
       <ResearchNav />
       <AnalysisLayout
         title="Variant Interpretation"
-        subtitle="ClinVar + gnomAD + Ensembl VEP + Gemini pathogenicity analysis"
+        icon="🧪"
+        subtitle="Aggregate ClinVar, gnomAD frequency and Ensembl VEP, then generate an ACMG-informed pathogenicity assessment with Gemini."
       >
-        <div className="mb-6 flex flex-wrap items-end gap-3">
-          <Input label="Gene symbol" placeholder="e.g. BRCA1" value={gene} onChange={setGene} />
-          <Input
-            label="Variant (HGVS)"
-            placeholder="e.g. c.5074G>A"
-            value={variant}
-            onChange={setVariant}
-          />
-          <AnalyzeButton onClick={run} loading={loading} disabled={!gene || !variant} />
-        </div>
+        <AnalysisForm
+          fields={[
+            {
+              key: 'gene',
+              label: 'Gene symbol',
+              placeholder: 'e.g. BRCA1',
+              value: gene,
+              onChange: setGene,
+            },
+            {
+              key: 'variant',
+              label: 'Variant (HGVS)',
+              placeholder: 'e.g. c.5074G>A',
+              value: variant,
+              onChange: setVariant,
+              helper: 'Optional — leave blank to analyze top variant',
+            },
+          ]}
+          onSubmit={run}
+          loading={loading}
+          disabled={!gene}
+          submitLabel="Interpret variant"
+        />
         <ErrorNotice error={error} />
+
+        {loading ? (
+          <div className="mt-6">
+            <ResultSkeleton cards={2} />
+          </div>
+        ) : null}
+
         {data ? (
-          <div className="grid gap-4">
-            <Card title={`${data.variant_description} (${data.gene_symbol})`}>
-              <dl className="grid gap-2 text-sm">
-                <div>
-                  <dt className="text-gray-500">Pathogenicity</dt>
-                  <dd className="font-medium">{data.pathogenicity}</dd>
-                </div>
-                <div>
-                  <dt className="text-gray-500">Clinical Actionability</dt>
-                  <dd>{data.clinical_actionability}</dd>
-                </div>
-              </dl>
-            </Card>
-            {data.acmg_criteria.length > 0 ? (
-              <Card title="ACMG Criteria">
-                <ul className="list-disc pl-5 text-sm text-gray-700">
-                  {data.acmg_criteria.map((c) => (
-                    <li key={c}>{c}</li>
-                  ))}
-                </ul>
+          <div className="mt-6 space-y-5">
+            <Reveal>
+              <Card
+                icon="🧪"
+                title={data.variant_description || `Variant — ${data.gene_symbol}`}
+                subtitle={data.gene_symbol}
+                action={
+                  <Chip tone={pathogenicityTone(data.pathogenicity)}>
+                    {data.pathogenicity || 'Not classified'}
+                  </Chip>
+                }
+              >
+                {data.data_sources.length > 0 ? (
+                  <div className="mb-5 flex flex-wrap gap-1.5">
+                    {data.data_sources.map((s) => (
+                      <Chip key={s}>{s}</Chip>
+                    ))}
+                  </div>
+                ) : null}
+                <KeyValueGrid>
+                  <KeyValue
+                    label="Clinical actionability"
+                    value={data.clinical_actionability || '—'}
+                  />
+                </KeyValueGrid>
               </Card>
-            ) : null}
+            </Reveal>
+
             {data.clinvar ? (
-              <Card title="ClinVar">
-                <dl className="grid gap-1 text-sm">
-                  <div>
-                    <dt className="text-gray-500">ID</dt>
-                    <dd>{data.clinvar.clinvar_id}</dd>
+              <Reveal delay={80}>
+                <Card icon="🏥" title="ClinVar" subtitle={data.clinvar.condition}>
+                  <div className="mb-4">
+                    <Chip tone={pathogenicityTone(data.clinvar.clinical_significance)}>
+                      {data.clinvar.clinical_significance || 'n/a'}
+                    </Chip>
                   </div>
-                  <div>
-                    <dt className="text-gray-500">Significance</dt>
-                    <dd>{data.clinvar.clinical_significance}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-gray-500">Condition</dt>
-                    <dd>{data.clinvar.condition}</dd>
-                  </div>
-                </dl>
-              </Card>
+                  <KeyValueGrid>
+                    <KeyValue label="ClinVar ID" value={data.clinvar.clinvar_id} />
+                    <KeyValue label="Review status" value={data.clinvar.review_status} />
+                    <KeyValue label="HGVS c." value={data.clinvar.hgvs_c} />
+                    <KeyValue label="HGVS p." value={data.clinvar.hgvs_p} />
+                  </KeyValueGrid>
+                </Card>
+              </Reveal>
             ) : null}
+
             {data.gnomad ? (
-              <Card title="gnomAD">
-                <dl className="grid gap-1 text-sm">
-                  <div>
-                    <dt className="text-gray-500">Variant ID</dt>
-                    <dd>{data.gnomad.variant_id}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-gray-500">Allele Frequency</dt>
-                    <dd>{data.gnomad.allele_frequency.toExponential(3)}</dd>
-                  </div>
-                </dl>
-              </Card>
+              <Reveal delay={120}>
+                <Card
+                  icon="🌍"
+                  title="gnomAD Population Frequency"
+                  subtitle={data.gnomad.variant_id}
+                >
+                  <KeyValueGrid>
+                    <KeyValue
+                      label="Allele frequency"
+                      value={
+                        data.gnomad.allele_frequency > 0
+                          ? data.gnomad.allele_frequency.toExponential(3)
+                          : '0'
+                      }
+                    />
+                    <KeyValue label="Allele count" value={data.gnomad.allele_count} />
+                    <KeyValue label="Allele number" value={data.gnomad.allele_number} />
+                  </KeyValueGrid>
+                </Card>
+              </Reveal>
             ) : null}
+
             {data.vep ? (
-              <Card title="VEP Consequence">
-                <dl className="grid gap-1 text-sm">
-                  <div>
-                    <dt className="text-gray-500">Consequence</dt>
-                    <dd>{data.vep.consequence}</dd>
+              <Reveal delay={160}>
+                <Card icon="🔍" title="Ensembl VEP Consequence">
+                  <div className="mb-4 flex flex-wrap gap-1.5">
+                    <Chip tone="amber">{data.vep.impact || 'Unknown impact'}</Chip>
+                    <Chip>{data.vep.consequence}</Chip>
                   </div>
-                  <div>
-                    <dt className="text-gray-500">Impact</dt>
-                    <dd>{data.vep.impact}</dd>
-                  </div>
-                </dl>
-              </Card>
+                  {data.vep.sift_prediction || data.vep.polyphen_prediction ? (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {data.vep.sift_prediction ? (
+                        <div className="rounded-xl bg-slate-50 p-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                            SIFT
+                          </p>
+                          <p className="mt-1 text-sm font-medium text-slate-800">
+                            {data.vep.sift_prediction}
+                            {data.vep.sift_score != null ? ` (${data.vep.sift_score})` : ''}
+                          </p>
+                        </div>
+                      ) : null}
+                      {data.vep.polyphen_prediction ? (
+                        <div className="rounded-xl bg-slate-50 p-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                            PolyPhen
+                          </p>
+                          <p className="mt-1 text-sm font-medium text-slate-800">
+                            {data.vep.polyphen_prediction}
+                            {data.vep.polyphen_score != null ? ` (${data.vep.polyphen_score})` : ''}
+                          </p>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </Card>
+              </Reveal>
             ) : null}
+
+            {data.acmg_criteria.length > 0 ? (
+              <Reveal delay={200}>
+                <Card
+                  icon="📋"
+                  title="ACMG Criteria"
+                  subtitle={`${data.acmg_criteria.length} criteria`}
+                >
+                  <ListBlock items={data.acmg_criteria} dense />
+                </Card>
+              </Reveal>
+            ) : null}
+
             {data.reasoning ? (
-              <Card title="Reasoning">
-                <p className="text-sm text-gray-700">{data.reasoning}</p>
-              </Card>
+              <Reveal delay={240}>
+                <Card icon="🧠" title="Reasoning">
+                  <p className="text-sm leading-relaxed text-slate-700">{data.reasoning}</p>
+                </Card>
+              </Reveal>
             ) : null}
+
             {data.summary ? (
-              <Card title="Summary">
-                <p className="text-sm text-gray-700">{data.summary}</p>
-              </Card>
+              <Reveal delay={280}>
+                <Card icon="✨" title="AI Summary">
+                  <p className="text-sm leading-relaxed text-slate-700">{data.summary}</p>
+                </Card>
+              </Reveal>
             ) : null}
           </div>
         ) : null}
