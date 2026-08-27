@@ -1,0 +1,73 @@
+name: Deploy Website
+
+# Deploys the Next.js web app to Vercel (free tier) automatically.
+# - Push to main  -> production deploy
+# - Pull request  -> preview deploy (URL commented on the PR)
+#
+# Required GitHub Actions secrets (repo Settings > Secrets):
+#   VERCEL_TOKEN          - Vercel personal access token
+#   VERCEL_ORG_ID         - Vercel team/user ID (from ~/.vercel/project.json)
+#   VERCEL_PROJECT_ID     - Vercel project ID (from ~/.vercel/project.json)
+#   VERCEL_GENOMEAI_API_URL (optional) - public URL of the hosted backend.
+#     If unset, the site falls back to http://localhost:8000 (local dev only).
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Deploy to Vercel (Production)
+        if: github.ref == 'refs/heads/main'
+        uses: amondnet/vercel-action@v42
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: ./apps/web
+          target: production
+          github-comment: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          build-env: |
+            NEXT_PUBLIC_GENOMEAI_API_URL=${{ secrets.VERCEL_GENOMEAI_API_URL || 'http://localhost:8000' }}
+
+      - name: Deploy to Vercel (Preview)
+        if: github.event_name == 'pull_request'
+        uses: amondnet/vercel-action@v42
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: ./apps/web
+          target: preview
+          github-comment: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          build-env: |
+            NEXT_PUBLIC_GENOMEAI_API_URL=${{ secrets.VERCEL_GENOMEAI_API_URL || 'http://localhost:8000' }}
