@@ -22,9 +22,10 @@ async def _retry(coro_factory, retries: int = 3, delay: float = 2.0):  # noqa: A
     for attempt in range(retries):
         try:
             return await coro_factory()
-        except (ConnectionError, OSError, TimeoutError, Exception) as exc:
+        except Exception as exc:
             msg = str(exc).lower()
-            if "remote" in msg or "connection" in msg or "incomplete" in msg:
+            transient = any(kw in msg for kw in ("timeout", "connection", "remote", "incomplete"))
+            if transient:
                 last_exc = exc
                 if attempt < retries - 1:
                     await asyncio.sleep(delay * (attempt + 1))

@@ -2,13 +2,44 @@
 
 from __future__ import annotations
 
+import asyncio
+import functools
+from collections.abc import Callable
+from typing import Any
+
 import pytest
 from genomeai_api.integration.connectors.chembl.client import ChEMBLClient
 from genomeai_api.integration.connectors.pubchem.client import PubChemClient
 
 
+def _retry_transient(retries: int = 3, delay: float = 3.0) -> Callable[..., Any]:
+    """Decorator: retry an async function on transient network errors."""
+
+    def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
+        @functools.wraps(fn)
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+            last_exc: Exception | None = None
+            for attempt in range(retries):
+                try:
+                    return await fn(*args, **kwargs)
+                except Exception as exc:
+                    msg = str(exc).lower()
+                    if any(kw in msg for kw in ("timeout", "connection", "remote", "incomplete")):
+                        last_exc = exc
+                        if attempt < retries - 1:
+                            await asyncio.sleep(delay * (attempt + 1))
+                        continue
+                    raise
+            raise last_exc  # type: ignore[misc]
+
+        return wrapper
+
+    return decorator
+
+
 @pytest.mark.asyncio
 class TestChEMBL:
+    @_retry_transient()
     async def test_search_aspirin(self) -> None:
         client = ChEMBLClient()
         try:
@@ -20,6 +51,7 @@ class TestChEMBL:
         finally:
             await client.close()
 
+    @_retry_transient()
     async def test_get_drug(self) -> None:
         client = ChEMBLClient()
         try:
@@ -40,6 +72,7 @@ class TestChEMBL:
 
 @pytest.mark.asyncio
 class TestPubChem:
+    @_retry_transient()
     async def test_search_aspirin(self) -> None:
         client = PubChemClient()
         try:
