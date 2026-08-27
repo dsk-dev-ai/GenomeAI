@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 import httpx
@@ -17,13 +18,42 @@ CHEMBL_API_URL = "https://www.ebi.ac.uk/chembl/api/data"
 
 
 class ChEMBLClient:
-    """Async ChEMBL REST client."""
+    """Async ChEMBL REST client with automatic retry on transient errors."""
 
     def __init__(self, timeout_seconds: float = 30.0) -> None:
         self._client = httpx.AsyncClient(
             base_url=CHEMBL_API_URL,
             timeout=httpx.Timeout(timeout_seconds),
         )
+
+    async def _get_with_retry(
+        self,
+        url: str,
+        params: dict[str, str | int] | None = None,
+        retries: int = 3,
+        delay: float = 3.0,
+    ) -> httpx.Response:
+        """GET with retry on transient errors (5xx, timeouts)."""
+        last_exc: Exception | None = None
+        for attempt in range(retries):
+            try:
+                response = await self._client.get(url, params=params)
+                if response.status_code >= 500:
+                    last_exc = httpx.HTTPStatusError(
+                        f"Server error {response.status_code}",
+                        request=response.request,
+                        response=response,
+                    )
+                    if attempt < retries - 1:
+                        await asyncio.sleep(delay * (attempt + 1))
+                    continue
+                return response
+            except (httpx.TimeoutException, httpx.ConnectError, httpx.RemoteProtocolError) as exc:
+                last_exc = exc
+                if attempt < retries - 1:
+                    await asyncio.sleep(delay * (attempt + 1))
+                continue
+        raise last_exc  # type: ignore[misc]
 
     async def search_drugs(self, query: str, max_results: int = 5) -> list[ChEMBLDrug]:
         """Search ChEMBL for drugs by name."""
@@ -33,7 +63,7 @@ class ChEMBLClient:
             "format": "json",
         }
         try:
-            response = await self._client.get("/molecule/search.json", params=params)
+            response = await self._get_with_retry("/molecule/search.json", params=params)
             response.raise_for_status()
             data: dict[str, object] = response.json()
             molecules_raw = data.get("molecules", [])
@@ -49,13 +79,14 @@ class ChEMBLClient:
         except httpx.HTTPStatusError as exc:
             logger.warning("ChEMBL search error: %s", exc.response.status_code)
             return []
+        except Exception as exc:
+            logger.warning("ChEMBL search failed: %s", exc)
+            return []
 
     async def get_drug(self, chembl_id: str) -> ChEMBLDrug | None:
         """Fetch a single drug by ChEMBL molecule ID."""
         try:
-            response = await self._client.get(
-                f"/molecule/{chembl_id}.json",
-            )
+            response = await self._get_with_retry(f"/molecule/{chembl_id}.json")
             response.raise_for_status()
             data: dict[str, object] = response.json()
             molecule_raw = data.get("molecule", data)
@@ -68,6 +99,9 @@ class ChEMBLClient:
                 return None
             logger.warning("ChEMBL fetch error: %s", exc.response.status_code)
             return None
+        except Exception as exc:
+            logger.warning("ChEMBL fetch failed: %s", exc)
+            return None
 
     async def get_drug_activities(
         self, chembl_id: str, max_results: int = 10,
@@ -79,7 +113,7 @@ class ChEMBLClient:
             "format": "json",
         }
         try:
-            response = await self._client.get("/activity.json", params=params)
+            response = await self._get_with_retry("/activity.json", params=params)
             response.raise_for_status()
             data: dict[str, object] = response.json()
             activities_raw = data.get("activities", [])
@@ -94,6 +128,9 @@ class ChEMBLClient:
             return results
         except httpx.HTTPStatusError as exc:
             logger.warning("ChEMBL activities error: %s", exc.response.status_code)
+            return []
+        except Exception as exc:
+            logger.warning("ChEMBL activities failed: %s", exc)
             return []
 
     def _parse_molecule(self, data: dict[str, object]) -> ChEMBLDrug:
@@ -152,9 +189,7 @@ class ChEMBLClient:
 
     async def health_check(self) -> bool:
         try:
-            response = await self._client.get(
-                "/molecule/CHEMBL25.json",
-            )
+            response = await self._get_with_retry("/molecule/CHEMBL25.json")
             return response.status_code == 200
         except Exception:
             return False
