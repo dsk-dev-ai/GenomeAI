@@ -94,9 +94,13 @@ describe('useVolcanoPlot', () => {
     const loader = vi.fn(async () => DIFFERENTIAL_EXPRESSION_VOLCANO_FIXTURE)
     const captured = renderHook({ loader })
     await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('success'))
-    act(() => captured.model.selectPoint('TP53'))
+    await act(async () => {
+      captured.model.selectPoint('TP53')
+    })
     await waitFor(() => expect(captured.model.selectedKey).toBe('TP53'))
-    act(() => captured.model.clearSelection())
+    await act(async () => {
+      captured.model.clearSelection()
+    })
     await waitFor(() => expect(captured.model.selectedKey).toBeNull())
   })
 
@@ -115,7 +119,9 @@ describe('useVolcanoPlot', () => {
     const captured = renderHook({ loader })
     await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('success'))
     await act(async () => {})
-    act(() => captured.model.selectPoint('g1'))
+    await act(async () => {
+      captured.model.selectPoint('g1')
+    })
     await waitFor(() => expect(captured.model.selectedKey).toBe('g1'))
 
     act(() => captured.model.refetch())
@@ -127,9 +133,13 @@ describe('useVolcanoPlot', () => {
     const loader = vi.fn(async () => DIFFERENTIAL_EXPRESSION_VOLCANO_FIXTURE)
     const captured = renderHook({ loader })
     await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('success'))
-    act(() => captured.model.selectPoint('TP53'))
+    await act(async () => {
+      captured.model.selectPoint('TP53')
+    })
     await waitFor(() => expect(captured.model.selectedKey).toBe('TP53'))
-    act(() => captured.model.selectPoint(null))
+    await act(async () => {
+      captured.model.selectPoint(null)
+    })
     await waitFor(() => expect(captured.model.selectedKey).toBeNull())
   })
 })

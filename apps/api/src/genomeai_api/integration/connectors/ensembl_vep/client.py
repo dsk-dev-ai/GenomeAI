@@ -45,6 +45,26 @@ class EnsemblVEPClient:
             )
             return None
 
+    async def predict_id(
+        self, rs_id: str,
+    ) -> VEPResult | None:
+        """Predict variant consequences using rsID (e.g. rs7412)."""
+        try:
+            response = await self._client.get(
+                f"/vep/human/id/{rs_id}",
+                headers={"Content-Type": "application/json"},
+            )
+            response.raise_for_status()
+            data = response.json()
+            if not data:
+                return None
+            return self._parse_result(data[0])
+        except httpx.HTTPStatusError as exc:
+            logger.warning(
+                "Ensembl VEP id error: %s", exc.response.status_code,
+            )
+            return None
+
     async def predict_region(
         self,
         chromosome: str,

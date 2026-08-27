@@ -4,6 +4,8 @@ These tests hit the actual NCBI E-utilities API to verify the connector works.
 Rate limit: 3 req/s (enforced by client).
 """
 
+import asyncio
+
 import pytest
 from genomeai_api.integration.connectors.base import DataSourceConfig
 from genomeai_api.integration.connectors.ncbi.client import NCBIClient
@@ -12,6 +14,24 @@ from genomeai_api.integration.connectors.ncbi.gene import (
     NCBIGeneFetchRequest,
     NCBIGeneSearchRequest,
 )
+
+
+async def _retry(coro_factory, retries: int = 3, delay: float = 2.0):  # noqa: ANN001,ANN202
+    """Retry an async operation on transient network errors."""
+    last_exc: Exception | None = None
+    for attempt in range(retries):
+        try:
+            return await coro_factory()
+        except Exception as exc:
+            msg = str(exc).lower()
+            transient = any(kw in msg for kw in ("timeout", "connection", "remote", "incomplete"))
+            if transient:
+                last_exc = exc
+                if attempt < retries - 1:
+                    await asyncio.sleep(delay * (attempt + 1))
+                continue
+            raise
+    raise last_exc  # type: ignore[misc]
 
 
 @pytest.fixture
@@ -57,7 +77,7 @@ class TestNCBIClient:
     @pytest.mark.asyncio
     async def test_efetch_gene_672(self, client: NCBIClient) -> None:
         """Fetch BRCA1 gene record by ID 672 — verify returns gene data."""
-        records = await client.search_genes("BRCA1", max_results=1)
+        records = await _retry(lambda: client.search_genes("BRCA1", max_results=1))
         assert len(records) >= 1
         record = records[0]
         assert record.gene_id == "672"
@@ -68,7 +88,7 @@ class TestNCBIClient:
     @pytest.mark.asyncio
     async def test_efetch_gene_7157(self, client: NCBIClient) -> None:
         """Fetch TP53 gene record by ID 7157 — verify returns gene data."""
-        record = await client.get_gene("7157")
+        record = await _retry(lambda: client.get_gene("7157"))
         assert record is not None
         assert record.gene_id == "7157"
         assert record.symbol == "TP53"
@@ -88,10 +108,8 @@ class TestNCBIClient:
     @pytest.mark.asyncio
     async def test_elink_gene_to_pubmed(self, client: NCBIClient) -> None:
         """Find PubMed articles linked to BRCA1 gene — verify returns links."""
-        links = await client.elink(
-            source_db="gene",
-            target_db="pubmed",
-            ids=["672"],
+        links = await _retry(
+            lambda: client.elink(source_db="gene", target_db="pubmed", ids=["672"]),
         )
         assert len(links) > 0
         assert links[0]["source_id"] == "672"
