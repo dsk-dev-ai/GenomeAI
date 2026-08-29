@@ -142,6 +142,32 @@ class FailingAI(AIProvider):
         return []
 
 
+class FencedJsonAI(AIProvider):
+    """AI provider returning markdown-fenced JSON, as gemini-3.x models do."""
+
+    name = "fenced"
+
+    async def generate(self, request: AIRequest) -> AIResponse:
+        return AIResponse(
+            text='```json\n{\n  "function": "Tumor suppressor",\n  '
+            '  "key_variants": ["BRCA1 185delAG"],\n  '
+            '  "associated_diseases": ["Breast cancer"],\n  '
+            '  "drug_targets": ["Olaparib"],\n  '
+            '  "clinical_significance": "High",\n  '
+            '  "summary": "BRCA1 repairs DNA."\n}\n```',
+            model="gemini-fenced",
+            provider="gemini",
+            tokens_used=0,
+            finish_reason="stop",
+        )
+
+    async def health_check(self) -> bool:
+        return False
+
+    async def list_models(self) -> list[str]:
+        return []
+
+
 @pytest.mark.asyncio
 async def test_basic_analysis_without_ai() -> None:
     """Test basic analysis without AI (fallback mode), no Ollama required."""
@@ -163,3 +189,30 @@ async def test_basic_analysis_without_ai() -> None:
     assert analysis.gene_symbol == "BRCA1"
     assert analysis.gene_id == "672"
     assert analysis.source == "ncbi"
+
+
+@pytest.mark.asyncio
+async def test_ai_parses_markdown_fenced_json() -> None:
+    """AI output wrapped in ```json fences must still parse into fields."""
+    from genomeai_api.integration.connectors.ncbi.models import NCBIGeneRecord
+
+    record = NCBIGeneRecord(
+        gene_id="672",
+        symbol="BRCA1",
+        name="BRCA1 DNA repair associated",
+        organism="Homo sapiens",
+        chromosome="17",
+        map_location="17q21.31",
+    )
+    engine = GeneAnalysisEngine(
+        ai_provider=FencedJsonAI(),
+        ncbi_client=NCBIClient(),
+    )
+    analysis = await engine.analyze_from_record(record)
+    assert analysis.source == "ncbi+ollama"
+    assert analysis.function == "Tumor suppressor"
+    assert analysis.key_variants == ["BRCA1 185delAG"]
+    assert analysis.associated_diseases == ["Breast cancer"]
+    assert analysis.drug_targets == ["Olaparib"]
+    assert analysis.clinical_significance == "High"
+    assert analysis.summary == "BRCA1 repairs DNA."

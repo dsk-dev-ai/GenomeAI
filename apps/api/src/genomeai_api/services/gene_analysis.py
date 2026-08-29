@@ -142,7 +142,13 @@ class GeneAnalysisEngine:
 
         data: dict[str, Any] = {}
         try:
-            parsed = json.loads(response_text)
+            cleaned = response_text.strip()
+            if cleaned.startswith("```"):
+                lines = cleaned.split("\n")
+                cleaned = "\n".join(
+                    ln for ln in lines if not ln.strip().startswith("```")
+                )
+            parsed = json.loads(cleaned)
             if isinstance(parsed, dict):
                 data = parsed
         except json.JSONDecodeError:

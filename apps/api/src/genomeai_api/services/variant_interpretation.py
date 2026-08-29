@@ -244,7 +244,13 @@ class VariantInterpretationEngine:
 
     def _parse_ai_response(self, response_text: str) -> dict[str, str | list[str]]:
         try:
-            data = json.loads(response_text)
+            cleaned = response_text.strip()
+            if cleaned.startswith("```"):
+                lines = cleaned.split("\n")
+                cleaned = "\n".join(
+                    ln for ln in lines if not ln.strip().startswith("```")
+                )
+            data = json.loads(cleaned)
             if isinstance(data, dict):
                 raw_criteria = data.get("acmg_criteria", [])
                 acmg: list[str] = (
