@@ -1,0 +1,26 @@
+# Render Blueprint — GenomeAI API (free web service, public URL)
+#
+# Import this repo in Render (Blueprints / "New +") to create the backend
+# service automatically. Render will build `Dockerfile.api` and serve it on
+# a free `https://<service>.onrender.com` URL (no custom domain needed).
+#
+# After the service exists, copy its deploy hook URL:
+#   app Dashboard -> your service -> Settings -> Deploy Hook
+# and store it as a GitHub Actions secret named `RENDER_DEPLOY_HOOK_URL`.
+#
+# The release workflow deploys this service by POSTing to that hook URL.
+
+services:
+  - type: web
+    name: genomeai-api
+    runtime: docker
+    repo: https://github.com/dsk-dev-ai/GenomeAI
+    branch: main
+    dockerfilePath: ./Dockerfile.api
+    healthCheckPath: /health
+    autoDeploy: false
+    envVars:
+      - key: GENOMEAI_CORS_ORIGINS
+        value: https://genomeai.vercel.app
+      - key: GEMINI_API_KEY
+        sync: false

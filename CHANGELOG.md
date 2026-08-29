@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Public **Live Demo deployment**: release-triggered GitHub Actions workflow
+  (`.github/workflows/release-deploy.yml`) deploying the FastAPI backend to
+  Render and the Next.js frontend to Vercel, with health checks and UI/API
+  smoke tests; `Dockerfile.api`, `render.yaml`, and deployment docs
+  (`docs/deployment/architecture.md`, `docs/deployment/releases.md`)
+- `Live Demo` link and website field in the README/repository
 - GitHub Sponsors funding (`.github/FUNDING.yml`)
 - Comprehensive README with architecture, features, data sources, and quick start
 - Public API integration roadmap (37+ free biomedical databases)

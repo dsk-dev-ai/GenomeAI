@@ -1,0 +1,57 @@
+# GenomeAI API — production image (uv-managed workspace)
+#
+# Builds only the FastAPI backend from the uv workspace and runs it with
+# uvicorn. Postgres/Redis are optional at runtime (the app degrades
+# gracefully), so a single web service is enough for the V1 live demo.
+
+FROM python:3.12-slim AS base
+
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/app/.venv/bin:$PATH"
+
+WORKDIR /app
+
+COPY --from=ghcr.io/astral-sh/uv:0.5 /uv /usr/local/bin/uv
+
+################
+# Build stage
+################
+FROM base AS build
+
+# Install git so uv can resolve git dependencies if any appear in the lock.
+RUN apt-get update && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
+# The repo (minus .dockerignore'd artifacts) carries the full uv workspace:
+# root pyproject.toml + uv.lock + packages/ + apps/.
+COPY . .
+
+# Install only the api package (plus its workspace dependencies from the lock).
+RUN uv sync --frozen --package genomeai-api --no-dev \
+    && uv cache clean
+
+################
+# Runtime stage
+################
+FROM python:3.12-slim AS runtime
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/app/.venv/bin:$PATH" \
+    PORT=10000
+
+WORKDIR /app
+
+# Copy the virtualenv and the installed genomeai-api package.
+COPY --from=build /app/.venv /app/.venv
+
+# The main module was installed into the venv (editable-style from src layout).
+COPY --from=build /app/apps/api/src /app/apps/api/src
+COPY --from=build /app/packages /app/packages
+
+EXPOSE 10000
+
+CMD ["uvicorn", "genomeai_api.main:app", "--host", "0.0.0.0", "--port", "10000"]
