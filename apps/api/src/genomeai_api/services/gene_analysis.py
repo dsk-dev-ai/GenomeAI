@@ -58,9 +58,11 @@ class GeneAnalysisEngine:
         self,
         ai_provider: AIProvider,
         ncbi_client: NCBIClient | None = None,
+        close_ai_provider: bool = True,
     ) -> None:
         self._ai = ai_provider
         self._ncbi = ncbi_client or NCBIClient()
+        self._close_ai_provider = close_ai_provider
 
     async def analyze_by_symbol(
         self,
@@ -198,3 +200,5 @@ class GeneAnalysisEngine:
     async def close(self) -> None:
         """Release resources."""
         await self._ncbi.close()
+        if self._close_ai_provider:
+            await self._ai.close()

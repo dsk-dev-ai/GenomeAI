@@ -45,7 +45,8 @@ class MultiDomainReportEngine:
         self._ai = ai_provider
 
     async def close(self) -> None:
-        """No persistent resources to clean up."""
+        """Release the shared AI provider used by sub-analyses."""
+        await self._ai.close()
 
     async def generate_report(
         self,
@@ -65,7 +66,10 @@ class MultiDomainReportEngine:
 
         async def _fetch_gene() -> None:
             try:
-                engine = GeneAnalysisEngine(ai_provider=self._ai)
+                engine = GeneAnalysisEngine(
+                    ai_provider=self._ai,
+                    close_ai_provider=False,
+                )
                 result = await engine.analyze_by_symbol(gene)
                 gene_data["summary"] = result.summary
                 gene_data["data"] = {
@@ -82,7 +86,10 @@ class MultiDomainReportEngine:
             if not variant:
                 return
             try:
-                engine = VariantInterpretationEngine(ai_provider=self._ai)
+                engine = VariantInterpretationEngine(
+                    ai_provider=self._ai,
+                    close_ai_provider=False,
+                )
                 results = await engine.interpret_by_gene(gene, max_variants=5)
                 if results:
                     result = results[0]
@@ -98,7 +105,10 @@ class MultiDomainReportEngine:
 
         async def _fetch_protein() -> None:
             try:
-                engine = ProteinAnalysisEngine(ai_provider=self._ai)
+                engine = ProteinAnalysisEngine(
+                    ai_provider=self._ai,
+                    close_ai_provider=False,
+                )
                 result = await engine.analyze_by_gene(gene)
                 protein_data["summary"] = result.function_summary
                 protein_data["data"] = {
@@ -113,7 +123,10 @@ class MultiDomainReportEngine:
 
         async def _fetch_literature() -> None:
             try:
-                engine = LiteratureSearchEngine(ai_provider=self._ai)
+                engine = LiteratureSearchEngine(
+                    ai_provider=self._ai,
+                    close_ai_provider=False,
+                )
                 result: dict[str, object] = await engine.search(gene, max_results=5)
                 lit_summary = result.get("ai_analysis", "")
                 epmc_raw: object = result.get("europepmc_articles", [])
@@ -132,7 +145,10 @@ class MultiDomainReportEngine:
 
         async def _fetch_drug() -> None:
             try:
-                engine = DrugAnalysisEngine(ai_provider=self._ai)
+                engine = DrugAnalysisEngine(
+                    ai_provider=self._ai,
+                    close_ai_provider=False,
+                )
                 result: dict[str, object] = await engine.analyze(gene)
                 drug_summary = result.get("ai_analysis", "")
                 chembl_raw: object = result.get("chembl_drugs", [])
@@ -151,7 +167,10 @@ class MultiDomainReportEngine:
 
         async def _fetch_pathway() -> None:
             try:
-                engine = PathwayAnalysisEngine(ai_provider=self._ai)
+                engine = PathwayAnalysisEngine(
+                    ai_provider=self._ai,
+                    close_ai_provider=False,
+                )
                 result = await engine.analyze_by_gene(gene)
                 pathway_data["summary"] = result.ai_raw_response
                 pathway_data["data"] = {
@@ -167,7 +186,10 @@ class MultiDomainReportEngine:
 
         async def _fetch_disease() -> None:
             try:
-                engine = DiseaseAnalysisEngine(ai_provider=self._ai)
+                engine = DiseaseAnalysisEngine(
+                    ai_provider=self._ai,
+                    close_ai_provider=False,
+                )
                 result = await engine.analyze_gene_diseases(gene)
                 disease_data["summary"] = result.ai_raw_response
                 disease_data["data"] = {
@@ -244,5 +266,9 @@ class MultiDomainReportEngine:
             max_tokens=4096,
             temperature=0.3,
         )
-        response: AIResponse = await self._ai.generate(request)
-        return response.text
+        try:
+            response: AIResponse = await self._ai.generate(request)
+            return response.text
+        except Exception as exc:
+            logger.warning("Executive summary AI analysis failed: %s", exc)
+            return "\n".join(parts[1:])

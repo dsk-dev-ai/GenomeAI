@@ -42,15 +42,31 @@ Respond in JSON format:
 class DrugAnalysisEngine:
     """Drug analysis engine combining ChEMBL + PubChem + AI."""
 
-    def __init__(self, ai_provider: AIProvider) -> None:
+    def __init__(self, ai_provider: AIProvider, close_ai_provider: bool = True) -> None:
         self._chembl = ChEMBLClient()
         self._pubchem = PubChemClient()
         self._ai = ai_provider
+        self._close_ai_provider = close_ai_provider
 
     async def search(self, query: str) -> dict[str, object]:
         """Search ChEMBL + PubChem for drug information."""
-        chembl_drugs = await self._chembl.search_drugs(query, max_results=3)
-        pubchem_compound = await self._pubchem.search_by_name(query)
+        sources: list[str] = []
+        chembl_drugs: list[ChEMBLDrug] = []
+        pubchem_compound: PubChemCompound | None = None
+
+        try:
+            chembl_drugs = await self._chembl.search_drugs(query, max_results=3)
+            if chembl_drugs:
+                sources.append("ChEMBL")
+        except Exception as exc:
+            logger.warning("ChEMBL search failed for %s: %s", query, exc)
+
+        try:
+            pubchem_compound = await self._pubchem.search_by_name(query)
+            if pubchem_compound:
+                sources.append("PubChem")
+        except Exception as exc:
+            logger.warning("PubChem search failed for %s: %s", query, exc)
 
         results: dict[str, object] = {
             "query": query,
@@ -60,6 +76,7 @@ class DrugAnalysisEngine:
                 if pubchem_compound
                 else None
             ),
+            "sources": sources,
         }
         return results
 
@@ -83,7 +100,7 @@ class DrugAnalysisEngine:
             drug_data_parts.append(self._pubchem_to_str(pc_dict))
 
         if not drug_data_parts:
-            return {"error": "No drug data found", "analysis": None}
+            return {**search_results, "error": "No drug data found", "ai_analysis": None}
 
         drug_data = "\n\n".join(drug_data_parts)
         prompt = DRUG_ANALYSIS_PROMPT.format(drug_data=drug_data)
@@ -94,14 +111,15 @@ class DrugAnalysisEngine:
         except Exception as exc:
             logger.warning("AI analysis failed: %s", exc)
             return {
-                "query": query,
+                **search_results,
                 "ai_analysis": None,
                 "error": str(exc),
             }
 
         return {
-            "query": query,
+            **search_results,
             "ai_analysis": ai_response.text,
+            "error": None,
         }
 
     def _chembl_to_dict(self, drug: ChEMBLDrug) -> dict[str, object]:
@@ -142,3 +160,5 @@ class DrugAnalysisEngine:
     async def close(self) -> None:
         await self._chembl.close()
         await self._pubchem.close()
+        if self._close_ai_provider:
+            await self._ai.close()

@@ -41,16 +41,19 @@ DISEASE_SYSTEM_PROMPT = (
 class DiseaseAnalysisEngine:
     """Orchestrates disease analysis from OpenTargets, DO, Monarch + AI."""
 
-    def __init__(self, ai_provider: AIProvider) -> None:
+    def __init__(self, ai_provider: AIProvider, close_ai_provider: bool = True) -> None:
         self._ai = ai_provider
         self._opentargets = OpenTargetsClient()
         self._do = DiseaseOntologyClient()
         self._monarch = MonarchClient()
+        self._close_ai_provider = close_ai_provider
 
     async def close(self) -> None:
         await self._opentargets.close()
         await self._do.close()
         await self._monarch.close()
+        if self._close_ai_provider:
+            await self._ai.close()
 
     async def search_disease(self, query: str) -> DiseaseAnalysis:
         """Search for a disease by name/query."""
@@ -228,8 +231,12 @@ class DiseaseAnalysisEngine:
             max_tokens=4096,
             temperature=0.3,
         )
-        response: AIResponse = await self._ai.generate(request)
-        return response.text
+        try:
+            response: AIResponse = await self._ai.generate(request)
+            return response.text
+        except Exception as exc:
+            logger.warning("AI disease analysis failed: %s", exc)
+            return ""
 
     async def _get_ai_analysis_gene(
         self,
@@ -257,5 +264,9 @@ class DiseaseAnalysisEngine:
             max_tokens=4096,
             temperature=0.3,
         )
-        response: AIResponse = await self._ai.generate(request)
-        return response.text
+        try:
+            response: AIResponse = await self._ai.generate(request)
+            return response.text
+        except Exception as exc:
+            logger.warning("AI disease analysis failed: %s", exc)
+            return ""
