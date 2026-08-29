@@ -9,7 +9,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-from typing import Any
+from collections.abc import Awaitable
+from typing import Any, cast
 
 from genomeai_api.ai.base import AIProvider, AIRequest, AIResponse
 
@@ -144,8 +145,8 @@ class GeminiProvider(AIProvider):
         try:
             aio = getattr(client, "aio", None)
             aclose = getattr(aio, "aclose", None)
-            if callable(aclose):
-                await aclose()
+            if aclose is not None:
+                await cast("Awaitable[Any]", aclose())
         except AttributeError as exc:
             if "_async_httpx_client" not in str(exc):
                 raise
