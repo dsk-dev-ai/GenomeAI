@@ -1,19 +1,26 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/genomics-open--source-brightgreen?style=for-the-badge&logo=🧬" alt="Genomics Open Source"/>
+  <a href="https://genomeai.vercel.app"><img src="https://img.shields.io/badge/Live_Demo-View_Online-2ea44f?style=for-the-badge&logo=internetexplorer&logoColor=white" alt="Live Demo"/></a>
+  <a href="https://github.com/dsk-dev-ai/GenomeAI/stargazers"><img src="https://img.shields.io/github/stars/dsk-dev-ai/GenomeAI?style=for-the-badge&logo=github&color=yellow" alt="GitHub Stars"/></a>
+  <a href="https://github.com/dsk-dev-ai/GenomeAI/forks"><img src="https://img.shields.io/github/forks/dsk-dev-ai/GenomeAI?style=for-the-badge&logo=github" alt="Forks"/></a>
 </p>
 
-<h1 align="center">GenomeAI</h1>
+<p align="center">
+  <a href="https://github.com/dsk-dev-ai/GenomeAI/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square" alt="License"></a>
+  <a href="https://github.com/dsk-dev-ai/GenomeAI/actions"><img src="https://img.shields.io/github/actions/workflow/status/dsk-dev-ai/GenomeAI/ci.yml?style=flat-square&label=CI" alt="CI Status"></a>
+  <a href="https://github.com/dsk-dev-ai/GenomeAI/last-commit"><img src="https://img.shields.io/github/last-commit/dsk-dev-ai/GenomeAI?style=flat-square&label=Last%20commit" alt="Last commit"></a>
+  <a href="https://github.com/dsk-dev-ai/GenomeAI/issues"><img src="https://img.shields.io/github/issues/dsk-dev-ai/GenomeAI?style=flat-square" alt="Open issues"></a>
+  <a href="https://github.com/dsk-dev-ai/GenomeAI/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square" alt="PRs Welcome"></a>
+  <a href="https://github.com/sponsors/dsk-dev-ai"><img src="https://img.shields.io/badge/%E2%9D%A4%EF%B8%8F-Sponsor-red?style=flat-square&logo=githubsponsors&logoColor=white" alt="Sponsor"></a>
+</p>
+
+<h1 align="center">🧬 GenomeAI</h1>
 
 <p align="center">
   <strong>Open-source AI platform for genomics, bioinformatics, biomedical research,<br/>and evidence-based AI powered by public scientific databases and multi-provider LLMs.</strong>
 </p>
 
 <p align="center">
-  <a href="https://github.com/dsk-dev-ai/GenomeAI/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square" alt="License"></a>
-  <a href="https://github.com/dsk-dev-ai/GenomeAI/actions"><img src="https://img.shields.io/github/actions/workflow/status/dsk-dev-ai/GenomeAI/ci.yml?style=flat-square&label=CI" alt="CI Status"></a>
-  <a href="https://github.com/dsk-dev-ai/GenomeAI/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square" alt="PRs Welcome"></a>
-  <a href="https://github.com/dsk-dev-ai/GenomeAI/stargazers"><img src="https://img.shields.io/github/stars/dsk-dev-ai/GenomeAI?style=flat-square&color=yellow" alt="Stars"></a>
-  <a href="https://github.com/sponsors/dsk-dev-ai"><img src="https://img.shields.io/badge/%E2%9D%A4%EF%B8%8F-Sponsor-red?style=flat-square&logo=githubsponsors&logoColor=white" alt="Sponsor"></a>
+  <a href=".github/genomeai-og.png"><img src=".github/genomeai-og.png" alt="GenomeAI banner" width="100%"/></a>
 </p>
 
 ## 🚀 Live Demo
