@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Public API integration roadmap (37+ free biomedical databases)
 
 ### Changed
+- Frontend deploy in the release workflow now uses the Vercel REST API instead
+  of `amondnet/vercel-action` (the action is incompatible with current Vercel
+  CLI); removed the redundant `deploy.yml` workflow (Vercel GitHub integration
+  already deploys main pushes and PR previews)
 - Updated ROADMAP.md with delivered work, API integration plan, cost-effective AI strategy
 - Updated ARCHITECTURE.md with current implementation status
 - Updated CONTRIBUTING.md with development setup instructions

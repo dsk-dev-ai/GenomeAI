@@ -12,7 +12,7 @@ GitHub Release (tag v1.0.0 on main)
 .github/workflows/release-deploy.yml   "Deploy Release (Live Demo)"
   checkout tag → install (pnpm + uv) → lint/format → typecheck →
   tests → build web → deploy backend (Render hook) → deploy frontend
-  (Vercel --prod) → wait for backend /health → wait for frontend →
+  (Vercel REST API) → wait for backend /health → wait for frontend →
   real API smoke test → UI smoke test → comment on the release
         │
         ▼
@@ -50,15 +50,16 @@ Repository → Settings → Secrets and variables → Actions.
 | Kind | Name | Example / source |
 |------|------|------------------|
 | Secret | `VERCEL_TOKEN` | Vercel → Settings → Tokens |
-| Secret | `VERCEL_ORG_ID` | `~/.vercel/project.json` (`orgId`) |
 | Secret | `VERCEL_PROJECT_ID` | `~/.vercel/project.json` (`projectId`) |
 | Secret | `RENDER_DEPLOY_HOOK_URL` | Render service → Settings → Deploy Hook |
 | Variable | `GENOMEAI_FRONTEND_URL` | `https://<project>.vercel.app` |
 | Variable | `GENOMEAI_BACKEND_URL` | `https://genomeai-api.onrender.com` |
 
-Optional: `VERCEL_GENOMEAI_API_URL` (Secret) overrides the backend URL on the
-continuous Vercel deploy; `GEMINI_API_KEY`/`GOOGLE_API_KEY` (Render env) enable
-AI features (the API falls back to basic analysis without a key).
+The `NEXT_PUBLIC_GENOMEAI_API_URL` build-time variable is set directly on the
+Vercel project (Settings → Environment Variables), so every deploy — including
+the release-triggered one — bakes the public backend URL into the frontend.
+`GOOGLE_API_KEY`/`GEMINI_API_KEY` (Render env) enable AI features (the API falls
+back to basic analysis without a key).
 
 Keep the token permissions at least-privilege (only the repos/projects above).
 
