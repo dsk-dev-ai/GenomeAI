@@ -59,11 +59,13 @@ class VariantInterpretationEngine:
         clinvar_client: ClinVarClient | None = None,
         gnomad_client: GnomADClient | None = None,
         vep_client: EnsemblVEPClient | None = None,
+        close_ai_provider: bool = True,
     ) -> None:
         self._ai = ai_provider
         self._clinvar = clinvar_client or ClinVarClient()
         self._gnomad = gnomad_client or GnomADClient()
         self._vep = vep_client or EnsemblVEPClient()
+        self._close_ai_provider = close_ai_provider
 
     async def interpret_by_gene(
         self,
@@ -286,3 +288,5 @@ class VariantInterpretationEngine:
         await self._clinvar.close()
         await self._gnomad.close()
         await self._vep.close()
+        if self._close_ai_provider:
+            await self._ai.close()

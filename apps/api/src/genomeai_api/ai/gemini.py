@@ -1,11 +1,12 @@
-"""Google Gemini AI provider — free tier, fast inference.
+"""Google Gemini AI provider - free tier, fast inference.
 
 Uses google-genai SDK with Gemini Flash models (free tier: 0 cost, generous RPM).
-Requires GEMINI_API_KEY env var.
+Requires GEMINI_API_KEY or GOOGLE_API_KEY env var.
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from typing import Any
@@ -13,6 +14,8 @@ from typing import Any
 from genomeai_api.ai.base import AIProvider, AIRequest, AIResponse
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 
 
 class GeminiProvider(AIProvider):
@@ -23,15 +26,31 @@ class GeminiProvider(AIProvider):
     def __init__(
         self,
         api_key: str | None = None,
-        default_model: str = "gemini-3.6-flash",
+        default_model: str | None = None,
     ) -> None:
-        self._api_key = api_key or os.environ.get("GEMINI_API_KEY", "")
-        self._default_model = default_model
+        # Google documents GOOGLE_API_KEY as taking precedence when both are set.
+        self._api_key = (
+            api_key
+            if api_key is not None
+            else os.environ.get("GOOGLE_API_KEY")
+            or os.environ.get("GEMINI_API_KEY", "")
+        )
+        self._default_model = (
+            default_model
+            or os.environ.get("GENOMEAI_GEMINI_MODEL")
+            or os.environ.get("GEMINI_MODEL")
+            or DEFAULT_GEMINI_MODEL
+        )
         self._client: Any = None
 
     def _get_client(self) -> Any:
+        if not self._api_key:
+            raise RuntimeError(
+                "Gemini API key is not configured. Set GEMINI_API_KEY or GOOGLE_API_KEY."
+            )
         if self._client is None:
             from google import genai
+
             self._client = genai.Client(api_key=self._api_key)
         return self._client
 
@@ -50,7 +69,8 @@ class GeminiProvider(AIProvider):
             if system_instruction:
                 config["system_instruction"] = system_instruction
 
-            response = client.models.generate_content(
+            response = await asyncio.to_thread(
+                client.models.generate_content,
                 model=model,
                 contents=contents,
                 config=config,
@@ -87,7 +107,8 @@ class GeminiProvider(AIProvider):
             if not self._api_key:
                 return False
             client = self._get_client()
-            client.models.generate_content(
+            await asyncio.to_thread(
+                client.models.generate_content,
                 model=self._default_model,
                 contents="Hi",
                 config={"max_output_tokens": 5},
@@ -100,10 +121,32 @@ class GeminiProvider(AIProvider):
     async def list_models(self) -> list[str]:
         try:
             client = self._get_client()
-            models = client.models.list()
+            models = await asyncio.to_thread(client.models.list)
             return [str(m.name) for m in models if hasattr(m, "name")]
         except Exception:
             return []
 
     async def close(self) -> None:
+        client = self._client
         self._client = None
+        if client is None:
+            return
+
+        try:
+            close = getattr(client, "close", None)
+            if callable(close):
+                close()
+        except AttributeError as exc:
+            if "_async_httpx_client" not in str(exc):
+                raise
+            logger.debug("Ignoring google-genai sync close noise: %s", exc)
+
+        try:
+            aio = getattr(client, "aio", None)
+            aclose = getattr(aio, "aclose", None)
+            if callable(aclose):
+                await aclose()
+        except AttributeError as exc:
+            if "_async_httpx_client" not in str(exc):
+                raise
+            logger.debug("Ignoring google-genai async close noise: %s", exc)

@@ -67,11 +67,13 @@ class ProteinAnalysisEngine:
         uniprot_client: UniProtClient | None = None,
         pdb_client: PDBClient | None = None,
         alphafold_client: AlphaFoldClient | None = None,
+        close_ai_provider: bool = True,
     ) -> None:
         self._ai = ai_provider
         self._uniprot = uniprot_client or UniProtClient()
         self._pdb = pdb_client or PDBClient()
         self._alphafold = alphafold_client or AlphaFoldClient()
+        self._close_ai_provider = close_ai_provider
 
     async def analyze_by_gene(
         self, gene: str,
@@ -248,3 +250,5 @@ class ProteinAnalysisEngine:
         await self._uniprot.close()
         await self._pdb.close()
         await self._alphafold.close()
+        if self._close_ai_provider:
+            await self._ai.close()

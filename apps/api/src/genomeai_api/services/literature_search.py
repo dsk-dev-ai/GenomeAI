@@ -45,10 +45,11 @@ Respond in JSON format:
 class LiteratureSearchEngine:
     """Literature search engine combining Europe PMC + Semantic Scholar + AI."""
 
-    def __init__(self, ai_provider: AIProvider) -> None:
+    def __init__(self, ai_provider: AIProvider, close_ai_provider: bool = True) -> None:
         self._epmc = EuropePMCClient()
         self._ss = SemanticScholarClient()
         self._ai = ai_provider
+        self._close_ai_provider = close_ai_provider
 
     async def search(self, query: str, max_results: int = 10) -> dict[str, object]:
         """Search both Europe PMC and Semantic Scholar, return merged results."""
@@ -171,3 +172,5 @@ class LiteratureSearchEngine:
     async def close(self) -> None:
         await self._epmc.close()
         await self._ss.close()
+        if self._close_ai_provider:
+            await self._ai.close()

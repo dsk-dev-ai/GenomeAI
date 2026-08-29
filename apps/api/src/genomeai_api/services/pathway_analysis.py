@@ -58,11 +58,13 @@ class PathwayAnalysisEngine:
         reactome_client: ReactomeClient | None = None,
         string_client: StringDBClient | None = None,
         kegg_client: KEGGClient | None = None,
+        close_ai_provider: bool = True,
     ) -> None:
         self._ai = ai_provider
         self._reactome = reactome_client or ReactomeClient()
         self._string = string_client or StringDBClient()
         self._kegg = kegg_client or KEGGClient()
+        self._close_ai_provider = close_ai_provider
 
     async def analyze_by_gene(self, gene: str) -> PathwayAnalysis:
         """Full pathway analysis for a single gene."""
@@ -262,3 +264,5 @@ class PathwayAnalysisEngine:
         await self._reactome.close()
         await self._string.close()
         await self._kegg.close()
+        if self._close_ai_provider:
+            await self._ai.close()
