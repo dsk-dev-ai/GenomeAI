@@ -29,7 +29,9 @@ real free-tier hosts that support the required runtimes.
 ### Frontend — Vercel (free)
 
 - Public URL: `https://<project>.vercel.app`
-- Deployed with the Vercel CLI / `amondnet/vercel-action`
+- Deployed by the Vercel GitHub integration (push to main / PR preview) and, for
+  releases, by a GitHub Actions step that triggers a deploy via the Vercel
+  REST API (`POST /v13/deployments`)
 - Build command from `apps/web/package.json` (Next.js)
 - Free-tier limitations:
   - Serverless, non-commercial usage only

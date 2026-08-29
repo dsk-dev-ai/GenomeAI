@@ -8,12 +8,11 @@ name: Deploy Release (Live Demo)
 #
 # Flow:
 #   tag -> checkout -> install -> build + tests -> deploy backend (Render)
-#        -> deploy frontend (Vercel, NEXT_PUBLIC_GENOMEAI_API_URL=backend URL)
+#        -> deploy frontend (Vercel REST API)
 #        -> health check both public URLs -> real API + UI smoke test
 #
 # Required GitHub Actions secrets (Settings > Secrets and variables > Actions):
 #   VERCEL_TOKEN            - Vercel personal access token
-#   VERCEL_ORG_ID           - Vercel team/user ID (from ~/.vercel/project.json)
 #   VERCEL_PROJECT_ID       - Vercel project ID (from ~/.vercel/project.json)
 #   RENDER_DEPLOY_HOOK_URL  - Render service deploy hook URL (Settings -> Deploy Hook)
 #
@@ -97,18 +96,28 @@ jobs:
         timeout-minutes: 2
 
       - name: Deploy frontend to Vercel (Release)
-        uses: amondnet/vercel-action@v42
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: "--prod"
-          working-directory: ./apps/web
-          target: production
-          github-comment: true
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          build-env: |
-            NEXT_PUBLIC_GENOMEAI_API_URL=${{ vars.GENOMEAI_BACKEND_URL }}
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "::error::VERCEL_TOKEN and/or VERCEL_PROJECT_ID secrets are not set."
+            echo "Create a Vercel personal access token and set the project ID in"
+            echo "Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          REPO_ID=$(gh api "repos/${{ github.repository }}" --jq '.id')
+          REF="${{ github.ref_name }}"
+          echo "Triggering Vercel production deploy of $REF ..."
+          curl -fsS -X POST \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://api.vercel.com/v13/deployments?forceNew=1" \
+            -d "{\"name\":\"genomeai\",\"project\":\"$VERCEL_PROJECT_ID\",\"target\":\"production\",\"gitSource\":{\"type\":\"github\",\"repoId\":$REPO_ID,\"ref\":\"$REF\"}}" \
+            -o /tmp/vercel_deploy.json
+          echo "Deploy request accepted:"
+          cat /tmp/vercel_deploy.json
+          echo
 
       - name: Wait for backend health
         env:
