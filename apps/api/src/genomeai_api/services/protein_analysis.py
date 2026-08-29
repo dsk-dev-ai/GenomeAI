@@ -134,7 +134,7 @@ class ProteinAnalysisEngine:
         ai_request = AIRequest(
             prompt=prompt,
             system_prompt=PROTEIN_SYSTEM_PROMPT,
-            max_tokens=1024,
+            max_tokens=4096,
             temperature=0.3,
         )
 
