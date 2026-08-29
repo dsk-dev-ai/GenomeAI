@@ -16,6 +16,18 @@
   <a href="https://github.com/sponsors/dsk-dev-ai"><img src="https://img.shields.io/badge/%E2%9D%A4%EF%B8%8F-Sponsor-red?style=flat-square&logo=githubsponsors&logoColor=white" alt="Sponsor"></a>
 </p>
 
+## 🚀 Live Demo
+
+> **Try GenomeAI right now — no install required.** Click the link and use the
+> working application:
+
+<p align="center">
+  <a href="https://genomeai.vercel.app"><strong>🌐 Open the Live Demo → https://genomeai.vercel.app</strong></a>
+  <br/>
+  <sub>Backend API: <code>https://genomeai-api.onrender.com</code> · free-tier hosts, deployed automatically on every release.
+  See <a href="docs/deployment/releases.md">docs/deployment/releases.md</a> for how it works.</sub>
+</p>
+
 ---
 
 ## What is GenomeAI?

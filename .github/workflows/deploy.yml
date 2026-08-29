@@ -9,7 +9,8 @@ name: Deploy Website
 #   VERCEL_ORG_ID         - Vercel team/user ID (from ~/.vercel/project.json)
 #   VERCEL_PROJECT_ID     - Vercel project ID (from ~/.vercel/project.json)
 #   VERCEL_GENOMEAI_API_URL (optional) - public URL of the hosted backend.
-#     If unset, the site falls back to http://localhost:8000 (local dev only).
+#     If unset, defaults to the GENOMEAI_BACKEND_URL repo variable (recommended)
+#     and finally http://localhost:8000 (local dev only).
 
 on:
   push:
@@ -56,7 +57,7 @@ jobs:
           github-comment: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
           build-env: |
-            NEXT_PUBLIC_GENOMEAI_API_URL=${{ secrets.VERCEL_GENOMEAI_API_URL || 'http://localhost:8000' }}
+            NEXT_PUBLIC_GENOMEAI_API_URL=${{ secrets.VERCEL_GENOMEAI_API_URL || vars.GENOMEAI_BACKEND_URL || 'http://localhost:8000' }}
 
       - name: Deploy to Vercel (Preview)
         if: github.event_name == 'pull_request'
@@ -70,4 +71,4 @@ jobs:
           github-comment: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
           build-env: |
-            NEXT_PUBLIC_GENOMEAI_API_URL=${{ secrets.VERCEL_GENOMEAI_API_URL || 'http://localhost:8000' }}
+            NEXT_PUBLIC_GENOMEAI_API_URL=${{ secrets.VERCEL_GENOMEAI_API_URL || vars.GENOMEAI_BACKEND_URL || 'http://localhost:8000' }}

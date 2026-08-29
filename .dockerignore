@@ -1,0 +1,35 @@
+# VCS
+.git
+.gitignore
+.gitattributes
+
+# Python
+.venv
+__pycache__
+*.py[cod]
+.ruff_cache
+.pytest_cache
+
+# Node / pnpm
+node_modules
+pnpm-store
+.next
+.turbo
+*.tsbuildinfo
+dist
+
+# Editors / OS
+.vscode
+.idea
+.DS_Store
+
+# Logs / local env
+*.log
+.env
+.env.local
+.env.*.local
+
+# Container build artifacts
+docker
+Dockerfile*
+docker-compose.yml
