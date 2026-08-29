@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <a href=".github/genomeai-og.png"><img src=".github/genomeai-og.png" alt="GenomeAI banner" width="100%"/></a>
+  <a href=".github/genomeai-og.png"><img src=".github/genomeai-og.png" alt="GenomeAI banner" width="720"/></a>
 </p>
 
 ## 🚀 Live Demo
