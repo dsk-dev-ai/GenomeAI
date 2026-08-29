@@ -96,7 +96,7 @@ class GeneAnalysisEngine:
         ai_request = AIRequest(
             prompt=prompt,
             system_prompt=GENE_ANALYSIS_SYSTEM_PROMPT,
-            max_tokens=1024,
+            max_tokens=4096,
             temperature=0.3,
         )
 
@@ -137,22 +137,18 @@ class GeneAnalysisEngine:
         response_text: str,
         record: NCBIGeneRecord,
     ) -> GeneAnalysis:
-        """Parse AI JSON response into GeneAnalysis."""
-        import json
+        """Parse AI JSON response into GeneAnalysis.
 
+        Gemini 3.x models may wrap the JSON in markdown code fences and can
+        truncate the output at max_tokens, so we strip fences first and then
+        salvage the best complete JSON object if strict parsing fails.
+        """
         data: dict[str, Any] = {}
-        try:
-            cleaned = response_text.strip()
-            if cleaned.startswith("```"):
-                lines = cleaned.split("\n")
-                cleaned = "\n".join(
-                    ln for ln in lines if not ln.strip().startswith("```")
-                )
-            parsed = json.loads(cleaned)
-            if isinstance(parsed, dict):
-                data = parsed
-        except json.JSONDecodeError:
-            pass
+        if response_text:
+            data = self._extract_json_dict(response_text)
+
+        if not data:
+            return self._basic_analysis(record)
 
         function_val = str(data.get("function", ""))
         key_variants_val: list[str] = []
@@ -186,6 +182,57 @@ class GeneAnalysisEngine:
             ai_raw_response=response_text,
             source="ncbi+ollama",
         )
+
+    @staticmethod
+    def _extract_json_dict(response_text: str) -> dict[str, Any]:
+        """Extract the best-possible JSON object from an AI response.
+
+        Handles markdown code fences (```json ... ```) and JSON truncated by
+        max_tokens. Returns {} if nothing usable is found.
+        """
+        import json
+
+        text = response_text.strip()
+
+        if text.startswith("```"):
+            lines = text.split("\n")
+            text = "\n".join(
+                ln for ln in lines if not ln.strip().startswith("```")
+            )
+
+        start = text.find("{")
+        if start == -1:
+            return {}
+        candidate = text[start:]
+
+        try:
+            parsed = json.loads(candidate)
+            if isinstance(parsed, dict):
+                return parsed
+        except json.JSONDecodeError:
+            pass
+
+        # Truncated JSON: try increasingly shorter prefixes, cutting only at
+        # positions that could end a complete value ('}' or '"'), bounded scan.
+        # A cut may leave the object unclosed, so try appending a closing "}".
+        checked = 0
+        for i in range(len(candidate) - 1, -1, -1):
+            if candidate[i] not in '}"':
+                continue
+            checked += 1
+            if checked > 64:
+                break
+            for attempt in (candidate[: i + 1], candidate[: i + 1] + "}"):
+                if not attempt.endswith("}"):
+                    continue
+                try:
+                    parsed = json.loads(attempt)
+                    if isinstance(parsed, dict):
+                        return parsed
+                except (json.JSONDecodeError, RecursionError):
+                    continue
+
+        return {}
 
     def _basic_analysis(self, record: NCBIGeneRecord) -> GeneAnalysis:
         """Fallback analysis without AI."""

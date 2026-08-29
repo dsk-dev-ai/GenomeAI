@@ -216,3 +216,137 @@ async def test_ai_parses_markdown_fenced_json() -> None:
     assert analysis.drug_targets == ["Olaparib"]
     assert analysis.clinical_significance == "High"
     assert analysis.summary == "BRCA1 repairs DNA."
+
+
+class TrailingGarbageAI(AIProvider):
+    """AI provider returning fenced JSON followed by trailing text."""
+
+    name = "trailing-garbage"
+
+    async def generate(self, request: AIRequest) -> AIResponse:
+        return AIResponse(
+            text='```json\n{\n  "function": "BRCA1 is a tumor suppressor",\n'
+            '  "summary": "important in DNA repair"\n}\n```\n'
+            'truncated trailing text',
+            model="gemini-trailing",
+            provider="gemini",
+            tokens_used=0,
+            finish_reason="stop",
+        )
+
+    async def health_check(self) -> bool:
+        return False
+
+    async def list_models(self) -> list[str]:
+        return []
+
+
+@pytest.mark.asyncio
+async def test_ai_parsed_despite_trailing_garbage() -> None:
+    """AI output with trailing text after the JSON block still parses."""
+    from genomeai_api.integration.connectors.ncbi.models import NCBIGeneRecord
+
+    record = NCBIGeneRecord(
+        gene_id="672",
+        symbol="BRCA1",
+        name="BRCA1 DNA repair associated",
+        organism="Homo sapiens",
+        chromosome="17",
+        map_location="17q21.31",
+    )
+    engine = GeneAnalysisEngine(
+        ai_provider=TrailingGarbageAI(),
+        ncbi_client=NCBIClient(),
+    )
+    analysis = await engine.analyze_from_record(record)
+    assert analysis.source == "ncbi+ollama"
+    assert analysis.function == "BRCA1 is a tumor suppressor"
+    assert analysis.summary == "important in DNA repair"
+
+
+class CutOffJsonAI(AIProvider):
+    """AI provider returning JSON truncated mid-string (max_tokens cut)."""
+
+    name = "cutoff"
+
+    async def generate(self, request: AIRequest) -> AIResponse:
+        return AIResponse(
+            text='```json\n{\n  "function": "BRCA1 is a tumor suppressor",\n'
+            '  "key_variants": ["185delAG", "538',
+            model="gemini-cutoff",
+            provider="gemini",
+            tokens_used=0,
+            finish_reason="length",
+        )
+
+    async def health_check(self) -> bool:
+        return False
+
+    async def list_models(self) -> list[str]:
+        return []
+
+
+@pytest.mark.asyncio
+async def test_ai_parsed_despite_truncated_json() -> None:
+    """max_tokens-truncated JSON must still yield the completed fields."""
+    from genomeai_api.integration.connectors.ncbi.models import NCBIGeneRecord
+
+    record = NCBIGeneRecord(
+        gene_id="672",
+        symbol="BRCA1",
+        name="BRCA1 DNA repair associated",
+        organism="Homo sapiens",
+        chromosome="17",
+        map_location="17q21.31",
+    )
+    engine = GeneAnalysisEngine(
+        ai_provider=CutOffJsonAI(),
+        ncbi_client=NCBIClient(),
+    )
+    analysis = await engine.analyze_from_record(record)
+    assert analysis.source == "ncbi+ollama"
+    assert analysis.function == "BRCA1 is a tumor suppressor"
+
+
+class NonJsonAI(AIProvider):
+    """AI provider returning free text (not JSON) — must fall back to basic."""
+
+    name = "plaintext"
+
+    async def generate(self, request: AIRequest) -> AIResponse:
+        return AIResponse(
+            text="BRCA1 is involved in DNA repair. It is a well-studied gene.",
+            model="gemini-text",
+            provider="gemini",
+            tokens_used=0,
+            finish_reason="stop",
+        )
+
+    async def health_check(self) -> bool:
+        return False
+
+    async def list_models(self) -> list[str]:
+        return []
+
+
+@pytest.mark.asyncio
+async def test_nonjson_ai_falls_back_to_basic() -> None:
+    """Free-text AI output (no valid JSON) must not return empty AI fields."""
+    from genomeai_api.integration.connectors.ncbi.models import NCBIGeneRecord
+
+    record = NCBIGeneRecord(
+        gene_id="672",
+        symbol="BRCA1",
+        name="BRCA1 DNA repair associated",
+        organism="Homo sapiens",
+        chromosome="17",
+        map_location="17q21.31",
+    )
+    engine = GeneAnalysisEngine(
+        ai_provider=NonJsonAI(),
+        ncbi_client=NCBIClient(),
+    )
+    analysis = await engine.analyze_from_record(record)
+    assert analysis.source == "ncbi"
+    assert analysis.function == ""
+    assert analysis.summary
