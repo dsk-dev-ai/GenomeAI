@@ -16,7 +16,7 @@ from genomeai_api.ai.base import AIProvider, AIRequest, AIResponse
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+DEFAULT_GEMINI_MODEL = "gemini-3.6-flash"
 
 
 class GeminiProvider(AIProvider):
