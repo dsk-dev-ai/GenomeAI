@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] - 2026-08-29
 
 ### Added
 - Public **Live Demo deployment**: release-triggered GitHub Actions workflow
@@ -17,8 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GitHub Sponsors funding (`.github/FUNDING.yml`)
 - Comprehensive README with architecture, features, data sources, and quick start
 - Public API integration roadmap (37+ free biomedical databases)
+- AI analysis via gemini-3.6-flash with graceful fallbacks to basic analysis
 
 ### Changed
+- AI gene/protein analysis: raised `max_tokens` to 4096, salvages
+  markdown-fenced and truncated JSON, and falls back honestly to basic
+  analysis (source `ncbi`) when unusable
 - Frontend deploy in the release workflow now uses the Vercel REST API instead
   of `amondnet/vercel-action` (the action is incompatible with current Vercel
   CLI); removed the redundant `deploy.yml` workflow (Vercel GitHub integration
