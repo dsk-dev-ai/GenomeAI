@@ -240,13 +240,8 @@ git push origin feat/my-feature
 - **Code of conduct:** [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 - **Security:** [SECURITY.md](SECURITY.md)
 
-<a href="https://star-history.com/#dsk-dev-ai/GenomeAI&Date">
- <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=dsk-dev-ai/GenomeAI&type=Date&theme=dark" />
-  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=dsk-dev-ai/GenomeAI&type=Date" />
-  <img align="center" srcset="https://api.star-history.com/svg?repos=dsk-dev-ai/GenomeAI&type=Date" width="680" alt="GenomeAI star history"/>
- </picture>
-</a>
+We're early — if GenomeAI helps your research, give it a ⭐ so more researchers find it.
+That's all the proof our roadmap needs.
 
 ## Sponsor
 
