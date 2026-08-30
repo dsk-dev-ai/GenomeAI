@@ -230,6 +230,24 @@ git push origin feat/my-feature
 
 ---
 
+---
+
+## Community
+
+- **Live demo:** [genomeai.vercel.app](https://genomeai.vercel.app)
+- **Discussions:** [GitHub Discussions](https://github.com/dsk-dev-ai/GenomeAI/discussions) — Q&A, ideas, show & tell
+- **Issues:** [Report a bug](https://github.com/dsk-dev-ai/GenomeAI/issues/new?assignees=&labels=bug&template=bug_report.md) · [Request a feature](https://github.com/dsk-dev-ai/GenomeAI/issues/new?assignees=&labels=enhancement&template=feature_request.md)
+- **Code of conduct:** [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- **Security:** [SECURITY.md](SECURITY.md)
+
+<a href="https://star-history.com/#dsk-dev-ai/GenomeAI&Date">
+ <picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=dsk-dev-ai/GenomeAI&type=Date&theme=dark" />
+  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=dsk-dev-ai/GenomeAI&type=Date" />
+  <img align="center" srcset="https://api.star-history.com/svg?repos=dsk-dev-ai/GenomeAI&type=Date" width="680" alt="GenomeAI star history"/>
+ </picture>
+</a>
+
 ## Sponsor
 
 GenomeAI is built and maintained by [Darshan Kachare](https://github.com/dsk-dev-ai) through [NextGenAI Labs](https://github.com/sponsors/dsk-dev-ai).
