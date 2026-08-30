@@ -240,16 +240,19 @@ git push origin feat/my-feature
 - **Code of conduct:** [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 - **Security:** [SECURITY.md](SECURITY.md)
 
-<a href="https://star-history.com/#dsk-dev-ai/GenomeAI&Date">
- <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=dsk-dev-ai/GenomeAI&type=Date&theme=dark" />
-  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=dsk-dev-ai/GenomeAI&type=Date" />
-  <img align="center" srcset="https://api.star-history.com/svg?repos=dsk-dev-ai/GenomeAI&type=Date" width="680" alt="GenomeAI star history"/>
- </picture>
+## Star History
+
+<a href="https://www.star-history.com/?repos=dsk-dev-ai%2FGenomeAI&type=date&legend=top-left">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=dsk-dev-ai/GenomeAI&type=date&theme=dark&legend=top-left&sealed_token=NebW1sqZDvCNQ6ggGrIe13EtxDj7yXWa5RNqn0dXZBHe8Z5P9cvuilaS14K9dKswFI2Nr4IUAIVwRN8NJ7Kc-s4hIl-eZUWMGCxjmqb8mvJT8tUOn9LiNOJVFi5ZlL0sczY_NwnGqqFWDA" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=dsk-dev-ai/GenomeAI&type=date&legend=top-left&sealed_token=NebW1sqZDvCNQ6ggGrIe13EtxDj7yXWa5RNqn0dXZBHe8Z5P9cvuilaS14K9dKswFI2Nr4IUAIVwRN8NJ7Kc-s4hIl-eZUWMGCxjmqb8mvJT8tUOn9LiNOJVFi5ZlL0sczY_NwnGqqFWDA" />
+    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=dsk-dev-ai/GenomeAI&type=date&legend=top-left&sealed_token=NebW1sqZDvCNQ6ggGrIe13EtxDj7yXWa5RNqn0dXZBHe8Z5P9cvuilaS14K9dKswFI2Nr4IUAIVwRN8NJ7Kc-s4hIl-eZUWMGCxjmqb8mvJT8tUOn9LiNOJVFi5ZlL0sczY_NwnGqqFWDA" />
+  </picture>
 </a>
 
-> ⭐ Chart is updated automatically. Click the graphic to view the interactive star
-> history (GitHub now requires a login/token on star-history.com for interactive charts).
+> ⭐ Live chart — GitHub temporarily restricts public star data, so this embed uses
+> an encrypted token (star-history.com sealed embed). If it shows a placeholder,
+> the token needs refreshing on star-history.com.
 
 ## Sponsor
 
