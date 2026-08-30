@@ -1,15 +1,16 @@
 # API Documentation
 
-This directory will contain API reference documentation as the API surface is developed.
+The REST API is **live** — 24 FastAPI route modules. See:
 
-## Planned Documents
+- [`apps/api/README.md`](../../apps/api/README.md) — route modules, services, example call
+- [`ARCHITECTURE.md`](../../ARCHITECTURE.md) — API gateway layer
+- [`docs/deployment/releases.md`](../deployment/releases.md) — deployment and secrets
+- Live backend: https://genomeai-api.onrender.com (`GET /health`)
+
+Planned future documents (gRPC, auth, as they are built):
 
 | Document | Description |
 |----------|-------------|
-| `design.md` | API design principles and conventions |
 | `rest.md` | REST API reference |
 | `grpc.md` | gRPC service definitions |
 | `authentication.md` | Authentication and authorization |
-| `errors.md` | Error codes and handling |
-| `sdk.md` | Python SDK reference |
-| `changelog.md` | API version history and breaking changes |

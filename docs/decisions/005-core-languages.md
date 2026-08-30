@@ -1,14 +1,26 @@
 # ADR 005: Core Implementation Languages
 
-**Status:** Accepted
+**Status:** Superseded (2026-08-29) — see below.
 
 ## Context
 
 GenomeAI spans high-performance genomic data processing, machine learning, and web services. The choice of programming languages impacts performance, developer productivity, community contributions, and ecosystem access.
 
-## Decision
+## Decision (superseded)
 
-Use **Rust** for the platform core and **Python** for the data science and ML layer.
+This ADR originally chose **Rust** for the platform core and **Python** for the
+data science and ML layer, with TypeScript for the web UI.
+
+**As released in v1.0.0, the implemented stack is fully Python + TypeScript:**
+- **Python** (FastAPI, SQLAlchemy, asyncio) — backend, workflow DAG engine,
+  integration connectors, AI services, CLI, SDK.
+- **TypeScript** (Next.js, React) — web UI and TS SDK.
+- No Rust in the codebase. The project favors Python's ecosystem (Biopython,
+  pydantic, asyncio) and TypeScript for the web layer; HPC kernels (aligners,
+  variant callers) are invoked as external tools (e.g. minimap2, GATK) rather
+  than reimplemented in Rust.
+
+## Original rationale (kept for history)
 
 ### Core Platform (Rust)
 

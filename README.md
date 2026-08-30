@@ -41,7 +41,7 @@
 
 GenomeAI is a unified platform that brings together **public biological databases**, **workflow automation**, **data visualization**, and **AI-powered analysis** — all in one open-source stack.
 
-It connects directly to 37+ free public APIs (NCBI, Ensembl, UniProt, PubChem, PubMed, gnomAD, ClinVar, AlphaFold, and more) to give researchers instant access to genomic, proteomic, chemical, and clinical data — without expensive licenses or proprietary infrastructure.
+It connects directly to **18 free public APIs** (NCBI, Ensembl, UniProt, ClinVar, gnomAD, PDB, AlphaFold, ChEMBL, PubChem, Reactome, KEGG, STRING, OpenTargets, Monarch, Disease Ontology, DGIdb, Europe PMC, Semantic Scholar) to give researchers instant access to genomic, proteomic, chemical, and clinical data — without expensive licenses or proprietary infrastructure.
 
 **Goal:** Make biomedical research accessible, reproducible, and AI-augmented for every researcher, clinician, and developer — anywhere in the world.
 
@@ -53,7 +53,7 @@ It connects directly to 37+ free public APIs (NCBI, Ensembl, UniProt, PubChem, P
 |---------|-------------------|
 | Biomedical data is scattered across 100+ databases | Unified connector layer — one API for all sources |
 | Existing tools require expensive licenses | 100% open-source, runs on free-tier APIs |
-| No integrated AI for genomic analysis | Multi-provider LLM support (Ollama, Groq, Together, OpenAI, Claude) |
+| No integrated AI for genomic analysis | Multi-provider LLM support (Gemini cloud, Ollama local) |
 | Workflows are manual and error-prone | DAG-based workflow engine with retry, scheduling, and parallel execution |
 | Results are hard to visualize | Built-in genome browser, protein viewer, network graphs, scientific charts |
 | Reproducibility is difficult | Versioned workflows, provenance tracking, audit logs |
@@ -64,54 +64,51 @@ It connects directly to 37+ free public APIs (NCBI, Ensembl, UniProt, PubChem, P
 
 ### Built and Working
 
-| Feature | Status | PRs |
-|---------|--------|-----|
-| Biological domain models (Genome, Sample, Gene, Variant, Transcript) | ✅ | #7–#22 |
-| REST API with CRUD endpoints | ✅ | #7–#22 |
-| Workflow DAG engine (definitions, steps, dependencies, validation) | ✅ | #42 |
-| Deterministic sequential execution | ✅ | #43 |
-| Cron-based workflow scheduler | ✅ | #44 |
-| Queue & worker (Redis-backed background execution) | ✅ | #45 |
-| Retry & failure handling (classification, backoff, policies) | ✅ | #46 |
-| Parallel DAG execution (concurrent independent steps) | ✅ | #47 |
-| Data integration foundation (sources, fetchers, connectors) | ✅ | #41 |
-| Genome browser, protein viewer, network graphs, scientific charts | ✅ | #28–#40 |
+| Feature | Status |
+|---------|--------|
+| Biological domain models (Genome, Sample, Gene, Variant, Transcript, Protein, …) | ✅ |
+| REST API with CRUD + enhanced analysis endpoints (24 route modules) | ✅ |
+| Workflow DAG engine (definitions, steps, dependencies, validation) | ✅ |
+| Deterministic, parallel DAG execution | ✅ |
+| Cron-based workflow scheduler | ✅ |
+| Queue & worker (Redis-backed background execution) | ✅ |
+| Retry & failure handling (classification, backoff, policies) | ✅ |
+| 18 real external-data connectors (NCBI, UniProt, ClinVar, gnomAD, …) | ✅ |
+| AI-powered analysis (gene, variant, protein, drug, pathway, disease, literature, multi-domain report) with Gemini + Ollama | ✅ |
+| Genome browser, protein viewer, network graphs, scientific charts, molecular structure | ✅ |
+| Live demo — [genomeai.vercel.app](https://genomeai.vercel.app) | ✅ |
 
 ### Coming Next
 
 | Feature | Phase |
 |---------|-------|
-| NCBI, Ensembl, UniProt, PubMed connector integration | 4 |
-| Variant annotation pipeline (ClinVar, gnomAD, dbSNP) | 4 |
-| Drug-target and compound data (ChEMBL, PubChem, DrugBank) | 4 |
-| AI-powered literature search and summarization | 5 |
 | Knowledge graph (gene-disease-drug-protein associations) | 5 |
-| LLM analysis assistant (variant interpretation, report generation) | 6 |
-| Multi-provider AI gateway (Ollama, Groq, OpenAI, Claude) | 6 |
+| More AI providers (OpenAI, Anthropic, Groq, Mistral) | 6 |
+| PubMed/Europe PMC deep-dive literature QA | 6 |
 | Plugin SDK and marketplace | 7 |
+| Full-text ingestion workers (scheduled sync of source databases) | 7 |
+| Authentication & multi-user organizations | 8 |
 
 ---
 
 ## Public Data Sources (Free APIs)
 
-GenomeAI connects to **37+ free public databases** across 12 categories:
+GenomeAI ships with **18 real connectors** to free public databases (implemented, live, and tested):
 
-| Category | Sources | Auth Required? |
-|----------|---------|----------------|
-| **Genomic** | NCBI E-utilities, Ensembl REST, UCSC, gnomAD, ClinVar, dbSNP | No (API key optional for higher rate) |
-| **Protein** | UniProt, RCSB PDB, AlphaFold DB | No |
-| **Drug/Compound** | ChEMBL, PubChem, RxNorm, OpenFDA | No |
-| **Literature** | PubMed, Europe PMC, Semantic Scholar | No |
-| **Clinical** | ClinicalTrials.gov, OMIM | No |
-| **Pathway** | Reactome, KEGG, Gene Ontology (AmiGO) | No |
-| **Disease** | Disease Ontology, MONDO, Orphanet | No |
-| **Expression** | GTEx, ENCODE | No |
-| **Variant** | ClinVar, gnomAD, LOVD, GWAS Catalog | No |
-| **Chemical** | PubChem, ChEMBL, PDB Ligands | No |
-| **Network** | STRING, BioGRID | No |
-| **Ontology** | HPO, Disease Ontology, Gene Ontology | No |
+| Domain | Sources |
+|--------|---------|
+| **Genomic** | NCBI E-utilities, Ensembl (VEP) |
+| **Protein** | UniProt, RCSB PDB, AlphaFold DB |
+| **Drug/Compound** | ChEMBL, PubChem, DGIdb, Open Targets |
+| **Literature** | Europe PMC, Semantic Scholar |
+| **Pathway** | Reactome, KEGG |
+| **Network** | STRING |
+| **Variant** | ClinVar, gnomAD |
+| **Disease** | Disease Ontology, Monarch, Open Targets |
 
-See [docs/external-data/MASTER_PLAN.md](docs/external-data/MASTER_PLAN.md) for the full integration plan.
+See [docs/data-integration/](docs/data-integration/README.md) for the live
+connectors and [docs/external-data/MASTER_PLAN.md](docs/external-data/MASTER_PLAN.md)
+for the historical full integration plan (including future sources).
 
 ---
 
@@ -139,13 +136,16 @@ See [docs/external-data/MASTER_PLAN.md](docs/external-data/MASTER_PLAN.md) for t
 │  Biological  │   Data        │   AI/LLM      │   Visualization   │
 │  Domains     │   Integration │   Gateway     │   Platform        │
 │              │               │               │                   │
-│  Genome      │   NCBI        │   Ollama      │   Genome Browser  │
-│  Sample      │   Ensembl     │   Groq        │   Protein Viewer  │
-│  Gene        │   UniProt     │   Together    │   Network Graphs  │
-│  Variant     │   PubMed      │   OpenAI      │   Scientific      │
-│  Transcript  │   PubChem     │   Claude      │   Charts          │
-│  Protein     │   ChEMBL      │   Local       │   3D Molecular    │
-│              │   gnomAD      │               │                   │
+│  Genome      │   NCBI        │   Gemini     │   Genome Browser  │
+│  Sample      │   Ensembl VEP │   Ollama     │   Protein Viewer  │
+│  Gene        │   UniProt     │   (local)    │   Network Graphs  │
+│  Variant     │   ClinVar     │              │   Scientific      │
+│  Transcript  │   gnomAD      │              │   Charts          │
+│  Protein     │   PDB/AlphaFold │            │   3D Molecular    │
+│              │   ChEMBL/PubChem │           │                   │
+│              │   Reactome/KEGG  │           │                   │
+│              │   STRING/OpenTargets│         │                   │
+│              │   EuropePMC/S2     │          │                   │
 └──────────────┴───────────────┴───────────────┴───────────────────┘
                                │
 ┌──────────────────────────────┴───────────────────────────────────┐
@@ -168,7 +168,7 @@ cd GenomeAI
 # Install all dependencies and start infrastructure
 make setup
 
-# Run tests (2051 passing)
+# Run tests (over 2,150 passing)
 make test
 
 # Start the API server
@@ -190,9 +190,9 @@ See [docs/development/](docs/development/) for detailed setup guides.
 | Workflow Engine | Python asyncio, DAG execution, Redis queue |
 | Frontend | Next.js, React, TypeScript, Tailwind CSS |
 | Visualization | D3.js, Three.js, Cytoscape.js, Mol* |
-| AI/LLM | Ollama (local), Groq, Together AI, OpenAI, Anthropic |
+| AI/LLM | Gemini (cloud, default `gemini-3.6-flash`), Ollama (local) |
 | DevOps | Docker, GitHub Actions, Turbo (monorepo) |
-| Testing | pytest (2051 tests), biome, ruff, pyright |
+| Testing | pytest (2,150+ tests), biome, ruff, pyright |
 
 ---
 

@@ -33,12 +33,12 @@ GenomeAI uses a **monorepo** managed by [Turborepo](https://turbo.build/repo) an
 ```
 GenomeAI/
 ├── apps/            # Runnable applications
-│   ├── web/         # Web dashboard (Future: Next.js)
-│   ├── api/         # REST API (Future: FastAPI)
+│   ├── web/         # Web dashboard (Next.js, live demo)
+│   ├── api/         # REST API (FastAPI, live)
 │   ├── worker/      # Background jobs
 │   ├── cli/         # Command-line interface
-│   ├── desktop/     # Desktop application
-│   └── mcp/         # MCP server
+│   ├── desktop/     # Desktop application (future)
+│   └── mcp/         # MCP server (future)
 ├── packages/        # Shared libraries
 │   ├── config/      # Shared config presets
 │   ├── types/       # Shared TypeScript types

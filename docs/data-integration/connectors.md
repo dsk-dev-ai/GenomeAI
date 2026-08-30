@@ -64,6 +64,35 @@ A source can be persisted via the admin API **only after** its factory is
 registered; `POST /integration/sources` validates that the base URL matches
 the SSRF allowlist.
 
+## Implemented providers
+
+18 real connectors live under `apps/api/src/genomeai_api/integration/connectors/`,
+each with typed requests/responses and a provider-specific client:
+
+| Connector | Provider | Domain |
+| --------- | -------- | ------ |
+| `ncbi` | NCBI E-utilities | Gene / ClinVar / PubMed |
+| `uniprot` | UniProt | Protein |
+| `ensembl_vep` | Ensembl VEP | Variant annotation |
+| `clinvar` | ClinVar | Variant / disease |
+| `gnomad` | gnomAD | Variant population frequencies |
+| `pdb` | RCSB PDB | Protein structure |
+| `alphafold` | AlphaFold DB | Protein structure prediction |
+| `chembl` | ChEMBL | Drug / compound bioactivity |
+| `pubchem` | PubChem | Compound |
+| `reactome` | Reactome | Pathway |
+| `kegg` | KEGG | Pathway / compound |
+| `string_db` | STRING | Protein–protein network |
+| `opentargets` | Open Targets | Disease–target–drug |
+| `monarch` | Monarch Initiative | Disease / phenotype |
+| `disease_ontology` | Disease Ontology | Disease |
+| `dgidb` | DGIdb | Drug–gene interaction |
+| `europepmc` | Europe PMC | Literature |
+| `semanticscholar` | Semantic Scholar | Literature |
+
+Each must follow the connector contract above. See
+[`provenance.md`](provenance.md) for how fetched raw data is recorded.
+
 ## Reference implementation
 
 `connectors/reference/` implements `genomeai-reference`, a deterministic
@@ -76,13 +105,14 @@ metadata-only mock demonstrating every boundary:
 
 See `test_integration_connector.py` for health/fetch/timeout/error coverage.
 
-## Adding a future provider (e.g. NCBI E-utilities)
+## Adding a new provider (e.g. a future source)
 
-1. Create `connectors/ncbi/` with a typed request/response pair and a
+1. Create `connectors/<provider>/` with a typed request/response pair and a
    normalizer converging on existing canonical entity types.
 2. Register the definition + factory in `services_bootstrap.py`.
 3. Add the provider base URL to `GENOMEAI_INTEGRATION_ALLOWED_SOURCE_URLS`.
 4. If an API key is required: set `credential_ref` to the *name* of the env
-   var holding it (`NCBI_API_KEY`) and read it at request time inside the
+   var holding it (e.g. `NCBI_API_KEY`) and read it at request time inside the
    connector. Never hardcode, serialize, or log the value.
-5. Ingestion itself remains out of scope until Phase 7 workers exist.
+5. Ingestion workers (scheduled synchronization / bulk loads) remain out of
+   scope for now; connectors are called live by the analysis services.

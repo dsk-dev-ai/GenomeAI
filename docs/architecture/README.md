@@ -1,14 +1,19 @@
 # Architecture Documentation
 
-This directory will contain detailed architecture documents as the platform is built.
+The full architecture lives in root [`ARCHITECTURE.md`](../../ARCHITECTURE.md).
+Component-specific docs:
 
-## Planned Documents
+- Workflow DAG engine: [`docs/workflows/`](../workflows/README.md)
+- Data integration: [`docs/data-integration/`](../data-integration/README.md)
+- Search: [`docs/search/architecture.md`](../search/architecture.md)
+- Visualization: [`docs/visualization/`](../visualization/README.md)
+- Deployment: [`docs/deployment/`](../deployment/README.md)
+- Decisions (ADRs): [`docs/decisions/`](../decisions/README.md)
+
+Planned future documents (as components are built):
 
 | Document | Description |
 |----------|-------------|
-| `workflows.md` | Workflow DAG specification and execution model |
-| `components.md` | Detailed component reference for each service |
-| `data-flow.md` | End-to-end data flows across the platform |
 | `security-model.md` | Threat model, authentication, authorization |
 
-See [ARCHITECTURE.md](../../ARCHITECTURE.md) for the high-level architecture overview.
+See also the root architecture diagram in [`README.md`](../../README.md#architecture).

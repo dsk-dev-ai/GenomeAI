@@ -1,14 +1,17 @@
 # Data Integration Foundation
 
 Reusable backend architecture that lets GenomeAI integrate external scientific
-data sources safely and consistently. This is the foundation for future NCBI,
-Ensembl, ClinVar, UniProt, and similar integrations — **no real external
-provider is integrated yet**.
+data sources safely and consistently. **18 real external providers are
+integrated** on top of this foundation (NCBI, Ensembl VEP, UniProt, ClinVar,
+gnomAD, PDB, AlphaFold, ChEMBL, PubChem, Reactome, KEGG, STRING, OpenTargets,
+Monarch, Disease Ontology, DGIdb, EuropePMC, Semantic Scholar), plus the
+reference connector used as a proof of the architecture.
 
 ## What exists today
 
 | Boundary | Module |
 | --- | --- |
+| Connected external providers (18) | `apps/api/src/genomeai_api/integration/connectors/` |
 | Shared vocabulary (source types, access modes, entity types, job states) | `apps/api/src/genomeai_api/integration/types.py` |
 | Error hierarchy (structured, credential-free) | `apps/api/src/genomeai_api/integration/errors.py` |
 | Connector contract | `apps/api/src/genomeai_api/integration/connectors/base.py` |
@@ -28,14 +31,16 @@ Detailed documents:
 - [architecture.md](architecture.md) — pipeline, layers, database schema
 - [connectors.md](connectors.md) — connector contract and how to add one
 - [provenance.md](provenance.md) — raw records, checksums, identifier mapping
+- The 18 implemented providers are listed in
+  [connectors.md](connectors.md#implemented-providers)
 
-## What deliberately does NOT exist yet
+## Not included yet
 
-- No full ingestions (NCBI / Ensembl / ClinVar / gnomAD / …)
 - No scheduled synchronization or workflow workers (Celery/Arq)
 - No object-storage pipeline or bulk download engine
-- No public end-user endpoints for external sources
-- No AI/vector/RAG integration
+- No public end-user endpoints for raw external sources (higher-level analysis
+  endpoints surface the integrated data instead)
+- No AI/vector/RAG ingestion layer
 
 These belong to later milestones and must build on this foundation.
 

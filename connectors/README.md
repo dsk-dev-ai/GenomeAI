@@ -1,14 +1,11 @@
-# `connectors/` — External Service Connectors
+# `connectors/`
 
-Connectors and clients for external biomedical data sources and APIs.
+> This directory is a placeholder. **Implemented connectors live under
+> `apps/api/src/genomeai_api/integration/connectors/`** — 18 real providers
+> (NCBI, Ensembl VEP, UniProt, ClinVar, gnomAD, PDB, AlphaFold, ChEMBL,
+> PubChem, Reactome, KEGG, STRING, OpenTargets, Monarch, Disease Ontology,
+> DGIdb, Europe PMC, Semantic Scholar).
 
-Each connector wraps a specific external service (ClinVar, GWAS Catalog, UniProt, ENSEMBL, etc.) providing a unified interface for the platform.
-
-**Planned connectors:**
-- ClinVar
-- GWAS Catalog
-- UniProt / Swiss-Prot
-- PDB
-- PubMed / Europe PMC
-- COSMIC
-- ENCODE
+See [`docs/data-integration/connectors.md`](../docs/data-integration/connectors.md)
+for the connector contract, the implemented-provider table, and how to add a new
+provider.

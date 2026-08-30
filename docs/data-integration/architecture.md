@@ -132,9 +132,27 @@ Typed errors map to status codes centrally in `main.py`
 (404 unknown source/connector, 409 duplicates/configuration/job-transition,
 400 unsafe URL).
 
-## Future workflow (not built)
+## Ingestion workflow
 
-Phase 7 ingestion workers should: create an `IngestionJob` row → transition to
-running → iterate connector pages → wrap each item in a `RawRecord` → persist
-provenance → normalize → upsert internal entities + external identifiers →
-record counts and finish the job. Everything needed above already exists.
+Live services (gene, protein, variant, drug, pathway, disease, literature
+analysis) call the connectors directly against the public providers. A future
+batch path can: create an `IngestionJob` row → transition to running → iterate
+connector pages → wrap each item in a `RawRecord` → persist provenance →
+normalize → upsert internal entities + external identifiers → record counts and
+finish the job. Everything needed for that path already exists.
+
+## Where feeds meet users
+
+The 18 connectors are surfaced through the enhanced analysis services and
+routes:
+
+| Slice | Route module | Sources |
+| ----- | ------------ | ------- |
+| Gene analysis | `routes/genes_enhanced.py` | NCBI, Ensembl, UniProt |
+| Variant interpretation | `routes/variants_enhanced.py` | NCBI, Ensembl VEP, ClinVar, gnomAD |
+| Protein analysis | `routes/proteins_enhanced.py` | UniProt, PDB, AlphaFold |
+| Literature | `routes/literature_enhanced.py` | Europe PMC, Semantic Scholar |
+| Drug–target | `routes/drugs_enhanced.py` | ChEMBL, PubChem, DGIdb, Open Targets |
+| Pathway | `routes/pathways_enhanced.py` | Reactome, KEGG, STRING |
+| Disease | `routes/diseases_enhanced.py` | Disease Ontology, Monarch, Open Targets |
+| Multi-domain report | `routes/reports_enhanced.py` | all of the above |

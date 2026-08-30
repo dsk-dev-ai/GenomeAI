@@ -193,7 +193,7 @@ Each chart module (`heatmap.ts`, `volcano.ts`, `coverage.ts`,
 ## API integration
 
 The GenomeAI backend does **not** yet expose these endpoints. Per the
-[Phase 6.7 API policy](../README.md#api-integration), we did not create
+[API policy in this document](#api-integration), we did not create
 duplicate endpoints: `lib/scientific/advancedApi.ts` is the smallest typed
 adapter that documents the future contracts and provides the normalization
 seams production will use:

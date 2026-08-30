@@ -1,8 +1,15 @@
 # AI/ML Documentation
 
-This directory will contain AI/ML reference documentation as the ML serving layer is developed.
+The live AI implementation is documented across the repo:
 
-## Planned Documents
+- AI providers (Gemini default, Ollama local): `apps/api/src/genomeai_api/ai/`
+- AI analysis services (gene, protein, variant, drug, pathway, disease,
+  literature, report): see [`ROADMAP.md`](../../ROADMAP.md) Phase 8 and
+  [`apps/api/services/`](../../apps/api/src/genomeai_api/services/)
+- AI gateway design: [`../decisions/`](../decisions/) and
+  [`../v1-plan/FREE_AI_STRATEGY.md`](../v1-plan/FREE_AI_STRATEGY.md) (historical)
+
+Planned future documents (ML serving layer, when built):
 
 | Document | Description |
 |----------|-------------|
@@ -10,9 +17,3 @@ This directory will contain AI/ML reference documentation as the ML serving laye
 | `training.md` | Training pipeline configuration and distributed training |
 | `inference.md` | Inference serving, batching, and caching |
 | `explainability.md` | Model interpretability and explainability methods |
-| `foundation-models.md` | Genomic foundation models (DNABERT, Enformer, etc.) |
-| `llm-integration.md` | LLM agents grounded in the knowledge graph |
-| `evaluation.md` | Model evaluation and benchmarking |
-| `privacy.md` | Differential privacy and federated learning |
-
-See [docs/plugins/](../plugins/) for contributing custom model architectures.

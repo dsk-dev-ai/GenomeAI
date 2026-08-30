@@ -48,7 +48,7 @@ Build a custom DAG-based workflow engine as a core GenomeAI component.
 **Positive:**
 - Deep integration with GenomeAI's data and access control models.
 - No external workflow engine dependency.
-- Deterministic, testable execution (2051 tests passing).
+- Deterministic, testable execution (2,150+ tests passing).
 - Parallel execution of independent steps (Phase 7.6).
 - Retry/failure classification with configurable policies (Phase 7.5).
 

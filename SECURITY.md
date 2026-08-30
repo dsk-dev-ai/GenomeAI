@@ -2,7 +2,9 @@
 
 ## Supported Versions
 
-This project is in early development. No stable releases have been published yet. Security updates will be provided for the latest stable release once available.
+This project provides security updates for the latest stable release
+(`v1.0.0`). The project is under active development, so pre-release changes may
+not receive backported security fixes.
 
 ## Reporting a Vulnerability
 

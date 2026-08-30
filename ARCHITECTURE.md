@@ -4,6 +4,14 @@
 
 GenomeAI is designed as a layered, modular system where each layer has a well-defined responsibility and communicates through versioned APIs. The architecture prioritizes composability, scalability, and auditability.
 
+> **v1.0.0 status (2026-08-29):** the V1 scope — CLI, REST API,
+> Web UI (live demo), Python SDK, workflow DAG engine, 18 external-data
+> connectors, and 8 AI analysis services — is **released** and live at
+> [genomeai.vercel.app](https://genomeai.vercel.app). Items still marked
+> `(Planned)`/`(Future)` below are the longer-term platform vision (HPC,
+> gRPC, ML serving, knowledge graph, auth/ABAC, plugins) and are **not** part
+> of V1.
+
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │                         User Interfaces                           │
@@ -52,19 +60,19 @@ GenomeAI is designed as a layered, modular system where each layer has a well-de
 
 Multiple interface options so users interact with the platform in the way best suited to their workflow:
 
-- **CLI** — Scriptable, CI/CD-friendly command-line tool for all platform operations. _(Planned)_
-- **REST API** — JSON/HTTP API for web applications and integrations. _(Planned)_
+- **CLI** — Scriptable, CI/CD-friendly command-line tool for all platform operations. ✅ Built (`apps/cli`: `version`, `doctor`).
+- **REST API** — JSON/HTTP API for web applications and integrations. ✅ Built (FastAPI, 24 route modules, live).
 - **gRPC** — High-performance streaming RPCs for real-time analysis and large data transfers. _(Future)_
-- **Web UI** — Browser-based dashboard for monitoring, inspection, and ad-hoc analysis. _(Future)_
-- **Notebook SDK** — Python SDK designed for interactive Jupyter/Lab environments. _(Future)_
+- **Web UI** — Browser-based dashboard for monitoring, inspection, and ad-hoc analysis. ✅ Built (Next.js, live demo).
+- **Notebook SDK** — Python SDK designed for interactive Jupyter/Lab environments. ✅ Scaffolded (`packages/sdk-python`).
 
 ### 2. API Gateway
 
 A single entry point handling cross-cutting concerns:
 
 - **Authentication & Authorization** — Attribute-based access control (ABAC) with support for OAuth 2.0, OIDC, and mTLS. _(Planned)_
-- **Rate Limiting** — Per-tenant and per-endpoint quotas. _(Planned)_
-- **Request Validation** — Schema-based validation at the edge. _(Planned)_
+- **Rate Limiting** — Per-tenant and per-endpoint quotas. ✅ Built (middleware + AI-provider quotas).
+- **Request Validation** — Schema-based validation at the edge. ✅ Built (Pydantic).
 - **Audit Logging** — Every mutation is recorded with caller identity, timestamp, and diff. _(Planned)_
 
 ### 3. Orchestration Layer
@@ -151,7 +159,7 @@ See [docs/plugins/](docs/plugins/) for plugin development guides.
 8. Everything is logged and traceable via a global request ID.
 ```
 
-> This is the target data flow for the v1.0 release. Not all components are implemented yet.
+> v1.0 data flow is live: connectors → cache → AI analysis → enhanced REST endpoints; CLI/SDK are scaffolded, HPC/ML/knowledge-graph components are the future platform vision.
 
 ## Design Decisions
 
@@ -162,9 +170,9 @@ See [docs/plugins/](docs/plugins/) for plugin development guides.
 | Pluggable aligners/callers | No single tool dominates; researchers need choice. |
 | ABAC over RBAC | Genomic data has complex access patterns (by study, by consent, by institution). |
 | Plugin sandboxing | Prevents malicious or buggy plugins from compromising the platform. |
-| Free APIs first | NCBI, Ensembl, UniProt, PubChem — all free, no keys required. |
-| Local AI (Ollama) | Zero cost, privacy-preserving for sensitive genomic data. |
-| Structured concurrency | TaskGroup + Semaphore for safe parallel execution (Phase 7.6). |
+| Free APIs first | NCBI, Ensembl, UniProt, ClinVar, gnomAD — all free, no keys required. ✅ Implemented (18 connectors). |
+| Cost-effective AI (Gemini + Ollama) | Gemini cloud default (`gemini-3.6-flash`) for quality; Ollama for zero-cost, privacy-preserving local analysis. |
+| Structured concurrency | TaskGroup + Semaphore for safe parallel execution (Phase 7.6). ✅ Implemented. |
 
 ## Key Technologies
 
@@ -176,7 +184,7 @@ See [docs/plugins/](docs/plugins/) for plugin development guides.
 | Orchestration | Custom DAG engine | Parallel execution, retry, scheduling (Phases 7.1–7.6) |
 | Frontend | Next.js, React, TypeScript | SSR, component ecosystem, type safety |
 | Visualization | D3.js, Three.js, Cytoscape.js, Mol* | Genome browser, 3D structures, network graphs |
-| AI/LLM | Ollama (local), Groq, Together AI | Local-first, zero-cost, multi-provider |
+| AI/LLM | Gemini (default `gemini-3.6-flash`), Ollama (local) | Cloud default + zero-cost local option |
 | Vector search | pgvector | Simplicity of a single database |
 | DevOps | Docker, GitHub Actions, Turbo | Containerization, CI/CD, monorepo builds |
 

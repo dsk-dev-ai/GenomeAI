@@ -1,5 +1,11 @@
 # V1 Phases — Detailed Breakdown
 
+> **Status (2026-08-29):** historical planning doc — V1 is **released** as
+> `v1.0.0`. Phase statuses below reflect the build-time plan. Shipped scope
+> differs from this plan in two respects: **18** real connectors (this doc
+> targets "50+") and Gemini cloud + Ollama as the AI stack. See
+> [README.md](README.md) in this directory for the released phase status table.
+
 Each phase has sub-phases. Each sub-phase gets its own branch.
 Work is step-by-step: complete sub-phase → validate → merge → next.
 

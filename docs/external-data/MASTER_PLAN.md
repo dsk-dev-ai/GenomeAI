@@ -1,6 +1,17 @@
 # GenomeAI External Data & API Master Plan
 
-**Status:** Accepted — official governing reference for Phases 4–9
+> **Status (2026-08-29):** This is the **original planning document**.
+> v1.0.0 is now released with **18 real connectors implemented** under
+> `apps/api/src/genomeai_api/integration/connectors/` (NCBI, Ensembl VEP,
+> UniProt, ClinVar, gnomAD, PDB, AlphaFold, ChEMBL, PubChem, Reactome, KEGG,
+> STRING, OpenTargets, Monarch, Disease Ontology, DGIdb, EuropePMC, Semantic
+> Scholar). For the live-implementation reality, see
+> [`docs/data-integration/`](../data-integration/README.md) and the enhanced
+> analysis routes. Sections below that are marked *(planned)* — including UCSC,
+> OpenFDA, RxNorm, ClinicalTrials.gov, OMIM, GTEx, ENCODE, LOVD, GWAS Catalog,
+> BioGRID, HPO — remain pipeline ideas and are **not yet implemented**.
+
+**Status (historical):** Accepted — official governing reference for Phases 4–9
 **Owner:** GenomeAI core
 **Scope:** Every external scientific source, API, connector, ingestion path, and storage decision.
 
@@ -437,6 +448,11 @@ Pipeline: `DataSource → Connector → IngestionJob → RawData → NormalizedE
 ---
 
 ## 21. What we build now
+
+> **Update (2026-08-29):** superseded — v1.0.0 is released. The
+> visualization layer and 18 external-data connectors are implemented and
+> live, and `docs/v1-plan/PHASES.md` / `docs/data-integration/` reflect the
+> current state. This roadmap section is preserved as historical planning.
 
 Phase 4 (Biological Domains) near-complete · Phase 5 (Search & Query) done · Phase 6 (Visualization) CURRENT.
 

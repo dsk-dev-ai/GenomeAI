@@ -16,7 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Live Demo` link and website field in the README/repository
 - GitHub Sponsors funding (`.github/FUNDING.yml`)
 - Comprehensive README with architecture, features, data sources, and quick start
-- Public API integration roadmap (37+ free biomedical databases)
+- 18 real external-data connectors (NCBI, Ensembl VEP, UniProt, ClinVar, gnomAD,
+  PDB, AlphaFold, ChEMBL, PubChem, Reactome, KEGG, STRING, OpenTargets, Monarch,
+  Disease Ontology, DGIdb, Europe PMC, Semantic Scholar)
+- 8 AI analysis services: gene, variant, protein, drug, pathway, disease,
+  literature, and multi-domain report
+- Search engine (full-text, domain search, query DSL)
 - AI analysis via gemini-3.6-flash with graceful fallbacks to basic analysis
 
 ### Changed
@@ -27,16 +32,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   of `amondnet/vercel-action` (the action is incompatible with current Vercel
   CLI); removed the redundant `deploy.yml` workflow (Vercel GitHub integration
   already deploys main pushes and PR previews)
-- Updated ROADMAP.md with delivered work, API integration plan, cost-effective AI strategy
+- Updated ROADMAP.md with delivered work and current state
 - Updated ARCHITECTURE.md with current implementation status
 - Updated CONTRIBUTING.md with development setup instructions
 - Updated ADR 001 to reflect actual DAG engine implementation
 
----
+## Unreleased
 
-## Release History
-
-- No stable releases yet. See [ROADMAP.md](ROADMAP.md) for upcoming milestones.
+### Planned
+- Knowledge graph (gene-disease-drug-protein associations)
+- More AI providers (OpenAI, Anthropic, Groq, Mistral)
+- Plugin SDK and marketplace
+- Authentication & multi-user organizations
 
 ## Delivered Milestones
 

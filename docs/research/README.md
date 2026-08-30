@@ -1,13 +1,19 @@
 # Research Documentation
 
-This directory will contain research-related documentation as the platform matures.
+GenomeAI's research-facing capabilities are **live** in the web app
+(`/research` routes: gene, protein, variant, drug, pathway, disease, literature,
+report). See:
 
-## Planned Documents
+- [`apps/web/README.md`](../../apps/web/README.md) — research routes
+- [`docs/data-integration/README.md`](../data-integration/README.md) — supported
+  public data sources and APIs (18 connectors)
+- [`docs/external-data/MASTER_PLAN.md`](../external-data/MASTER_PLAN.md) —
+  historical full integration plan
+
+Planned future documents:
 
 | Document | Description |
 |----------|-------------|
 | `reproducibility.md` | Reproducible research practices |
 | `benchmarks.md` | Benchmark datasets and evaluation protocols |
 | `publications.md` | Related publications and citations |
-| `data-sources.md` | Supported public data sources and APIs |
-| `use-cases.md` | Example research use cases and workflows |

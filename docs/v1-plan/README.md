@@ -1,5 +1,14 @@
 # GenomeAI V1 Plan
 
+> **Status (2026-08-29):** ✅ **V1 COMPLETE and released** as `v1.0.0` with a
+> live demo. This directory is the **historical planning document** for how V1
+> was scoped. The released reality: **18** real connectors (not 50+), AI via
+> **Gemini cloud (default) + Ollama local**, 8 analysis services, search,
+> workflow engine, visualization, and a live demo
+> ([genomeai.vercel.app](https://genomeai.vercel.app)). See
+> [../deployment/verification-v1.0.0.md](../deployment/verification-v1.0.0.md)
+> for verified status.
+
 **Goal:** Fully working genomics research platform using ONLY free APIs and free AI. Every feature must work perfectly with zero cost.
 
 **Design principle:** Authentication, paid APIs, and premium features come in V2. V1 is 100% free, fully tested, and production-ready on free tiers.
@@ -49,18 +58,18 @@
 
 | Phase | Name | Description | Status |
 |-------|------|-------------|--------|
-| V1.1 | Core Domain Models | Complete biological domain models | 🚧 Partially done |
-| V1.2 | Database Connectors | Connect to 50+ free public APIs | 📋 |
-| V1.3 | Workflow Engine | DAG execution, scheduling, retry, parallel | ✅ Done (7.1-7.6) |
-| V1.4 | AI Gateway | Multi-provider LLM with free fallback chain | 📋 |
-| V1.5 | Search & Query | Full-text, faceted, gene/protein/variant search | 📋 |
-| V1.6 | Visualization | Genome browser, protein viewer, charts | ✅ Done (28-40) |
-| V1.7 | Data Integration | Ingestion pipelines from public databases | 📋 |
-| V1.8 | Literature Analysis | PubMed search, evidence synthesis, summarization | 📋 |
-| V1.9 | Drug & Compound | Drug-target analysis, compound lookup | 📋 |
-| V1.10 | Variant Interpretation | ClinVar + gnomAD + AI-assisted pathogenicity | 📋 |
-| V1.11 | Report Generation | LLM-powered research and clinical reports | 📋 |
-| V1.12 | Testing & Quality | Real database testing, validation, documentation | 📋 |
+| V1.1 | Core Domain Models | Complete biological domain models | ✅ Released |
+| V1.2 | Database Connectors | Connect to 18 free public APIs | ✅ Released |
+| V1.3 | Workflow Engine | DAG execution, scheduling, retry, parallel | ✅ Released |
+| V1.4 | AI Gateway | Gemini cloud (default) + Ollama local | ✅ Released |
+| V1.5 | Search & Query | Full-text, faceted, gene/protein/variant search | ✅ Released |
+| V1.6 | Visualization | Genome browser, protein viewer, charts | ✅ Released |
+| V1.7 | Data Integration | Ingestion pipelines from public databases | ✅ Released (live connectors) |
+| V1.8 | Literature Analysis | Europe PMC / Semantic Scholar search + summarization | ✅ Released |
+| V1.9 | Drug & Compound | Drug-target analysis, compound lookup | ✅ Released |
+| V1.10 | Variant Interpretation | ClinVar + gnomAD + AI-assisted pathogenicity | ✅ Released |
+| V1.11 | Report Generation | LLM-powered research and clinical reports | ✅ Released |
+| V1.12 | Testing & Quality | Real database testing, validation, documentation | ✅ Released (2,150+ tests) |
 
 ---
 
