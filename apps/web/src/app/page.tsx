@@ -55,22 +55,23 @@ const features = [
 
 const sources = [
   'NCBI',
-  'ClinVar',
-  'gnomAD',
   'Ensembl VEP',
   'UniProt',
+  'ClinVar',
+  'gnomAD',
   'PDB',
   'AlphaFold',
-  'Europe PMC',
-  'Semantic Scholar',
   'ChEMBL',
   'PubChem',
   'Reactome',
-  'STRING',
   'KEGG',
+  'STRING',
   'OpenTargets',
-  'Disease Ontology',
   'Monarch',
+  'Disease Ontology',
+  'DGIdb',
+  'Europe PMC',
+  'Semantic Scholar',
   'Gemini AI',
 ]
 
@@ -151,7 +152,7 @@ export default function Home() {
 
           <p className="animate-fade-in-up [animation-delay:200ms] mt-6 max-w-xl text-lg leading-relaxed text-slate-600">
             GenomeAI unifies{' '}
-            <strong className="text-slate-800">21 free biological databases</strong> with free-tier
+            <strong className="text-slate-800">18 free biological databases</strong> with free-tier
             Gemini AI to deliver gene, variant, protein, literature, drug, pathway and disease
             analysis — plus a single executive multi-domain report.
           </p>
@@ -186,8 +187,8 @@ export default function Home() {
           <div className="animate-fade-in-up [animation-delay:400ms] mt-10 flex flex-wrap gap-8">
             {[
               { value: '8', label: 'Analytic domains' },
-              { value: '18+', label: 'Free data APIs' },
-              { value: '0$', label: 'Cost to run' },
+              { value: '18', label: 'Free data APIs' },
+              { value: '$0', label: 'Cost to run' },
               { value: '1', label: 'Unified report' },
             ].map((s) => (
               <div key={s.label}>

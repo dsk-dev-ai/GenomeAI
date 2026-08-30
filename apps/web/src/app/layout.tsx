@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     template: '%s · GenomeAI',
   },
   description:
-    'GenomeAI is an open-source genomics research platform combining 21 free biological databases with free-tier Gemini AI to deliver gene, variant, protein, literature, drug, pathway, disease and executive multi-domain analysis.',
+    'GenomeAI is an open-source genomics research platform combining 18 free biological databases with free-tier Gemini AI to deliver gene, variant, protein, literature, drug, pathway, disease and executive multi-domain analysis.',
   keywords: [
     'genomics',
     'bioinformatics',

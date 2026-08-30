@@ -64,8 +64,8 @@ const domains = [
 ]
 
 const stats = [
-  { value: '18+', label: 'Free data APIs' },
-  { value: '21', label: 'Data sources' },
+  { value: '18', label: 'Free data APIs' },
+  { value: '18', label: 'Data sources' },
   { value: '8', label: 'Analytic domains' },
   { value: '$0', label: 'Cost to run' },
 ]
@@ -87,7 +87,7 @@ export default function ResearchHome() {
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-genome-400 opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-genome-500" />
                 </span>
-                21 free data APIs · Free-tier Gemini AI · Zero cost
+                18 free data APIs · Free-tier Gemini AI · Zero cost
               </div>
               <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl">
                 GenomeAI <span className="text-gradient">Research Console</span>

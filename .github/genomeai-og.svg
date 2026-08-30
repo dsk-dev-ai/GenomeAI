@@ -30,7 +30,7 @@
   <g font-family="DejaVu Sans, Arial, sans-serif">
     <text x="90" y="250" font-size="120" font-weight="bold" fill="#f8fafc">GenomeAI</text>
     <text x="90" y="330" font-size="46" fill="#7dd3fc">Open-source AI for genomics &amp; bioinformatics</text>
-    <text x="90" y="400" font-size="36" fill="#94a3b8">37+ public science APIs · multi-provider LLMs · free &amp; open</text>
+    <text x="90" y="400" font-size="36" fill="#94a3b8">18 free public science APIs · free-tier Gemini AI · open source</text>
     <text x="90" y="470" font-size="28" fill="#2dd4bf">https://genomeai.vercel.app</text>
     <rect x="90" y="500" width="360" height="14" rx="7" opacity="0">
       <animate attributeName="width" from="0" to="360" dur="1s"/>
