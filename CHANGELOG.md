@@ -5,6 +5,33 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-08-30
+
+### Fixed
+- Corrected inflated public claims to match reality across the repo and the
+  live demo: the site now states **18 free biological data APIs** (not 21 and
+  not "37+"), the sources list includes all 18 connectors plus Gemini AI
+  (DGIdb was missing), and stats read `18` Free data APIs, `8` Analytic
+  domains, `$0` Cost to run, `1` Unified report
+- GitHub repository description and the OG banner image now state "18 free
+  public science APIs" instead of "37+"
+- No more "multi-provider LLM" claim — the README/site accurately describe
+  Gemini (Gemini Flash) with Ollama fallback for local use
+
+### Added
+- Issue templates (`bug_report.md`, `feature_request.md`) and a pull request
+  template — community health 100%
+- GitHub Discussions with welcome and launch announcements
+- Star-history chart and a Community section in the README
+- Full documentation refresh (90 files audited, stale claims corrected,
+  broken links fixed)
+- 20 GitHub topics and a shareable launch release body for discoverability
+
+### Changed
+- Python package version bumps to `1.1.0`
+- Completion checklist for V1 marked fully delivered (see
+  `FULL-ROADMAP-TO-COMPLETE.md`)
+
 ## [1.0.0] - 2026-08-29
 
 ### Added
