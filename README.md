@@ -244,15 +244,15 @@ git push origin feat/my-feature
 
 <a href="https://www.star-history.com/?repos=dsk-dev-ai%2FGenomeAI&type=date&legend=top-left">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=dsk-dev-ai/GenomeAI&type=date&theme=dark&legend=top-left&sealed_token=NebW1sqZDvCNQ6ggGrIe13EtxDj7yXWa5RNqn0dXZBHe8Z5P9cvuilaS14K9dKswFI2Nr4IUAIVwRN8NJ7Kc-s4hIl-eZUWMGCxjmqb8mvJT8tUOn9LiNOJVFi5ZlL0sczY_NwnGqqFWDA" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=dsk-dev-ai/GenomeAI&type=date&legend=top-left&sealed_token=NebW1sqZDvCNQ6ggGrIe13EtxDj7yXWa5RNqn0dXZBHe8Z5P9cvuilaS14K9dKswFI2Nr4IUAIVwRN8NJ7Kc-s4hIl-eZUWMGCxjmqb8mvJT8tUOn9LiNOJVFi5ZlL0sczY_NwnGqqFWDA" />
-    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=dsk-dev-ai/GenomeAI&type=date&legend=top-left&sealed_token=NebW1sqZDvCNQ6ggGrIe13EtxDj7yXWa5RNqn0dXZBHe8Z5P9cvuilaS14K9dKswFI2Nr4IUAIVwRN8NJ7Kc-s4hIl-eZUWMGCxjmqb8mvJT8tUOn9LiNOJVFi5ZlL0sczY_NwnGqqFWDA" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=dsk-dev-ai/GenomeAI&type=date&theme=dark&legend=top-left&sealed_token=475_h1z3vpuyiD6VjC8-ZBAv5JIHewi5K2SyQqpcNycqJ9XWi_N0Ut9woNi_fn4EW-qc4IL95QVk5JhxNsMTPCHxtGTtjsD-xh4jguJkNVmbaxEyrJdINbpiSfWQfuQYVxkvYTS4YTadnGWSC8IGHdrv3NoVazugWsLdMf6wyeFvgKQcNn9wRaoMi2XK" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=dsk-dev-ai/GenomeAI&type=date&legend=top-left&sealed_token=475_h1z3vpuyiD6VjC8-ZBAv5JIHewi5K2SyQqpcNycqJ9XWi_N0Ut9woNi_fn4EW-qc4IL95QVk5JhxNsMTPCHxtGTtjsD-xh4jguJkNVmbaxEyrJdINbpiSfWQfuQYVxkvYTS4YTadnGWSC8IGHdrv3NoVazugWsLdMf6wyeFvgKQcNn9wRaoMi2XK" />
+    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=dsk-dev-ai/GenomeAI&type=date&legend=top-left&sealed_token=475_h1z3vpuyiD6VjC8-ZBAv5JIHewi5K2SyQqpcNycqJ9XWi_N0Ut9woNi_fn4EW-qc4IL95QVk5JhxNsMTPCHxtGTtjsD-xh4jguJkNVmbaxEyrJdINbpiSfWQfuQYVxkvYTS4YTadnGWSC8IGHdrv3NoVazugWsLdMf6wyeFvgKQcNn9wRaoMi2XK" />
   </picture>
 </a>
 
-> ⭐ Live chart — GitHub temporarily restricts public star data, so this embed uses
-> an encrypted token (star-history.com sealed embed). If it shows a placeholder,
-> the token needs refreshing on star-history.com.
+> ⭐ Live chart — updates automatically as the repo gains stars. Click the graphic
+> for the interactive view (GitHub restricts public star data, so the embed uses an
+> encrypted star-history.com sealed token).
 
 ## Sponsor
 
