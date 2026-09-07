@@ -38,6 +38,15 @@ class AppSettings(BaseSettings):
     environment: Environment = Environment.DEVELOPMENT
     workflow_max_concurrency: int = Field(default=1, ge=1)
 
+    # Enables the /admin/* and /integration admin routes. These routes are
+    # mutating and security-sensitive (rate limiting, SSRF fetch sources), so
+    # they require a valid admin token. Set to False to hard-disable them.
+    enable_admin_routes: bool = True
+
+    # Shared secret required on admin routes (via the X-Admin-Token header).
+    # When unset, admin routes are effectively disabled (fail-closed).
+    admin_token: str | None = None
+
 
 class DatabaseSettings(BaseSettings):
     model_config = SettingsConfigDict(

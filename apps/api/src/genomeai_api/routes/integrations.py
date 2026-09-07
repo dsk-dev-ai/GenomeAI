@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from genomeai_config import Settings
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from genomeai_api.dependencies import get_db_session, get_settings
+from genomeai_api.dependencies import get_db_session, get_settings, require_admin_token
 from genomeai_api.integration.registry import SourceRegistry
 from genomeai_api.integration.services_bootstrap import build_default_registry
 from genomeai_api.repositories.integration import (
@@ -36,7 +36,13 @@ from genomeai_api.schemas.integration import (
 )
 from genomeai_api.services.integration import IntegrationService
 
-router = APIRouter(prefix="/integration", tags=["integration"])
+# Internal admin API: mutating integration endpoints require an admin token.
+# The dependency fails closed (503) when no token is configured.
+router = APIRouter(
+    prefix="/integration",
+    tags=["integration"],
+    dependencies=[Depends(require_admin_token)],
+)
 
 
 def _get_registry() -> SourceRegistry:

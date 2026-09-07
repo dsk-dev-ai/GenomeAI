@@ -2,12 +2,19 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from genomeai_api.dependencies import require_admin_token
 from genomeai_api.ratelimit.providers import AIProvider
 
-router = APIRouter(prefix="/admin/limits", tags=["admin", "limits"])
+# These routes mutate rate limiting; they must never be reachable without a
+# valid admin token. The dependency fails closed (503) when no token is set.
+router = APIRouter(
+    prefix="/admin/limits",
+    tags=["admin", "limits"],
+    dependencies=[Depends(require_admin_token)],
+)
 
 
 class LimitToggleRequest(BaseModel):

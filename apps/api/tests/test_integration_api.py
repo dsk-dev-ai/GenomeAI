@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from fastapi import FastAPI, Request, status
@@ -31,6 +31,8 @@ ERROR_STATUS = {
     InvalidJobTransitionError: status.HTTP_409_CONFLICT,
 }
 
+ADMIN_TOKEN = "test-admin-token"
+
 
 @pytest.fixture
 def mock_service() -> AsyncMock:
@@ -41,6 +43,12 @@ def mock_service() -> AsyncMock:
 def client(mock_service: AsyncMock) -> TestClient:
     app = FastAPI()
     app.include_router(router)
+
+    # The admin dependency reads settings from app.state, so provide a stub
+    # with the admin token configured (fail-open for the existing tests).
+    settings = Mock()
+    settings.app.admin_token = ADMIN_TOKEN
+    app.state.app_state = Mock(settings=settings)
 
     for exc_type, code in ERROR_STATUS.items():
         def _make_handler(code: int):
@@ -54,7 +62,19 @@ def client(mock_service: AsyncMock) -> TestClient:
         return mock_service  # type: ignore[return-value]
 
     app.dependency_overrides[_get_service] = override
-    return TestClient(app)
+
+    headers = {"X-Admin-Token": ADMIN_TOKEN}
+
+    class AuthedTestClient(TestClient):
+        def get(self, *args: object, **kwargs: object):
+            kwargs.setdefault("headers", headers)
+            return super().get(*args, **kwargs)
+
+        def post(self, *args: object, **kwargs: object):
+            kwargs.setdefault("headers", headers)
+            return super().post(*args, **kwargs)
+
+    return AuthedTestClient(app)
 
 
 def _source_response(source_id: str = "genomeai-reference") -> DataSourceResponse:
@@ -204,3 +224,39 @@ def test_connectors_listing_is_static_metadata(
     response = client.get("/integration/connectors")
     assert response.status_code == 200
     assert response.json()[0]["source_id"] == "genomeai-reference"
+
+
+def test_admin_routes_require_token(mock_service: AsyncMock) -> None:
+    app = FastAPI()
+    app.include_router(router)
+    settings = Mock()
+    settings.app.admin_token = ADMIN_TOKEN
+    app.state.app_state = Mock(settings=settings)
+
+    async def override() -> IntegrationService:
+        return mock_service  # type: ignore[return-value]
+
+    app.dependency_overrides[_get_service] = override
+
+    client = TestClient(app)
+    response = client.get("/integration/sources", headers={"X-Admin-Token": "wrong"})
+    assert response.status_code == 401
+    response = client.get("/integration/sources")
+    assert response.status_code == 401
+
+
+def test_admin_routes_fail_closed_when_token_unset(mock_service: AsyncMock) -> None:
+    app = FastAPI()
+    app.include_router(router)
+    settings = Mock()
+    settings.app.admin_token = None
+    app.state.app_state = Mock(settings=settings)
+
+    async def override() -> IntegrationService:
+        return mock_service  # type: ignore[return-value]
+
+    app.dependency_overrides[_get_service] = override
+
+    client = TestClient(app)
+    response = client.get("/integration/sources", headers={"X-Admin-Token": "anything"})
+    assert response.status_code == 503
