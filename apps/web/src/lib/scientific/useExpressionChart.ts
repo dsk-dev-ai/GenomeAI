@@ -79,12 +79,14 @@ export function useExpressionChart(options: UseExpressionChartOptions = {}): Exp
 
   const [valueField, setValueField] = useState<ExpressionValueField>('value')
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const selectedForDatasetIdRef = useRef<string | null>(null)
 
-  // Clear selection whenever a new dataset loads.
-  const loadedDatasetIdRef = useRef<string | null>(null)
+  // Clear selection whenever a new dataset loads. The selection is recorded
+  // alongside the dataset it belongs to so a late-running clear effect can
+  // never clobber a selection made against the same dataset.
   useEffect(() => {
-    if (dataset !== undefined && dataset.id !== loadedDatasetIdRef.current) {
-      loadedDatasetIdRef.current = dataset.id
+    if (dataset !== undefined && dataset.id !== selectedForDatasetIdRef.current) {
+      selectedForDatasetIdRef.current = dataset.id
       setSelectedKey(null)
     }
   }, [dataset])
@@ -98,9 +100,16 @@ export function useExpressionChart(options: UseExpressionChartOptions = {}): Exp
     [dataset, effectiveField],
   )
 
-  const selectPoint = useCallback((key: string | null) => {
-    setSelectedKey(key)
-  }, [])
+  const selectPoint = useCallback(
+    (key: string | null) => {
+      // Record which dataset this selection belongs to so the dataset-changed
+      // effect can never clear a selection made against the already-loaded
+      // dataset (avoids a race with the effect running after selectPoint).
+      selectedForDatasetIdRef.current = dataset?.id ?? null
+      setSelectedKey(key)
+    },
+    [dataset?.id],
+  )
 
   const clearSelection = useCallback(() => setSelectedKey(null), [])
 

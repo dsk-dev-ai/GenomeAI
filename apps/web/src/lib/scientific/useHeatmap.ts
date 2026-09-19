@@ -61,12 +61,14 @@ export function useHeatmap(options: UseHeatmapOptions = {}): HeatmapResult {
   })
 
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const selectedForDatasetIdRef = useRef<string | null>(null)
 
-  // Clear selection whenever a new dataset loads.
-  const loadedDatasetIdRef = useRef<string | null>(null)
+  // Clear selection whenever a new dataset loads. The selection is recorded
+  // alongside the dataset it belongs to so a late-running clear effect can
+  // never clobber a selection made against the same dataset.
   useEffect(() => {
-    if (data !== undefined && data.id !== loadedDatasetIdRef.current) {
-      loadedDatasetIdRef.current = data.id
+    if (data !== undefined && data.id !== selectedForDatasetIdRef.current) {
+      selectedForDatasetIdRef.current = data.id
       setSelectedKey(null)
     }
   }, [data])
@@ -83,9 +85,16 @@ export function useHeatmap(options: UseHeatmapOptions = {}): HeatmapResult {
     return (value: number) => scale(value)
   }, [domain])
 
-  const selectCell = useCallback((key: string | null) => {
-    setSelectedKey(key)
-  }, [])
+  const selectCell = useCallback(
+    (key: string | null) => {
+      // Record which dataset this selection belongs to so the dataset-changed
+      // effect can never clear a selection made against the already-loaded
+      // dataset (avoids a race with the effect running after selectCell).
+      selectedForDatasetIdRef.current = data?.id ?? null
+      setSelectedKey(key)
+    },
+    [data?.id],
+  )
 
   const clearSelection = useCallback(() => setSelectedKey(null), [])
 
